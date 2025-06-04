@@ -18,6 +18,36 @@ Directory and summary of all documentation files, updated as new docs are create
 ### .ai/context/dependency_graph.md
 Static dependency graph of legacy source files, generated for context in documentation and migration tasks.
 
+### .ai/docs/system_architecture_overview.md
+Comprehensive overview of the Legacy MUD system architecture, including high-level features, technical architecture, component breakdowns, design patterns, and code organization.
+
+### .ai/docs/components/infrastructure.md
+Documents the Infrastructure Systems: game engine, network, memory management, persistence, and utilities. Details technical foundations and core utilities.
+
+### .ai/docs/components/world_system.md
+Describes the World System: areas, rooms, world map, environmental systems, resets, and terrain. Covers spatial structure and environmental simulation.
+
+### .ai/docs/components/object_system.md
+Explains the Object System: item management, prototypes, values, enhancement, loot, and persistence. Details object relationships and enhancement.
+
+### .ai/docs/components/character_system.md
+Documents the Character System: player and NPC management, attributes, progression, AI scripting, and combat. Covers character lifecycle and behaviors.
+
+### .ai/docs/components/game_mechanics.md
+Outlines Game Mechanics: affect/status system, combat, magic, skills, event system, quests, and special gameplay features. Explains core rules and effect systems.
+
+### .ai/docs/components/interaction_systems.md
+Covers Interaction Systems: command processing, communication, movement, object manipulation, socials, and auction. Details player input and action routing.
+
+### .ai/docs/components/user_experience.md
+Describes User Experience Systems: command aliases, marriage, scan/hunt, minigames, and quality-of-life features. Focuses on player engagement and convenience.
+
+### .ai/docs/components/admin_systems.md
+Documents Admin Systems: admin commands, world building, security, monitoring, help management, and quest tools. Details tools for administrators and builders.
+
+### .ai/docs/components/help_system.md
+Explains the Help System: in-game documentation, help categories, search, editing, and database integration. Covers help file structure and command integration.
+
 ---
 
 ## To Be Created

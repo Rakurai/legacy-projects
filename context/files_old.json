@@ -1,0 +1,1102 @@
+{
+  "/src/Exit.cc": {
+    "loc": 26,
+    "category": "room_connections",
+    "summary": "Implements the Exit class functionality for room-to-room connections, including initialization from prototypes, flag state management, and helper methods for direction handling."
+  },
+  "/src/wiz_admin.cc": {
+    "loc": 17,
+    "category": "admin_commands",
+    "summary": "Implements basic administrative functions and essential game management commands for immortal-level administrators"
+  },
+  "/src/ObjectPrototype.cc": {
+    "loc": 275,
+    "category": null,
+    "summary": "Implements object template loading from area files with specialized handling for different item types and their custom property values."
+  },
+  "/src/help.cc": {
+    "loc": 718,
+    "category": null,
+    "summary": "Implements the game's help system, including help file loading, database integration, search capabilities, and category-based organization of help content."
+  },
+  "/src/MobProg.cc": {
+    "loc": 68,
+    "category": "game_entities",
+    "summary": "Implements mobile program scripting for NPCs, including type conversions."
+  },
+  "/src/Auction.cc": {
+    "loc": 373,
+    "category": "auction_system",
+    "summary": "Implements the game's auction system for player-to-player item sales, including bidding mechanics, timing, and result handling."
+  },
+  "/src/channels.cc": {
+    "loc": 1823,
+    "category": null,
+    "summary": "Implements broadcast chat channels (gossip, auction, etc.) with toggling, history tracking, and permission controls."
+  },
+  "/src/wiz_quest.cc": {
+    "loc": 1001,
+    "category": "admin_commands",
+    "summary": "Implements quest management system including creation, tracking, rewards, and special event controls"
+  },
+  "/src/interp.cc": {
+    "loc": 988,
+    "category": null,
+    "summary": "Implements the command interpretation system, including command parsing, lookup, and dispatch functionality. Contains the extensive command table and `interpret()` function that processes all user input."
+  },
+  "/src/String.cc": {
+    "loc": 352,
+    "category": "game_utilities",
+    "summary": "Implements string manipulation utilities, including case-insensitive comparisons and searches."
+  },
+  "/src/remort.cc": {
+    "loc": 580,
+    "category": null,
+    "summary": "Implements the character advancement system allowing high-level characters to restart with enhanced abilities."
+  },
+  "/src/clan-edit.cc": {
+    "loc": 560,
+    "category": null,
+    "summary": "Implements clan management functionality including clan creation, editing, persistence, and member tracking with database integration."
+  },
+  "/src/departed.cc": {
+    "loc": 129,
+    "category": "constants_json",
+    "summary": "Implements functionality for managing departed immortals, including loading and saving lists."
+  },
+  "/src/Room.cc": {
+    "loc": 146,
+    "category": null,
+    "summary": "Implements room instance creation, character movement tracking, and environmental state management like light levels."
+  },
+  "/src/const.cc": {
+    "loc": 2724,
+    "category": "skills",
+    "summary": "Implements game constant definitions including skill and spell tables, skill groups, race/class skill bonuses, and skill level requirements."
+  },
+  "/src/act_comm.cc": {
+    "loc": 1956,
+    "category": null,
+    "summary": "Implements core communication commands including say, tell, whisper, and emote with visibility checking and formatting for different perspectives."
+  },
+  "/src/Battle.cc": {
+    "loc": 3,
+    "category": "battle_mechanics",
+    "summary": "A minimal implementation file containing only the declaration of a global battle object."
+  },
+  "/src/GameTime.cc": {
+    "loc": 133,
+    "category": "game_time_tracking",
+    "summary": "Implements game time tracking with conversions between real-time and game calendar, and provides sunlight cycle information based on in-game hours."
+  },
+  "/src/Note.cc": {
+    "loc": 1985,
+    "category": null,
+    "summary": "Implements the bulletin board system with multiple themed boards, note creation/editing/deletion, and unread message tracking."
+  },
+  "/src/Shop.cc": {
+    "loc": 14,
+    "category": "game_utilities",
+    "summary": "Implements shop functionality, including trade types, profit margins, and operating hours."
+  },
+  "/src/Area.cc": {
+    "loc": 939,
+    "category": "area_management",
+    "summary": "Implements area loading from files, area initialization, reset mechanics, and tracking of players/immortals in areas."
+  },
+  "/src/mobiles.cc": {
+    "loc": 182,
+    "category": null,
+    "summary": "Implements NPC service functionality like healers, trainers, and merchants that players can interact with."
+  },
+  "/src/special.cc": {
+    "loc": 1373,
+    "category": null,
+    "summary": "Implements special procedures for NPCs, objects, and rooms that provide unique behaviors like shopkeepers, trainers, and guards."
+  },
+  "/src/file.cc": {
+    "loc": 269,
+    "category": null,
+    "summary": "Implements file I/O utilities for reading and writing game data, including parsing for different data types and formats."
+  },
+  "/src/ignore.cc": {
+    "loc": 182,
+    "category": "communication",
+    "summary": "Implements a multi-level player communication filtering system allowing players to selectively block different types of communication (tells, channels, etc.) from specific players with commands for adding, removing, and listing ignored players."
+  },
+  "/src/ObjectValue.cc": {
+    "loc": 51,
+    "category": "game_utilities",
+    "summary": "Implements operations for object values, including arithmetic and bitwise operations."
+  },
+  "/src/mob_prog.cc": {
+    "loc": 1937,
+    "category": null,
+    "summary": "Implements the mobile program scripting system with triggers, conditions, and commands that control NPC behavior and interaction."
+  },
+  "/src/wiz_secure.cc": {
+    "loc": 1165,
+    "category": "admin_commands",
+    "summary": "Implements security and access control systems including ban management, account security, and privilege enforcement"
+  },
+  "/src/Player.cc": {
+    "loc": 16,
+    "category": "game_utilities",
+    "summary": "Implements player initialization and tracking, including skill learning and evolution."
+  },
+  "/src/act.cc": {
+    "loc": 484,
+    "category": null,
+    "summary": "Implements the core message formatting system for action feedback that shows different perspectives to different observers."
+  },
+  "/src/load_config.cc": {
+    "loc": 37,
+    "category": "configuration",
+    "summary": "Implements dynamic configuration file loading, parsing JSON-based configuration data to set runtime parameters and game settings with validation and error handling."
+  },
+  "/src/music.cc": {
+    "loc": 357,
+    "category": null,
+    "summary": "Implements the bardic music system with songs, instruments, and performance effects that provide gameplay benefits."
+  },
+  "/src/quest.cc": {
+    "loc": 1897,
+    "category": null,
+    "summary": "Implements the automated quest system with mission generation, tracking, and rewards for player engagement."
+  },
+  "/src/QuestArea.cc": {
+    "loc": 25,
+    "category": "game_utilities",
+    "summary": "Implements quest area initialization and management, including locating the quest start room."
+  },
+  "/src/lootv2.cc": {
+    "loc": 556,
+    "category": "object_system",
+    "summary": "Implements an enhanced loot generation system building on the base loot tables with more sophisticated drop mechanics, improved rarity controls, and contextual treasure generation."
+  },
+  "/src/dispel.cc": {
+    "loc": 249,
+    "category": null,
+    "summary": "Implements the dispel mechanics system, including dispellable effect types, level-based saving throws, and effect removal methods (dispel, cancel, undo)."
+  },
+  "/src/Character.cc": {
+    "loc": 285,
+    "category": "character_management",
+    "summary": "Implements core character functionality including initialization, cleanup, and memory management for character resources and attributes."
+  },
+  "/src/tables.cc": {
+    "loc": 1143,
+    "category": "constants",
+    "summary": "Implements game data tables containing structured information for races, classes, skills, items, spells, and other core game mechanics."
+  },
+  "/src/find.cc": {
+    "loc": 548,
+    "category": null,
+    "summary": "Implements target acquisition and search functionality for effects, including visibility checks, range validation, and target selection logic."
+  },
+  "/src/War.cc": {
+    "loc": 1478,
+    "category": null,
+    "summary": "Implements the clan war system with war declaration mechanics, event tracking, participant scoring, and war resolution logic."
+  },
+  "/src/scan.cc": {
+    "loc": 223,
+    "category": "user_experience",
+    "summary": "Implements multi-directional area scanning functionality that extends player perception beyond the current room, with distance-based information filtering, visibility rules, and formatted output of detected entities."
+  },
+  "/src/debug.cc": {
+    "loc": 378,
+    "category": "Logging and Debugging",
+    "summary": "Includes debugging utilities and commands for the game. Provides tools for developers to test and debug various game functionalities."
+  },
+  "/src/storage.cc": {
+    "loc": 157,
+    "category": "object_system",
+    "summary": "Implements an item storage system enabling players to store possessions between sessions across different locations, with capacity limits, access controls, and persistence mechanisms."
+  },
+  "/src/duel.cc": {
+    "loc": 834,
+    "category": null,
+    "summary": "Implements the player dueling system with arenas, challenges, and structured player versus player combat."
+  },
+  "/src/lookup.cc": {
+    "loc": 226,
+    "category": "utilities",
+    "summary": "Implements entity lookup functionality for finding characters, objects, and rooms by various identifiers, with support for name matching, visibility rules, and scoped searches."
+  },
+  "/src/Reset.cc": {
+    "loc": 179,
+    "category": "game_utilities",
+    "summary": "Implements reset mechanics for game entities, including mobile and object resets."
+  },
+  "/src/area_handler.cc": {
+    "loc": 605,
+    "category": null,
+    "summary": "Implements area management functionality including mobile and object creation, reset procedures, and prototype instantiation."
+  },
+  "/src/Game.cc": {
+    "loc": 139,
+    "category": "Logging and Debugging",
+    "summary": "Defines global variables and functions related to game state, including logging controls (`log_all`) and time tracking (`current_time`)."
+  },
+  "/src/MobilePrototype.cc": {
+    "loc": 161,
+    "category": "game_entities",
+    "summary": "Implements mobile templates for creating NPCs with predefined attributes."
+  },
+  "/src/wiz_build.cc": {
+    "loc": 348,
+    "category": "admin_commands",
+    "summary": "Implements world building commands for creating and modifying game areas, rooms, objects, and mobiles"
+  },
+  "/src/wiz_gen.cc": {
+    "loc": 4220,
+    "category": "admin_commands",
+    "summary": "Implements core immortal functionality for character management, object/mobile control, security, and general administrative tasks"
+  },
+  "/src/Flags.cc": {
+    "loc": 69,
+    "category": "game_entities",
+    "summary": "Implements flag parsing and manipulation for game entities."
+  },
+  "/src/rmagic.cc": {
+    "loc": 512,
+    "category": null,
+    "summary": "Implements enhanced magic system for remorted (high-level, advanced) characters with specialized spell effects and abilities."
+  },
+  "/src/act_move.cc": {
+    "loc": 3306,
+    "category": null,
+    "summary": "Implements movement commands and related location transitions including directional movement, special movement types, and visibility tracking."
+  },
+  "/src/RoomPrototype.cc": {
+    "loc": 132,
+    "category": null,
+    "summary": "Implements room template loading from area files, handling sector type conversion and special room flags, and providing room instance creation."
+  },
+  "/src/random.cc": {
+    "loc": 258,
+    "category": null,
+    "summary": "Implements random number generation functions used throughout the codebase for game randomization and chance calculations."
+  },
+  "/src/typename.cc": {
+    "loc": 328,
+    "category": "utilities",
+    "summary": "Implements runtime type information and name management utilities for object type identification, conversion, and comparison across the game's entity system."
+  },
+  "/src/sqlite.cc": {
+    "loc": 154,
+    "category": null,
+    "summary": "Implements SQLite database interface with connection management, query execution, and result processing."
+  },
+  "/src/Disabled.cc": {
+    "loc": 136,
+    "category": "command_disabling",
+    "summary": "Implements functionality for disabling commands, including persistence of disabled commands to disk and command disabling verification."
+  },
+  "/src/objstate.cc": {
+    "loc": 184,
+    "category": "object_system",
+    "summary": "Implements object persistence between server restarts, ensuring items on the ground and their states remain intact, with special handling for quest items and modified containers."
+  },
+  "/src/hunt.cc": {
+    "loc": 358,
+    "category": "user_experience",
+    "summary": "Implements the hunting/tracking system that allows players to follow other characters across the world, with skill-based success rates, environmental modifiers, trail detection algorithms, and directional guidance."
+  },
+  "/src/paint.cc": {
+    "loc": 191,
+    "category": "user_experience",
+    "summary": "Implements the paintball minigame with specialized weapons, ammunition management, team assignments, scoring logic, and non-lethal combat mechanics for recreational player competition."
+  },
+  "/src/mob_commands.cc": {
+    "loc": 672,
+    "category": null,
+    "summary": "Implements special commands available to NPCs through the mobile program system for actions like movement, combat, and quest interactions."
+  },
+  "/src/fight.cc": {
+    "loc": 6007,
+    "category": null,
+    "summary": "Implements the comprehensive combat system including attack resolution, damage calculation, defensive mechanics, and death handling."
+  },
+  "/src/Weather.cc": {
+    "loc": 146,
+    "category": null,
+    "summary": "Implements dynamic weather system with seasonal variations, atmospheric pressure simulation, and changing sky conditions that affect gameplay."
+  },
+  "/src/bank.cc": {
+    "loc": 444,
+    "category": "game_attributes",
+    "summary": "Implements banking functionality, including deposit operations and bank location validation."
+  },
+  "/src/edit.cc": {
+    "loc": 1005,
+    "category": null,
+    "summary": "Implements editor functionality for game entities, handling modification of effects and their parameters, and providing tools for managing effect-related properties."
+  },
+  "/src/ExitPrototype.cc": {
+    "loc": 20,
+    "category": "game_entities",
+    "summary": "Implements exit prototypes for rooms, including locks and flags."
+  },
+  "/src/World.cc": {
+    "loc": 306,
+    "category": null,
+    "summary": "Implements central world management for areas, rooms, and world-level updates, providing a coordinator for all environment systems."
+  },
+  "/src/act_obj.cc": {
+    "loc": 5383,
+    "category": null,
+    "summary": "Implements object manipulation commands for inventory management, equipment handling, and item usage with restriction enforcement."
+  },
+  "/src/flag.cc": {
+    "loc": 892,
+    "category": null,
+    "summary": "Implements flag-based state management for effects, handling flag manipulation, bitwise operations, and persistent effect states."
+  },
+  "/src/act_info.cc": {
+    "loc": 5493,
+    "category": null,
+    "summary": "Implements commands for gathering information about the game world, characters, and objects including look, examine, who, and score."
+  },
+  "/src/Descriptor.cc": {
+    "loc": 12,
+    "category": "connection_handling",
+    "summary": "Implements the connection descriptor class linking network connections to the state machine system that handles player login."
+  },
+  "/src/magic.cc": {
+    "loc": 6892,
+    "category": null,
+    "summary": "Implements the game's magical system, including spell execution framework, targeting, and individual spell effects. One of the largest files in the codebase containing hundreds of spell implementations."
+  },
+  "/src/loot_tables.cc": {
+    "loc": 1317,
+    "category": "object_system",
+    "summary": "Implements the core loot distribution system with multi-tiered tables, weighted probabilities, monster-specific drops, and treasure generation algorithms that control item distribution throughout the game."
+  },
+  "/src/set-stat.cc": {
+    "loc": 2197,
+    "category": "character_system",
+    "summary": "Implements comprehensive character attribute manipulation system including commands for viewing and modifying character stats, with permission controls, validation logic, and both temporary and permanent stat adjustments."
+  },
+  "/src/update.cc": {
+    "loc": 1570,
+    "category": "infrastructure",
+    "summary": "Implements the central game update loop with pulse-based timing, managing periodic updates for characters, objects, combat, weather, and other game systems with specialized update frequencies."
+  },
+  "/src/save.cc": {
+    "loc": 1944,
+    "category": null,
+    "summary": "Implements character and object data persistence, handling saving and loading of player files and equipment in JSON format."
+  },
+  "/src/Logging.cc": {
+    "loc": 62,
+    "category": "Logging and Debugging",
+    "summary": "Implements logging utilities for the game, including functions for reporting bugs, writing logs, and handling file-related errors. Provides formatted output and integrates with the game's debugging and notification systems."
+  },
+  "/src/effects.cc": {
+    "loc": 855,
+    "category": null,
+    "summary": "Implements core effect application logic, handling temporary and permanent effects, effect stacking and overwriting, and effect timing and duration management."
+  },
+  "/src/argument.cc": {
+    "loc": 193,
+    "category": "command_system",
+    "summary": "Implements sophisticated command argument parsing utilities including number_argument for number-name format, one_argument for quote-aware tokenization, mult_argument for quantity parsing, and entity_argument for complex entity references."
+  },
+  "/src/comm.cc": {
+    "loc": 1880,
+    "category": null,
+    "summary": "Implements network communication including socket management, descriptor handling, input/output processing, and the main game loop."
+  },
+  "/src/skills.cc": {
+    "loc": 1783,
+    "category": "skills",
+    "summary": "Core implementation of the skill system including non-magical skills, learning mechanics, skill checks, practice system, skill groups, and character customization."
+  },
+  "/src/memory.cc": {
+    "loc": 17,
+    "category": "infrastructure",
+    "summary": "Implements memory management utilities defined in memory.hh, providing functionality for memory allocation tracking, leak detection, and memory usage statistics."
+  },
+  "/src/wiz_coder.cc": {
+    "loc": 676,
+    "category": "admin_commands",
+    "summary": "Implements debugging and development tools for monitoring system performance, memory usage, and other technical aspects"
+  },
+  "/src/Object.cc": {
+    "loc": 396,
+    "category": "game_entities",
+    "summary": "Implements object functionality, including cleanup and unique item generation."
+  },
+  "/src/marry.cc": {
+    "loc": 465,
+    "category": "user_experience",
+    "summary": "Implements the character marriage system with proposal mechanics, ceremony management, relationship benefits, status tracking, and divorce handling for formal player-to-player social relationships."
+  },
+  "/src/social.cc": {
+    "loc": 453,
+    "category": null,
+    "summary": "Implements the social action system with predefined emotive commands, multiple target support, and online social editing tools."
+  },
+  "/src/attribute.cc": {
+    "loc": 191,
+    "category": "game_attributes",
+    "summary": "Implements attribute accessors and stat-to-attribute mappings, including maximum stat retrieval for characters."
+  },
+  "/src/alias.cc": {
+    "loc": 190,
+    "category": "user_experience",
+    "summary": "Implements the command aliasing system that allows players to create custom command shortcuts with parameter substitution, persistent storage, and security protections against recursive aliases and command abuse."
+  },
+  "/src/RoomID.cc": {
+    "loc": 79,
+    "category": null,
+    "summary": "Implements room identification functionality with a compact representation combining vnum and instance number, providing parsing and formatting utilities."
+  },
+  "/src/config.cc": {
+    "loc": 806,
+    "category": null,
+    "summary": "Implements game configuration management including settings storage, validation, and runtime adjustment of game parameters."
+  },
+  "/src/handler.cc": {
+    "loc": 1572,
+    "category": null,
+    "summary": "Implements core entity management functions for characters, objects, and affects, handling state transitions and updates."
+  },
+  "/src/skill/skill_table.cc": {
+    "loc": 37,
+    "category": "skills",
+    "summary": "Implements skill table lookup functionality including name-to-skill mapping and skill type conversion"
+  },
+  "/src/util/Image.cc": {
+    "loc": 181,
+    "category": "utilities",
+    "summary": "Implements ASCII art and visualization utilities for generating maps, diagrams, and other visual representations needed for in-game display and administrative tools."
+  },
+  "/src/include/lootv2.hh": {
+    "loc": 110,
+    "category": "object_system",
+    "summary": "Defines the enhanced loot generation system (LootV2) with advanced probability distribution for item drops, tiered rarity system, context-sensitive generation, and specialized drop tables."
+  },
+  "/src/include/Character.hh": {
+    "loc": 244,
+    "category": null,
+    "summary": "Defines the Character class, representing a player or NPC. Includes stats, inventory, status flags, group/party info, and macros for attribute and permission checks."
+  },
+  "/src/include/dispel.hh": {
+    "loc": 12,
+    "category": "game_mechanics",
+    "summary": "Declares interfaces for the dispel mechanics system that removes magical effects, with level-based calculations and support for different dispel variants like dispel magic and cancel."
+  },
+  "/src/include/QuestArea.hh": {
+    "loc": 27,
+    "category": "game_mechanics",
+    "summary": "Defines the QuestArea class for specialized areas with quest-specific properties, including start room tracking, quest-related object handling, and mission state management."
+  },
+  "/src/include/War.hh": {
+    "loc": 61,
+    "category": "game_mechanics",
+    "summary": "Defines the War class and related structures that implement the clan warfare system, including war declarations, scoring mechanics, victory conditions, peace negotiations, and timed war events."
+  },
+  "/src/include/find.hh": {
+    "loc": 24,
+    "category": "game_mechanics",
+    "summary": "Declares the target finding system used by spells and effects, implementing sophisticated target acquisition with validity checking, range validation, and context-aware selection strategies."
+  },
+  "/src/include/tables.hh": {
+    "loc": 197,
+    "category": "constants",
+    "summary": "Declares table structures and types for game data storage including races, classes, skills, items, spells, and conversion tables."
+  },
+  "/src/include/macros.hh": {
+    "loc": 129,
+    "category": "infrastructure",
+    "summary": "Defines utility macros used throughout the codebase, including debug helpers, logging shortcuts, memory management wrappers, common function patterns, and platform-specific adaptations."
+  },
+  "/src/include/MobProgActList.hh": {
+    "loc": 23,
+    "category": "character_system",
+    "summary": "Defines the action queue for NPCs, managing scheduled actions with prioritization, delayed execution capability, and safe command processing specific to mobile characters."
+  },
+  "/src/include/file.hh": {
+    "loc": 18,
+    "category": "infrastructure",
+    "summary": "Declares file I/O utility functions for loading and saving game data, with abstractions for file operations, error handling, and both text and binary file support."
+  },
+  "/src/include/vt100.hh": {
+    "loc": 16,
+    "category": "infrastructure",
+    "summary": "Defines VT100 terminal control sequences for cursor movement, screen clearing, color and attribute control, and special character display in terminal-based interfaces."
+  },
+  "/src/include/ObjectValue.hh": {
+    "loc": 84,
+    "category": "object_system",
+    "summary": "Defines the value system for objects with type-specific properties, providing specialized behavior for different object types (weapons, containers, food, etc.) through polymorphic value interpretation."
+  },
+  "/src/include/act.hh": {
+    "loc": 39,
+    "category": "interaction",
+    "summary": "Declares the core message formatting system for action feedback with token substitution for different perspectives (actor, target, observers) and visibility filtering based on context."
+  },
+  "/src/include/Player.hh": {
+    "loc": 138,
+    "category": "character_system",
+    "summary": "Extends the Character class with player-specific functionality including persistent data storage, configuration preferences, progression tracking, authentication, and customization options."
+  },
+  "/src/include/StoredPlayer.hh": {
+    "loc": 21,
+    "category": "character",
+    "summary": "Defines data structures for persisting player information to disk, including versioning and migration support."
+  },
+  "/src/include/music.hh": {
+    "loc": 21,
+    "category": "game_mechanics",
+    "summary": "Defines the bardic music system including song effects, instrument types, performance skill integration, and area-based magical effects created through musical performances."
+  },
+  "/src/include/GarbageCollectingList.hh": {
+    "loc": 77,
+    "category": "infrastructure",
+    "summary": "Defines container classes for managing lists of garbage-collected objects with automatic cleanup, safe iteration during modifications, and deferred deletion during traversal."
+  },
+  "/src/include/Pooled.hh": {
+    "loc": 84,
+    "category": "infrastructure",
+    "summary": "Implements memory pooling for frequently allocated objects, reducing memory fragmentation and improving performance through pre-allocated memory blocks and efficient object recycling."
+  },
+  "/src/include/ExtraDescr.hh": {
+    "loc": 28,
+    "category": "object_system",
+    "summary": "Defines the ExtraDescr class that provides additional keyword-based descriptions for object features, enhancing world detail and enabling object puzzle mechanics through special descriptions."
+  },
+  "/src/include/declare.hh": {
+    "loc": 341,
+    "category": "infrastructure",
+    "summary": "Contains comprehensive forward declarations for classes, structs, global variables, and function prototypes to facilitate cross-component references while minimizing include dependencies."
+  },
+  "/src/include/Location.hh": {
+    "loc": 114,
+    "category": "world_system",
+    "summary": "Defines the Location class that represents precise positions in the game world, combining room references with position information for character/object positioning and relative location calculations."
+  },
+  "/src/include/Guild.hh": {
+    "loc": 16,
+    "category": "game_mechanics",
+    "summary": "Defines the Guild class representing professional organizations for character specialization, providing skill-based advancement paths and profession-specific abilities."
+  },
+  "/src/include/Room.hh": {
+    "loc": 62,
+    "category": null,
+    "summary": "Defines the Room class, representing a location in the game world. Manages exits, contents, affects, flags, and provides methods for character movement and room state."
+  },
+  "/src/include/Garbage.hh": {
+    "loc": 11,
+    "category": "infrastructure",
+    "summary": "Defines the Garbage base class for reference-counted objects, providing foundation for safe memory management with automatic cleanup when objects are no longer referenced."
+  },
+  "/src/include/EQSocket.hh": {
+    "loc": 15,
+    "category": "object_system",
+    "summary": "Defines the EQSocket class representing equipment socket system for item customization, handling socket creation, quality types, and integration with the gem enhancement system."
+  },
+  "/src/include/GameTime.hh": {
+    "loc": 39,
+    "category": "world_system",
+    "summary": "Defines the GameTime class that manages in-game time with hour/day/month/year tracking, time-based event triggering, and sunlight cycle calculations affecting gameplay."
+  },
+  "/src/include/Battle.hh": {
+    "loc": 20,
+    "category": "combat_system",
+    "summary": "Defines the Battle class that manages the arena combat system, including battle state, level restrictions, and entry fees"
+  },
+  "/src/include/Area.hh": {
+    "loc": 114,
+    "category": null,
+    "summary": "Defines the Area class, representing a game region with rooms, objects, mobiles, vnum range, and metadata. Handles loading, updating, and resetting."
+  },
+  "/src/include/Shop.hh": {
+    "loc": 25,
+    "category": "commerce",
+    "summary": "Defines the Shop class implementing in-game merchants with opening hours, specialized merchandise, profit margins for buying/selling items, and shopkeeper interaction behaviors."
+  },
+  "/src/include/Note.hh": {
+    "loc": 51,
+    "category": "communication",
+    "summary": "Defines the Note class and related structures for the bulletin board system, implementing multiple themed boards with permissions, read tracking, searching, and note manipulation functions."
+  },
+  "/src/include/Exit.hh": {
+    "loc": 51,
+    "category": "world_system",
+    "summary": "Defines the Exit class that represents connections between rooms, handling directions, door states (open/closed/locked), visibility rules, and access controls for room-to-room navigation."
+  },
+  "/src/include/Clan.hh": {
+    "loc": 43,
+    "category": "game_mechanics",
+    "summary": "Defines the Clan class and related structures for player organizations, including hierarchical leadership roles, membership management, clan-specific permissions, and shared resources."
+  },
+  "/src/include/Sector.hh": {
+    "loc": 25,
+    "category": "world_system",
+    "summary": "Defines the Sector enumeration and utilities for room terrain types, determining movement costs, skill effects, environmental conditions, and visual representation on the world map."
+  },
+  "/src/include/MobProg.hh": {
+    "loc": 71,
+    "category": "character_system",
+    "summary": "Defines the MobProg system for NPC behavior scripting with trigger conditions, conditional execution, and flexible actions for defining complex NPC behaviors and interactions."
+  },
+  "/src/include/ObjectPrototype.hh": {
+    "loc": 47,
+    "category": "object_system",
+    "summary": "Defines templates for object creation with static properties, type-specific behaviors, and base attributes used to instantiate item instances throughout the game world."
+  },
+  "/src/include/channels.hh": {
+    "loc": 13,
+    "category": "communication",
+    "summary": "Defines interfaces for the communication channel system including global, organizational, and special channels."
+  },
+  "/src/include/Auction.hh": {
+    "loc": 31,
+    "category": "interaction",
+    "summary": "Defines the Auction class that manages player-to-player item sales, including bidding mechanics, auction states, timing, cancellation handling, and notification systems."
+  },
+  "/src/include/sql.hh": {
+    "loc": 39,
+    "category": "infrastructure",
+    "summary": "Declares the SQLite database interface with connection pooling, transaction handling, prepared statement support, result set processing, and error handling mechanisms."
+  },
+  "/src/include/String.hh": {
+    "loc": 147,
+    "category": null,
+    "summary": "Defines the String class, a std::string extension with case-insensitive comparisons, string utilities, and legacy C-string compatibility."
+  },
+  "/src/include/Actable.hh": {
+    "loc": 7,
+    "category": "interaction",
+    "summary": "Defines the Actable interface for entities that can perform actions, providing a common abstraction layer for action execution across different entity types."
+  },
+  "/src/include/interp.hh": {
+    "loc": 501,
+    "category": null,
+    "summary": "Defines the command system structure including the command table, position requirements, and declarations for hundreds of command handler functions."
+  },
+  "/src/include/comm.hh": {
+    "loc": 16,
+    "category": "communication",
+    "summary": "Declares core network communication functions for socket handling, data buffering, and connection management."
+  },
+  "/src/include/memory.hh": {
+    "loc": 31,
+    "category": "infrastructure",
+    "summary": "Declares memory management utilities for tracking allocations, detecting memory leaks, and providing allocation statistics and reporting for debugging memory-related issues."
+  },
+  "/src/include/Object.hh": {
+    "loc": 89,
+    "category": "object_system",
+    "summary": "Defines the Object class representing items in the game world, managing properties, location state, contained objects, affects, and item lifecycle from creation to destruction."
+  },
+  "/src/include/Social.hh": {
+    "loc": 31,
+    "category": "interaction",
+    "summary": "Defines the Social class representing pre-defined emotive commands with multiple target support, customized messages for different perspectives, and online editing capabilities for administrators."
+  },
+  "/src/include/RoomID.hh": {
+    "loc": 49,
+    "category": "world_system",
+    "summary": "Defines the RoomID class implementing a unique identifier system for room instances, combining virtual number with instance number to enable multiple instances of the same room template."
+  },
+  "/src/include/World.hh": {
+    "loc": 81,
+    "category": "world_system",
+    "summary": "Defines the World class serving as the central coordinator for the game environment, managing areas, tracking global state, handling world-wide updates, and controlling area reset scheduling."
+  },
+  "/src/include/Tail.hh": {
+    "loc": 29,
+    "category": "infrastructure",
+    "summary": "Defines the Tail class implementing a file monitoring utility with real-time display functionality, line buffer management, and dynamic file tracking for log monitoring."
+  },
+  "/src/include/DepartedPlayer.hh": {
+    "loc": 18,
+    "category": "character_system",
+    "summary": "Defines the DepartedPlayer class that maintains records of players/immortals who have left the game, supporting list traversal and persistence of departure information."
+  },
+  "/src/include/magic.hh": {
+    "loc": 189,
+    "category": "game_mechanics",
+    "summary": "Defines the magic system's spell function type and declares hundreds of individual spell functions that comprise the game's magic system, organized by spell category and effect type."
+  },
+  "/src/include/Descriptor.hh": {
+    "loc": 46,
+    "category": "infrastructure",
+    "summary": "Defines the Descriptor class managing network connections, handling input/output buffers, connection states, authentication, character association, and telnet protocol negotiation."
+  },
+  "/src/include/argument.hh": {
+    "loc": 32,
+    "category": "command_system",
+    "summary": "Declares command argument parsing functions and defines entity flags used by entity_argument for parsing references to players, mobiles, objects, and rooms with both C and C++ string support."
+  },
+  "/src/include/Vnum.hh": {
+    "loc": 28,
+    "category": "world_system",
+    "summary": "Defines the Vnum class providing a type-safe virtual number identifier system for game entities, with range operations, comparisons, and serialization support for area-specific identification."
+  },
+  "/src/include/telnet.hh": {
+    "loc": 83,
+    "category": "infrastructure",
+    "summary": "Defines telnet protocol implementation including option negotiation, suboption processing, command codes, and protocol state tracking for network connections."
+  },
+  "/src/include/merc.hh": {
+    "loc": 241,
+    "category": "infrastructure",
+    "summary": "Defines foundational game structures and constants, providing core data structure definitions, historical system compatibility, global reference tables, and legacy macros."
+  },
+  "/src/include/Logging.hh": {
+    "loc": 27,
+    "category": "infrastructure",
+    "summary": "Defines the logging system interface with multiple severity levels, configurable output targets, context-enriched logging functions, and error reporting facilities."
+  },
+  "/src/include/Disabled.hh": {
+    "loc": 24,
+    "category": "admin_systems",
+    "summary": "Defines structures and functions for the command disabling system, allowing administrators to temporarily disable specific commands with reason tracking and persistence."
+  },
+  "/src/include/RoomPrototype.hh": {
+    "loc": 44,
+    "category": "world_system",
+    "summary": "Defines the RoomPrototype class serving as a template for creating room instances, storing base room properties such as descriptions, flags, sector type, and other attributes."
+  },
+  "/src/include/random.hh": {
+    "loc": 12,
+    "category": "infrastructure",
+    "summary": "Declares pseudorandom number generation utilities, including dice-style random rolls, range-based selection, and percentage chance calculations used throughout the game code."
+  },
+  "/src/include/typename.hh": {
+    "loc": 34,
+    "category": "infrastructure",
+    "summary": "Declares a type name resolution system that provides runtime type information, type comparison utilities, object type identification, and pretty-printing of type names."
+  },
+  "/src/include/Weather.hh": {
+    "loc": 32,
+    "category": "world_system",
+    "summary": "Defines the Weather class implementing a dynamic weather simulation with seasonal variations, sky conditions, atmospheric pressure tracking, room-specific effects, and forecasting capabilities."
+  },
+  "/src/include/Format.hh": {
+    "loc": 83,
+    "category": "infrastructure",
+    "summary": "Defines type-safe string formatting utilities for consistent text representation, string composition, type-aware formatting patterns, and parameter substitution with performance optimization."
+  },
+  "/src/include/Edit.hh": {
+    "loc": 28,
+    "category": "interaction",
+    "summary": "Defines the Edit class implementing an in-game text editor with line-based editing, string manipulation, and formatting capabilities for notes, descriptions, and other text content."
+  },
+  "/src/include/ExitPrototype.hh": {
+    "loc": 23,
+    "category": "world_system",
+    "summary": "Defines the ExitPrototype class serving as a template for creating Exit instances, storing base properties like destination, key requirements, flags, and descriptions for room connections."
+  },
+  "/src/include/Duel.hh": {
+    "loc": 55,
+    "category": "game_mechanics",
+    "summary": "Defines the Duel class implementing the player versus player dueling system, including challenge management, arena handling, combat rules, spectator support, and duel resolution."
+  },
+  "/src/include/constants.hh": {
+    "loc": 1387,
+    "category": "constants",
+    "summary": "Defines core game constants including system limits, gameplay values, configuration parameters, and magic numbers used throughout the codebase for consistent operation."
+  },
+  "/src/include/Reset.hh": {
+    "loc": 37,
+    "category": "world_system",
+    "summary": "Defines the Reset class managing area respawn instructions, controlling mobile and object placement, equipment for mobiles, door states, and periodic world refreshing."
+  },
+  "/src/include/lookup.hh": {
+    "loc": 25,
+    "category": "infrastructure",
+    "summary": "Declares entity lookup functions for finding characters, objects, and rooms by various identifiers, supporting name-based and ID-based searches with visibility rules and fuzzy matching."
+  },
+  "/src/include/MobilePrototype.hh": {
+    "loc": 65,
+    "category": "character_system",
+    "summary": "Defines templates for NPC creation with base attributes, behaviors, equipment specifications, shop capabilities, and special flags that control mobile behavior parameters."
+  },
+  "/src/include/Game.hh": {
+    "loc": 32,
+    "category": "infrastructure",
+    "summary": "Defines the Game singleton that manages central game state, provides access to global subsystems, controls initialization and shutdown sequences, and maintains critical game variables."
+  },
+  "/src/include/Flags.hh": {
+    "loc": 108,
+    "category": "infrastructure",
+    "summary": "Defines the flag manipulation system used across components, supporting efficient bit operations, type-safe flag management, named flag constants, and operations for testing and modifying flag states."
+  },
+  "/src/include/skill/skill.hh": {
+    "loc": 39,
+    "category": "skills",
+    "summary": "Declares core skill system interfaces and skill_table_t structure for managing skill properties and requirements, linking skill identifiers with their implementation and parameters."
+  },
+  "/src/include/skill/Type.hh": {
+    "loc": 245,
+    "category": "skills",
+    "summary": "Defines the comprehensive skill::type enum class containing all possible skill types in the game, providing type-safe skill identification and categorization for the skill system."
+  },
+  "/src/include/util/Image.hh": {
+    "loc": 32,
+    "category": "infrastructure",
+    "summary": "Declares utilities for ASCII art generation and manipulation, including character-based drawing primitives, box and line drawing, screen buffer management, and multi-color text support."
+  },
+  "/src/include/JSON/cJSON.hh": {
+    "loc": 58,
+    "category": "infrastructure",
+    "summary": "Declares wrapper functions around the cJSON library, providing structured data serialization/deserialization and file operations for configuration and data storage."
+  },
+  "/src/include/event/Handler.hh": {
+    "loc": 20,
+    "category": "game_mechanics",
+    "summary": "Defines the Handler interface with a notify method for event subscribers, providing the base class for components that need to respond to game events."
+  },
+  "/src/include/event/event.hh": {
+    "loc": 17,
+    "category": "game_mechanics",
+    "summary": "Defines the event type enumeration for the event system, providing fine-grained categorization of events, system-specific event definitions, and event priority classification."
+  },
+  "/src/include/event/Dispatcher.hh": {
+    "loc": 25,
+    "category": "game_mechanics",
+    "summary": "Defines the event dispatcher implementing the publish-subscribe pattern, managing event subscriptions and coordinating event distribution to registered handlers."
+  },
+  "/src/include/worldmap/Worldmap.hh": {
+    "loc": 30,
+    "category": "worldmap",
+    "summary": "Provides the core world map interface for managing and visualizing the game world's spatial organization, supporting terrain representation and map generation."
+  },
+  "/src/include/worldmap/MapColor.hh": {
+    "loc": 48,
+    "category": "worldmap",
+    "summary": "Defines color constants and functions for world map visualization, supporting terrain types and features with color-coded representation for ASCII map display."
+  },
+  "/src/include/worldmap/Coordinate.hh": {
+    "loc": 86,
+    "category": "worldmap",
+    "summary": "Defines the coordinate system for world positions with operations for translation, validation, and distance calculations in the world's 2D/3D spatial representation system."
+  },
+  "/src/include/worldmap/Quadtree.hh": {
+    "loc": 100,
+    "category": "worldmap",
+    "summary": "Implements spatial partitioning for efficient area queries and neighbor finding in the world map system, optimizing spatial searches with logarithmic complexity."
+  },
+  "/src/include/worldmap/Region.hh": {
+    "loc": 43,
+    "category": "worldmap",
+    "summary": "Defines geographical regions in the world map with boundary management and property handling, organizing the world into named areas with distinct characteristics."
+  },
+  "/src/include/conn/State.hh": {
+    "loc": 79,
+    "category": "connection",
+    "summary": "Defines the connection state machine for player login process, including states for character creation, authentication, and game entry with state transition management."
+  },
+  "/src/include/affect/Affect.hh": {
+    "loc": 181,
+    "category": "affect_system",
+    "summary": "Defines the Affect class and related structures for status effects, including list management, comparators, and accessors for characters, objects, and rooms."
+  },
+  "/src/include/affect/affect_list.hh": {
+    "loc": 25,
+    "category": "affect_system",
+    "summary": "Declares additional internal list operations for affects, including adding, removing, copying, deduplicating, and sorting affects within affect containers."
+  },
+  "/src/include/affect/Type.hh": {
+    "loc": 145,
+    "category": "affect_system",
+    "summary": "Declares the affect::type enum class, listing all possible affect types such as buffs, debuffs, weapon flags, and object prefixes/suffixes with type-safe enumeration."
+  },
+  "/src/include/affect/affect_int.hh": {
+    "loc": 22,
+    "category": "affect_system",
+    "summary": "Declares internal functions for manipulating lists of Affect objects, intended for internal use within affect modules with implementation details hidden from external callers."
+  },
+  "/src/include/gem/gem.hh": {
+    "loc": 51,
+    "category": "object_system",
+    "summary": "Defines the gem enhancement system for equipment customization, including socket creation, gem insertion/removal mechanics, gem types with different bonuses, and quality-based enhancement calculations."
+  },
+  "/src/JSON/cJSON.cc": {
+    "loc": 54,
+    "category": "infrastructure",
+    "summary": "Implements wrapper functions around the cJSON library, providing high-level convenience methods for file loading/saving and structured data serialization/deserialization operations used by the game's configuration system."
+  },
+  "/src/deps/cJSON/cJSON.h": {
+    "loc": 155,
+    "category": "infrastructure",
+    "summary": "Declares the cJSON library's interface, defining data structures for JSON representation and function prototypes for parsing, generating, and manipulating JSON data with minimal dependencies."
+  },
+  "/src/deps/cJSON/cJSON.c": {
+    "loc": 765,
+    "category": "infrastructure",
+    "summary": "Implements the cJSON library core functionality, providing comprehensive JSON parsing, manipulation, and generation capabilities with memory management, error handling, and data conversion facilities."
+  },
+  "/src/event/Dispatcher.cc": {
+    "loc": 48,
+    "category": "game_mechanics",
+    "summary": "Implements the event dispatching system, managing event publication to subscribed handlers with careful iteration to handle subscription modifications during event processing."
+  },
+  "/src/worldmap/Region.cc": {
+    "loc": 157,
+    "category": "world_system",
+    "summary": "Implements geographical region management with boundary detection, point-in-polygon testing, region property management, and named region lookup for defining distinct areas within the game world."
+  },
+  "/src/worldmap/Coordinate.cc": {
+    "loc": 18,
+    "category": "world_system",
+    "summary": "Implements coordinate system operations including distance calculations, translations, vector mathematics, path calculations, and coordinate normalization for the world map system."
+  },
+  "/src/worldmap/Worldmap.cc": {
+    "loc": 108,
+    "category": null,
+    "summary": "Implements a visual world map system with color-coded terrain representation, mapping coordinates to sector types."
+  },
+  "/src/conn/ReadMOTDState.cc": {
+    "loc": 24,
+    "category": null,
+    "summary": "Implements regular message of the day display and transition to gameplay for normal players."
+  },
+  "/src/conn/GetRaceState.cc": {
+    "loc": 66,
+    "category": null,
+    "summary": "Handles race selection during character creation."
+  },
+  "/src/conn/GetAlignmentState.cc": {
+    "loc": 81,
+    "category": null,
+    "summary": "Handles alignment selection during character creation."
+  },
+  "/src/conn/PlayingState.cc": {
+    "loc": 15,
+    "category": null,
+    "summary": "Implements active gameplay state handling by passing commands to the alias system. Final state in connection flow."
+  },
+  "/src/conn/State.cc": {
+    "loc": 27,
+    "category": "constants_json",
+    "summary": "Implements state machine initialization with static instances of all connection states, providing centralized access to the connection state system."
+  },
+  "/src/conn/CopyoverRecoverState.cc": {
+    "loc": 12,
+    "category": null,
+    "summary": "Handles reconnection after server restart (copyover)."
+  },
+  "/src/conn/ReadNewMOTDState.cc": {
+    "loc": 171,
+    "category": "character_creation",
+    "summary": "Implements comprehensive new player welcome sequence including class selection, race selection, skill selection, MOTD display, and new character setup."
+  },
+  "/src/conn/GetSexState.cc": {
+    "loc": 46,
+    "category": null,
+    "summary": "Handles gender selection during character creation."
+  },
+  "/src/conn/GetGuildState.cc": {
+    "loc": 52,
+    "category": null,
+    "summary": "Handles guild selection during character creation."
+  },
+  "/src/conn/GetWeaponState.cc": {
+    "loc": 32,
+    "category": null,
+    "summary": "Handles starting weapon selection during character creation."
+  },
+  "/src/conn/GetOldPassState.cc": {
+    "loc": 168,
+    "category": null,
+    "summary": "Handles password verification for existing characters."
+  },
+  "/src/conn/GetDeityState.cc": {
+    "loc": 57,
+    "category": null,
+    "summary": "Handles deity selection during character creation."
+  },
+  "/src/conn/BreakConnectState.cc": {
+    "loc": 63,
+    "category": "game_attributes",
+    "summary": "Implements the break connection state handler, including reconnect attempts and input handling."
+  },
+  "/src/conn/GetNameState.cc": {
+    "loc": 225,
+    "category": null,
+    "summary": "Handles character name input, validating against naming rules and existing players."
+  },
+  "/src/conn/ReadIMOTDState.cc": {
+    "loc": 20,
+    "category": null,
+    "summary": "Implements immortal message of the day display and transition to gameplay for immortal players."
+  },
+  "/src/conn/ConfirmNewNameState.cc": {
+    "loc": 46,
+    "category": null,
+    "summary": "Implements name confirmation during character creation."
+  },
+  "/src/conn/ClosedState.cc": {
+    "loc": 13,
+    "category": null,
+    "summary": "Implements the closed connection state handler, logging unexpected input as bugs."
+  },
+  "/src/conn/ConfirmNewPassState.cc": {
+    "loc": 55,
+    "category": null,
+    "summary": "Implements password confirmation for new character creation."
+  },
+  "/src/conn/RollStatsState.cc": {
+    "loc": 62,
+    "category": "character_creation",
+    "summary": "Implements character attribute generation system including stat rolling, race/class modifiers, rerolling limits, validation against min/max values, and final stat distribution."
+  },
+  "/src/conn/GetNewPassState.cc": {
+    "loc": 35,
+    "category": null,
+    "summary": "Handles new password creation for new characters."
+  },
+  "/src/conn/GetMudExpState.cc": {
+    "loc": 59,
+    "category": null,
+    "summary": "Handles MUD experience questioning during character creation."
+  },
+  "/src/affect/affect_room.cc": {
+    "loc": 150,
+    "category": "affect_system",
+    "summary": "Implements room-specific affect operations for area-based effects."
+  },
+  "/src/affect/affect_cache_array.cc": {
+    "loc": 83,
+    "category": "affect_system",
+    "summary": "Implements caching mechanisms for affect lookups and updates."
+  },
+  "/src/affect/affect_table.cc": {
+    "loc": 232,
+    "category": "affect_system",
+    "summary": "Implements lookup tables and type conversions for the affect system."
+  },
+  "/src/affect/affect_char.cc": {
+    "loc": 373,
+    "category": "affect_system",
+    "summary": "Implements character-specific affect operations including adding, removing, and modifying affects."
+  },
+  "/src/affect/affect_list.cc": {
+    "loc": 156,
+    "category": "affect_system",
+    "summary": "Implements list management operations for affects including add, remove, and deduplication."
+  },
+  "/src/affect/affect_obj.cc": {
+    "loc": 156,
+    "category": "affect_system",
+    "summary": "Implements object-specific affect operations for applying and managing status effects on objects."
+  },
+  "/src/affect/affect.cc": {
+    "loc": 400,
+    "category": "affect_system",
+    "summary": "Implements reusable callback functions, comparators, and core affect operations."
+  },
+  "/src/gem/gem.cc": {
+    "loc": 199,
+    "category": "object_system",
+    "summary": "Implements the gem socketable enhancement system allowing players to customize equipment with gems providing various bonuses, including socket creation, gem insertion/removal, and stat/ability modifications."
+  }
+}

@@ -1,1 +1,0 @@
-- 2025-06-01: Added summary_headers_batch_affect.md for src/include/affect/ header files. Updated files_old.md and files_docs.md accordingly.

@@ -147,6 +147,8 @@ async def get_entity_tool(
     elif params.signature:
         result = await session.execute(
             select(Entity).where(Entity.signature == params.signature)
+            .order_by(Entity.doc_quality.desc(), Entity.fan_in.desc())
+            .limit(1)
         )
         entity = result.scalar_one_or_none()
     else:
@@ -154,6 +156,17 @@ async def get_entity_tool(
 
     if not entity:
         raise ValueError("Entity not found")
+
+    # Deserialize JSON fields that may come back as strings from the DB
+    import json
+
+    def _parse_json(val):
+        if isinstance(val, str):
+            try:
+                return json.loads(val)
+            except (json.JSONDecodeError, TypeError):
+                return None
+        return val
 
     # Build EntityDetail
     detail = EntityDetail(
@@ -180,12 +193,12 @@ async def get_entity_tool(
         is_entry_point=entity.is_entry_point,
         brief=entity.brief,
         details=entity.details,
-        params=entity.params,
+        params=_parse_json(entity.params),
         returns=entity.returns,
         rationale=entity.rationale,
-        usages=entity.usages,
+        usages=_parse_json(entity.usages),
         notes=entity.notes,
-        side_effect_markers=entity.side_effect_markers,
+        side_effect_markers=_parse_json(entity.side_effect_markers),
         neighbors=None,  # TODO: implement if include_neighbors=true
         provenance="doxygen_extracted" if entity.doc_state == "extracted_summary" else "llm_generated",
     )

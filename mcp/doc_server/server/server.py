@@ -129,7 +129,7 @@ async def lifespan(app: FastMCP):
 # Create FastMCP app
 mcp = FastMCP(
     "Legacy Documentation Server",
-    dependencies=["networkx", "sqlmodel", "pgvector"],
+    lifespan=lifespan,
 )
 
 
@@ -502,10 +502,8 @@ async def get_related_files(file_path: str, limit: int = 50) -> dict[str, Any]:
 
 def main():
     """Main entry point."""
-    # Use lifespan context for initialization
     mcp.run(
         transport="stdio",
-        lifespan=lifespan,
     )
 
 

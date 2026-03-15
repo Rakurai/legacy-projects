@@ -130,7 +130,7 @@ async def _execute_hybrid_query(
             {filter_clause}
         ),
         semantic AS (
-            SELECT entity_id, 1 - (embedding <=> :embedding::vector) AS score
+            SELECT entity_id, 1 - (embedding <=> CAST(:embedding AS vector)) AS score
             FROM entities
             WHERE embedding IS NOT NULL
             {filter_clause}
@@ -157,9 +157,12 @@ async def _execute_hybrid_query(
         LIMIT :limit
     """)
 
+    # Convert embedding list to pgvector string format
+    embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+
     result = await session.execute(
         hybrid_sql,
-        {"query": query, "embedding": query_embedding, "limit": limit}
+        {"query": query, "embedding": embedding_str, "limit": limit}
     )
 
     rows = result.fetchall()

@@ -171,14 +171,17 @@ async def _resolve_by_signature(
     if kind:
         stmt = stmt.where(Entity.kind == kind)
 
-    result = await session.execute(stmt)
-    entity = result.scalar_one_or_none()
+    stmt = stmt.order_by(Entity.doc_quality.desc(), Entity.fan_in.desc()).limit(20)
 
-    if entity:
+    result = await session.execute(stmt)
+    entities = list(result.scalars().all())
+
+    if entities:
+        status: ResolutionStatus = "exact" if len(entities) == 1 else "ambiguous"
         return ResolutionResult(
-            status="exact",
+            status=status,
             match_type="signature_exact",
-            candidates=[entity],
+            candidates=entities,
             resolved_from=signature,
         )
 
@@ -312,7 +315,7 @@ async def _resolve_by_semantic(
         kind_filter = f"AND kind = '{kind}'" if kind else ""
 
         semantic_sql = text(f"""
-            SELECT *, 1 - (embedding <=> :embedding::vector) AS score
+            SELECT *, 1 - (embedding <=> CAST(:embedding AS vector)) AS score
             FROM entities
             WHERE embedding IS NOT NULL
             {kind_filter}
@@ -320,9 +323,12 @@ async def _resolve_by_semantic(
             LIMIT :limit
         """)
 
+        # Convert embedding list to pgvector string format
+        embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
+
         result = await session.execute(
             semantic_sql,
-            {"embedding": query_embedding, "limit": limit}
+            {"embedding": embedding_str, "limit": limit}
         )
 
         rows = result.fetchall()

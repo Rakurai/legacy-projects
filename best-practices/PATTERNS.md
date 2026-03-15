@@ -1,0 +1,150 @@
+# PATTERNS.md — Universal Development Patterns
+
+Applies to all domains (backend, frontend, workers, CLI).
+Voice: imperative, rule-based. Audience: expert coding agent.
+Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without production hardening.
+
+---
+
+## Core Philosophy
+
+* **Clean break**: treat the codebase as greenfield. No legacy references, no migration bridges, no temporary shims.
+* **Fail-fast**: startup validates configuration and dependencies; if invalid, **crash immediately** with a helpful error.
+* **Schema-first**: define strict typed contracts before logic; enforce at the edges (schemas/types).
+* **Program to contract**: trust validated types; **no defensive programming** against inputs already guaranteed by the contract.
+* **Composition over inheritance**: prefer composition; keep inheritance shallow and local if used.
+* **Minimal, additive documentation**: comments/docstrings must add non-obvious value; do not restate names or signatures.
+* **No fallbacks**: the word and practice are **forbidden**. If something is required, it must be present or the program fails usefully.
+* **No in-code history**: no versioning, change logs, references to changed/removed code, etc. in the source code.  History is the role of the version control system.
+
+---
+
+## Type Safety as Contract
+
+**Principle**: Types are executable contracts.
+
+**Rules**
+
+* Enforce strict typing everywhere (Python: mypy `--strict`; TS: `strict`).
+* No `Any` in production paths. If unavoidable, annotate with `Any` and add `# TODO refine type`.
+* Narrow types aggressively (Literal/union/enums). Prefer Protocol/TypedDict over weakening types.
+* Public interfaces must be fully typed; return `Optional[T]` **only** when `None` is intentional.
+
+---
+
+## Dependency Injection
+
+**Principle**: Explicit, testable dependencies.
+
+**Rules**
+
+* Declare dependencies in constructors or framework DI; no hidden globals or dynamic imports.
+* Make dependencies mockable. Do not create them inside business logic.
+
+---
+
+## Error Handling
+
+**Principle**: Handle only where you own the responsibility; otherwise propagate.
+
+**Rules**
+
+* Never mask or downgrade errors; no silent catches; no broad `except Exception` without immediate re-raise.
+* If an error cannot be meaningfully handled at the current layer, **let it propagate**. Crashing during PoC is informative.
+* Wrap external/library exceptions into domain errors **only** when adding actionable context, then re-raise.
+
+---
+
+## Minimal, Consistent Logging
+
+**Principle**: Structured context; signal, not noise.
+
+**Rules**
+
+* Log **start**, **error**, **completion** of meaningful operations with contextual fields (resource IDs, operation names).
+* Do not duplicate logs and errors; prefer one precise log at the owner boundary.
+* Never use `print`. Use the project’s logger (see domain docs for specifics).
+
+---
+
+## Interfaces & Resource Design
+
+**Principle**: Predictable, resource-oriented boundaries.
+
+**Rules**
+
+* Use resource-based URLs and appropriate verbs (GET/POST/PUT/PATCH/DELETE) in HTTP services.
+* Adhere to the project’s interface contract doc (see INTERFACES.md).
+* Do not invent ad-hoc JSON shapes; all payloads must be schema-first and typed.
+
+---
+
+## Long-Running Work
+
+**Principle**: Non-blocking orchestration with explicit status (when applicable to the project).
+
+**Rules**
+
+* If work cannot complete within a request boundary, return a **job handle** and expose a status query.
+* Do not block threads or event loops waiting for long jobs.
+* Keep status schemas typed and minimal (state, updated_at, optional progress/result/error).
+
+---
+
+## Resource & Process Hygiene
+
+**Principle**: Leave the system clean on all paths.
+
+**Rules**
+
+* Validate config and external resources at startup; import required packages at module scope so missing deps fail early.
+* Ensure cleanup of files/sockets/subprocesses on success, failure, and cancellation paths.
+
+---
+
+## Testing Principles (PoC Scope)
+
+**Principle**: Prove the happy path works; avoid test whirlpools.
+
+**Rules**
+
+* Write **happy-path** tests that confirm contracts and core flows execute successfully.
+* Do not construct failure scenarios or exhaustive edge-case matrices in PoC.
+* Prefer a few high-signal integration/contract tests over broad unit coverage.
+* If tests or code fail, fix the **implementation**, not by trivializing tests.
+
+---
+
+## Documentation & Code Organization
+
+**Principle**: Small, cohesive units; clarity first.
+
+**Rules**
+
+* One functional unit per file (≤ ~200 LOC) unless a tiny, cohesive family fits better together.
+* Names must carry intent; comments/docstrings should explain **why**, not **what** is already obvious.
+* Keep domain specifics (logging impl, framework mechanics) in domain docs; keep universal rules here.
+
+---
+
+## Prohibited Practices
+
+* “Fallback” anything (terminology or behavior).
+* Defensive checks against already-validated inputs.
+* Silent failure, log-and-continue, or catching without re-raising.
+* Legacy/migration/temporary bridging code.
+
+---
+
+## Quick Checklist
+
+* [ ] Greenfield mindset: no legacy/migration code.
+* [ ] Strict typing; no `Any` (or TODO-marked if unavoidable).
+* [ ] DI explicit; no hidden globals/dynamic imports.
+* [ ] Fail-fast on config/deps; helpful crash messages.
+* [ ] Errors handled at owner layer only; otherwise propagate.
+* [ ] Structured logs for start/error/complete; no `print`.
+* [ ] Resource-based interfaces; schema-first; **no pagination**.
+* [ ] Long-running work uses explicit job handles (only if applicable).
+* [ ] Happy-path tests only; few high-signal checks.
+* [ ] Comments/docstrings add non-obvious value only.

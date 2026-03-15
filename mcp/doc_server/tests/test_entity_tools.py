@@ -1,41 +1,34 @@
 """
 Integration tests for entity lookup tools.
 
-Tests actual DB execution of:
-- resolve_entity_tool
-- get_entity_tool (by id, by signature, with code, with neighbors)
-- get_source_code_tool
-- list_file_entities_tool
-- get_file_summary_tool
+Tests actual DB execution via mock_ctx of:
+- resolve_entity
+- get_entity (by id, by signature, with code, with neighbors)
+- get_source_code
+- list_file_entities
+- get_file_summary
 """
 
 import pytest
-import networkx as nx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.db_models import Entity, Edge
 from server.errors import EntityNotFoundError
 from server.tools.entity import (
-    ResolveEntityParams,
-    GetEntityParams,
-    GetSourceCodeParams,
-    ListFileEntitiesParams,
-    GetFileSummaryParams,
-    resolve_entity_tool,
-    get_entity_tool,
-    get_source_code_tool,
-    list_file_entities_tool,
-    get_file_summary_tool,
+    resolve_entity,
+    get_entity,
+    get_source_code,
+    list_file_entities,
+    get_file_summary,
 )
 
 
-# ---------- resolve_entity_tool ----------
+# ---------- resolve_entity ----------
 
 @pytest.mark.asyncio
-async def test_resolve_entity_exact_name(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_entity_exact_name(mock_ctx, sample_entities):
     """Tool returns exact match for unambiguous entity name."""
-    params = ResolveEntityParams(query="do_kill")
-    result = await resolve_entity_tool(test_session, params, embedding_client=None)
+    result = await resolve_entity(mock_ctx, query="do_kill")
 
     assert result.resolution_status == "exact"
     assert result.match_type == "name_exact"
@@ -44,33 +37,30 @@ async def test_resolve_entity_exact_name(test_session: AsyncSession, sample_enti
 
 
 @pytest.mark.asyncio
-async def test_resolve_entity_with_kind_filter(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_entity_with_kind_filter(mock_ctx, sample_entities):
     """Tool respects kind filter."""
-    params = ResolveEntityParams(query="Character", kind="class")
-    result = await resolve_entity_tool(test_session, params, embedding_client=None)
+    result = await resolve_entity(mock_ctx, query="Character", kind="class")
 
     assert result.resolution_status == "exact"
     assert all(c.kind == "class" for c in result.candidates)
 
 
 @pytest.mark.asyncio
-async def test_resolve_entity_not_found(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_entity_not_found(mock_ctx, sample_entities):
     """Tool returns not_found for unknown entities."""
-    params = ResolveEntityParams(query="zzz_unknown_xyz_42")
-    result = await resolve_entity_tool(test_session, params, embedding_client=None)
+    result = await resolve_entity(mock_ctx, query="zzz_unknown_xyz_42")
 
     assert result.resolution_status == "not_found"
     assert result.resolution_candidates == 0
 
 
-# ---------- get_entity_tool ----------
+# ---------- get_entity ----------
 
 @pytest.mark.asyncio
-async def test_get_entity_by_id(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_get_entity_by_id(mock_ctx, sample_entities):
     """Fetch entity by entity_id returns full detail."""
     eid = sample_entities[0].entity_id
-    params = GetEntityParams(entity_id=eid)
-    detail = await get_entity_tool(test_session, params)
+    detail = await get_entity(mock_ctx, entity_id=eid)
 
     assert detail.entity_id == eid
     assert detail.name == "damage"
@@ -80,38 +70,30 @@ async def test_get_entity_by_id(test_session: AsyncSession, sample_entities: lis
 
 
 @pytest.mark.asyncio
-async def test_get_entity_by_signature(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_get_entity_by_signature(mock_ctx, sample_entities):
     """Fetch entity by signature resolves correctly."""
-    params = GetEntityParams(
-        signature="void damage(Character *ch, Character *victim, int dam)"
+    detail = await get_entity(
+        mock_ctx,
+        signature="void damage(Character *ch, Character *victim, int dam)",
     )
-    detail = await get_entity_tool(test_session, params)
-
     assert detail.name == "damage"
 
 
 @pytest.mark.asyncio
-async def test_get_entity_with_code(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_get_entity_with_code(mock_ctx, sample_entities):
     """include_code=True returns source_text."""
     eid = sample_entities[0].entity_id
-    params = GetEntityParams(entity_id=eid, include_code=True)
-    detail = await get_entity_tool(test_session, params)
+    detail = await get_entity(mock_ctx, entity_id=eid, include_code=True)
 
     assert detail.source_text is not None
     assert "damage" in detail.source_text
 
 
 @pytest.mark.asyncio
-async def test_get_entity_with_neighbors(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_get_entity_with_neighbors(mock_ctx, sample_entities, sample_edges):
     """include_neighbors=True populates neighbor list from graph."""
     eid = sample_entities[0].entity_id  # damage
-    params = GetEntityParams(entity_id=eid, include_neighbors=True)
-    detail = await get_entity_tool(test_session, params, graph=sample_graph)
+    detail = await get_entity(mock_ctx, entity_id=eid, include_neighbors=True)
 
     assert detail.neighbors is not None
     assert len(detail.neighbors) >= 1
@@ -121,76 +103,67 @@ async def test_get_entity_with_neighbors(
 
 
 @pytest.mark.asyncio
-async def test_get_entity_not_found(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_get_entity_not_found(mock_ctx, sample_entities):
     """Missing entity raises EntityNotFoundError."""
-    params = GetEntityParams(entity_id="nonexistent_id_xyz")
     with pytest.raises(EntityNotFoundError):
-        await get_entity_tool(test_session, params)
+        await get_entity(mock_ctx, entity_id="nonexistent_id_xyz")
 
 
-# ---------- get_source_code_tool ----------
+# ---------- get_source_code ----------
 
 @pytest.mark.asyncio
-async def test_get_source_code(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_get_source_code(mock_ctx, sample_entities):
     """Returns source text and metadata."""
     eid = sample_entities[0].entity_id
-    params = GetSourceCodeParams(entity_id=eid)
-    result = await get_source_code_tool(test_session, params)
+    result = await get_source_code(mock_ctx, entity_id=eid)
 
-    assert result["entity_id"] == eid
-    assert result["source_text"] is not None
-    assert result["file_path"] == "src/fight.cc"
-    assert result["start_line"] == 100
+    assert result.entity_id == eid
+    assert result.source_text is not None
+    assert result.file_path == "src/fight.cc"
+    assert result.start_line == 100
 
 
 @pytest.mark.asyncio
-async def test_get_source_code_not_found(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_get_source_code_not_found(mock_ctx, sample_entities):
     """Missing entity raises EntityNotFoundError."""
-    params = GetSourceCodeParams(entity_id="nonexistent_id_xyz")
     with pytest.raises(EntityNotFoundError):
-        await get_source_code_tool(test_session, params)
+        await get_source_code(mock_ctx, entity_id="nonexistent_id_xyz")
 
 
-# ---------- list_file_entities_tool ----------
+# ---------- list_file_entities ----------
 
 @pytest.mark.asyncio
-async def test_list_file_entities(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_list_file_entities(mock_ctx, sample_entities):
     """Lists all entities in a file ordered by start line."""
-    params = ListFileEntitiesParams(file_path="src/fight.cc")
-    result = await list_file_entities_tool(test_session, params)
+    result = await list_file_entities(mock_ctx, file_path="src/fight.cc")
 
-    assert result["file_path"] == "src/fight.cc"
-    entities = result["entities"]
+    assert result.file_path == "src/fight.cc"
     # fight.cc has: max_damage (line 10), armor_absorb (line 50), damage (line 100), file entity
-    assert len(entities) >= 3
+    assert len(result.entities) >= 3
 
 
 @pytest.mark.asyncio
-async def test_list_file_entities_with_kind_filter(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_list_file_entities_with_kind_filter(mock_ctx, sample_entities):
     """Kind filter restricts results."""
-    params = ListFileEntitiesParams(file_path="src/fight.cc", kind="function")
-    result = await list_file_entities_tool(test_session, params)
+    result = await list_file_entities(mock_ctx, file_path="src/fight.cc", kind="function")
 
-    entities = result["entities"]
-    assert all(e.kind == "function" for e in entities)
+    assert all(e.kind == "function" for e in result.entities)
 
 
 @pytest.mark.asyncio
-async def test_list_file_entities_empty(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_list_file_entities_empty(mock_ctx, sample_entities):
     """Non-existent file returns empty list."""
-    params = ListFileEntitiesParams(file_path="src/nonexistent.cc")
-    result = await list_file_entities_tool(test_session, params)
+    result = await list_file_entities(mock_ctx, file_path="src/nonexistent.cc")
 
-    assert result["entities"] == []
+    assert result.entities == []
 
 
-# ---------- get_file_summary_tool ----------
+# ---------- get_file_summary ----------
 
 @pytest.mark.asyncio
-async def test_get_file_summary(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_get_file_summary(mock_ctx, sample_entities):
     """Returns aggregated file stats."""
-    params = GetFileSummaryParams(file_path="src/fight.cc")
-    result = await get_file_summary_tool(test_session, params)
+    result = await get_file_summary(mock_ctx, file_path="src/fight.cc")
 
     assert result.file_path == "src/fight.cc"
     assert result.entity_count >= 3
@@ -200,8 +173,7 @@ async def test_get_file_summary(test_session: AsyncSession, sample_entities: lis
 
 
 @pytest.mark.asyncio
-async def test_get_file_summary_not_found(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_get_file_summary_not_found(mock_ctx, sample_entities):
     """Non-existent file raises EntityNotFoundError."""
-    params = GetFileSummaryParams(file_path="src/nonexistent.cc")
     with pytest.raises(EntityNotFoundError):
-        await get_file_summary_tool(test_session, params)
+        await get_file_summary(mock_ctx, file_path="src/nonexistent.cc")

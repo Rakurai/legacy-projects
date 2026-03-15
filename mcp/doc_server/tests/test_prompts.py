@@ -4,6 +4,8 @@ Unit tests for MCP prompt templates.
 Tests that prompt generators return well-formed conversation messages.
 """
 
+import pytest
+
 from server.prompts import (
     explain_entity_prompt,
     analyze_behavior_prompt,
@@ -12,42 +14,18 @@ from server.prompts import (
 )
 
 
-def test_explain_entity_prompt():
-    """Returns user+assistant messages mentioning the entity."""
-    msgs = explain_entity_prompt("damage")
+@pytest.mark.parametrize("factory,args,expected_mentions", [
+    (explain_entity_prompt, ("damage",), ["damage"]),
+    (analyze_behavior_prompt, ("do_kill", 5), ["do_kill"]),
+    (compare_entry_points_prompt, (["do_look", "do_examine"],), ["do_look", "do_examine"]),
+    (explore_capability_prompt, ("combat",), ["combat"]),
+], ids=["explain_entity", "analyze_behavior", "compare_entry_points", "explore_capability"])
+def test_prompt_structure(factory, args, expected_mentions):
+    """All prompt generators return user+assistant messages mentioning key terms."""
+    msgs = factory(*args)
 
     assert len(msgs) == 2
     assert msgs[0]["role"] == "user"
     assert msgs[1]["role"] == "assistant"
-    assert "damage" in msgs[0]["content"]
-    assert "damage" in msgs[1]["content"]
-
-
-def test_analyze_behavior_prompt():
-    """Returns messages for behavioral analysis workflow."""
-    msgs = analyze_behavior_prompt("do_kill", max_depth=5)
-
-    assert len(msgs) == 2
-    assert msgs[0]["role"] == "user"
-    assert msgs[1]["role"] == "assistant"
-    assert "do_kill" in msgs[0]["content"]
-
-
-def test_compare_entry_points_prompt():
-    """Returns messages mentioning all entry points."""
-    msgs = compare_entry_points_prompt(["do_look", "do_examine"])
-
-    assert len(msgs) == 2
-    assert msgs[0]["role"] == "user"
-    assert "do_look" in msgs[0]["content"]
-    assert "do_examine" in msgs[0]["content"]
-
-
-def test_explore_capability_prompt():
-    """Returns messages for capability exploration."""
-    msgs = explore_capability_prompt("combat")
-
-    assert len(msgs) == 2
-    assert msgs[0]["role"] == "user"
-    assert msgs[1]["role"] == "assistant"
-    assert "combat" in msgs[0]["content"]
+    for term in expected_mentions:
+        assert term in msgs[0]["content"]

@@ -25,7 +25,7 @@ class Entity(SQLModel, table=True):
     member_id: str | None = Field(default=None, description="Member hex hash (NULL for compounds)")
 
     # Identity (user-facing)
-    name: str | None = Field(default=None, description="Bare name: do_look, race_type, etc. (NULL for files/dirs)")
+    name: str = Field(default="", description="Bare name: do_look, race_type, etc. (empty for files/dirs)")
     signature: str = Field(description="Full signature: void do_look(Character *ch, String argument) (not unique, indexed)")
     kind: str = Field(description="function, variable, class, struct, file, enum, define, typedef, namespace, dir, group")
     entity_type: str = Field(description="compound or member")
@@ -44,11 +44,11 @@ class Entity(SQLModel, table=True):
     # Documentation
     brief: str | None = Field(default=None, description="One-line summary")
     details: str | None = Field(default=None, description="Detailed documentation")
-    params: str | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {param_name: description}")
+    params: dict[str, str] | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {param_name: description}")
     returns: str | None = Field(default=None, description="Return value description")
     notes: str | None = Field(default=None, description="Implementation notes")
     rationale: str | None = Field(default=None, description="Design rationale")
-    usages: str | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {caller_key: usage_description}")
+    usages: dict[str, str] | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {caller_key: usage_description}")
     doc_state: str | None = Field(default=None, description="extracted_summary, refined_summary, etc.")
     doc_quality: str | None = Field(default=None, description="Derived: high, medium, low")
 
@@ -60,7 +60,7 @@ class Entity(SQLModel, table=True):
     fan_in: int = Field(default=0, ge=0, description="Incoming CALLS edges")
     fan_out: int = Field(default=0, ge=0, description="Outgoing CALLS edges")
     is_bridge: bool = Field(default=False, description="Callers/callees span different capabilities")
-    side_effect_markers: str | None = Field(
+    side_effect_markers: dict[str, list[str]] | None = Field(
         default=None,
         sa_column=Column(JSONB),
         description="JSON: {messaging: [...], persistence: [...], state_mutation: [...], scheduling: [...]}"
@@ -146,7 +146,7 @@ class EntryPoint(SQLModel, table=True):
 
     entity_id: str = Field(primary_key=True, foreign_key="entities.entity_id")
     name: str = Field(description="do_kill, spell_fireball, spec_cast_cleric, etc.")
-    capabilities: list | None = Field(
+    capabilities: list[str] | None = Field(
         default=None,
         sa_column=Column(JSONB),
         description="List of capability names exercised"

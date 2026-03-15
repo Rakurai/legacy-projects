@@ -11,52 +11,154 @@ Scores are normalized and combined with weights:
 - Semantic: 0.6 weight
 - Keyword: 0.4 weight
 
-Degrades gracefully to keyword-only mode if embedding service unavailable.
+Degrades to keyword-only mode if embedding service unavailable.
+
+All queries use SQLAlchemy ORM — no raw SQL.
 """
 
+from sqlalchemy import func, literal, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text
+from sqlmodel import select
 from typing import Literal
 
 from server.db_models import Entity
-from server.models import SearchResult, EntitySummary, Provenance
-from server.resolver import entity_to_summary
+from server.models import SearchResult, Provenance
+from server.converters import entity_to_summary
 from server.logging_config import log
 
 
 SearchMode = Literal["hybrid", "semantic_only", "keyword_fallback"]
+
+# Scoring weights (matching spec)
+_EXACT_WEIGHT = 10.0
+_SEMANTIC_WEIGHT = 0.6
+_KEYWORD_WEIGHT = 0.4
+
+
+def _apply_filters(stmt, kind: str | None, capability: str | None, min_doc_quality: str | None):
+    """Apply optional filters to a SELECT statement."""
+    if kind:
+        stmt = stmt.where(Entity.kind == kind)
+    if capability:
+        stmt = stmt.where(Entity.capability == capability)
+    if min_doc_quality:
+        quality_order = {"high": 3, "medium": 2, "low": 1}
+        min_order = quality_order.get(min_doc_quality, 1)
+        if min_order == 3:
+            stmt = stmt.where(Entity.doc_quality == "high")
+        elif min_order == 2:
+            stmt = stmt.where(Entity.doc_quality.in_(["high", "medium"]))
+    return stmt
+
+
+def _provenance_for(entity: Entity) -> Provenance:
+    """Determine provenance label from entity doc_state."""
+    if entity.doc_state in ("refined_summary", "refined_usage", "generated_summary"):
+        return "llm_generated"
+    return "doxygen_extracted"
+
+
+async def _exact_match_ids(
+    session: AsyncSession,
+    query: str,
+    kind: str | None,
+    capability: str | None,
+    min_doc_quality: str | None,
+) -> set[str]:
+    """Find entity IDs with exact signature or name match."""
+    stmt = (
+        select(Entity.entity_id)
+        .where(or_(Entity.signature == query, Entity.name == query))
+    )
+    stmt = _apply_filters(stmt, kind, capability, min_doc_quality)
+    result = await session.execute(stmt)
+    return {row[0] for row in result.all()}
+
+
+async def _keyword_scores(
+    session: AsyncSession,
+    query: str,
+    kind: str | None,
+    capability: str | None,
+    min_doc_quality: str | None,
+    limit: int,
+) -> dict[str, float]:
+    """Get {entity_id: ts_rank score} for keyword matches."""
+    tsq = func.plainto_tsquery("english", query)
+    rank_expr = func.ts_rank(Entity.search_vector, tsq).label("score")
+
+    stmt = (
+        select(Entity.entity_id, rank_expr)
+        .where(Entity.search_vector.op("@@")(tsq))
+    )
+    stmt = _apply_filters(stmt, kind, capability, min_doc_quality)
+    stmt = stmt.order_by(rank_expr.desc()).limit(limit)
+
+    result = await session.execute(stmt)
+    return {row.entity_id: float(row.score) for row in result.all()}
+
+
+async def _semantic_scores(
+    session: AsyncSession,
+    query_embedding: list[float],
+    kind: str | None,
+    capability: str | None,
+    min_doc_quality: str | None,
+    limit: int,
+) -> dict[str, float]:
+    """Get {entity_id: cosine_similarity score} for semantic matches."""
+    cosine_dist = Entity.embedding.cosine_distance(query_embedding)
+    score_expr = (literal(1) - cosine_dist).label("score")
+
+    stmt = (
+        select(Entity.entity_id, score_expr)
+        .where(Entity.embedding.isnot(None))
+    )
+    stmt = _apply_filters(stmt, kind, capability, min_doc_quality)
+    stmt = stmt.order_by(score_expr.desc()).limit(limit)
+
+    result = await session.execute(stmt)
+    return {row.entity_id: float(row.score) for row in result.all()}
+
+
+def _merge_scores(
+    exact_ids: set[str],
+    keyword_scores: dict[str, float],
+    semantic_scores: dict[str, float],
+    limit: int,
+) -> list[tuple[str, float]]:
+    """Merge scores from all strategies, return sorted (entity_id, combined_score) pairs."""
+    all_ids = exact_ids | keyword_scores.keys() | semantic_scores.keys()
+    scored: list[tuple[str, float]] = []
+
+    for eid in all_ids:
+        score = 0.0
+        if eid in exact_ids:
+            score += _EXACT_WEIGHT
+        if eid in semantic_scores:
+            score += semantic_scores[eid] * _SEMANTIC_WEIGHT
+        if eid in keyword_scores:
+            score += keyword_scores[eid] * _KEYWORD_WEIGHT
+        scored.append((eid, score))
+
+    scored.sort(key=lambda x: x[1], reverse=True)
+    return scored[:limit]
 
 
 async def hybrid_search(
     session: AsyncSession,
     query: str,
     embedding_client=None,
-    embedding_model: str = "text-embedding-3-large",
+    embedding_model: str = "",
     kind: str | None = None,
     capability: str | None = None,
     min_doc_quality: str | None = None,
     limit: int = 20,
 ) -> tuple[list[SearchResult], SearchMode]:
-    """
-    Perform hybrid search combining semantic, keyword, and exact matching.
-
-    Args:
-        session: Database session
-        query: Search query
-        embedding_client: Optional OpenAI client for embeddings
-        embedding_model: Embedding model name
-        kind: Optional kind filter
-        capability: Optional capability filter
-        min_doc_quality: Optional minimum doc quality (high, medium, low)
-        limit: Maximum results
-
-    Returns:
-        Tuple of (search results, search mode used)
-    """
+    """Perform hybrid search combining semantic + keyword + exact matching."""
     log.info("Hybrid search", query=query, kind=kind, capability=capability)
 
-    # Get query embedding (if available)
-    query_embedding = None
+    query_embedding: list[float] | None = None
     search_mode: SearchMode = "hybrid"
 
     if embedding_client:
@@ -64,205 +166,53 @@ async def hybrid_search(
             response = await embedding_client.embeddings.create(
                 model=embedding_model,
                 input=query,
-                encoding_format="float"
+                encoding_format="float",
             )
             query_embedding = response.data[0].embedding
-            log.debug("Query embedding generated", dimensions=len(query_embedding))
         except Exception as e:
             log.warning("Embedding generation failed; falling back to keyword-only", error=str(e))
             search_mode = "keyword_fallback"
     else:
-        log.info("Embedding client not available; using keyword-only mode")
         search_mode = "keyword_fallback"
 
-    # Build parameterized filters
-    filter_conditions: list[str] = []
-    filter_params: dict[str, str] = {}
-    if kind:
-        filter_conditions.append("kind = :filter_kind")
-        filter_params["filter_kind"] = kind
-    if capability:
-        filter_conditions.append("capability = :filter_cap")
-        filter_params["filter_cap"] = capability
-    if min_doc_quality:
-        quality_order = {"high": 3, "medium": 2, "low": 1}
-        min_order = quality_order.get(min_doc_quality, 1)
-        if min_order == 3:
-            filter_conditions.append("doc_quality = 'high'")
-        elif min_order == 2:
-            filter_conditions.append("doc_quality IN ('high', 'medium')")
-        # low includes all
+    # Run sub-queries
+    exact_ids = await _exact_match_ids(session, query, kind, capability, min_doc_quality)
+    keyword_sc = await _keyword_scores(session, query, kind, capability, min_doc_quality, limit=100)
 
-    filter_clause = (" AND " + " AND ".join(filter_conditions)) if filter_conditions else ""
-
-    # Execute hybrid query
+    semantic_sc: dict[str, float] = {}
     if search_mode == "hybrid" and query_embedding:
-        results = await _execute_hybrid_query(
-            session, query, query_embedding, filter_clause, filter_params, limit
-        )
-    else:
-        results = await _execute_keyword_query(
-            session, query, filter_clause, filter_params, limit
-        )
+        semantic_sc = await _semantic_scores(session, query_embedding, kind, capability, min_doc_quality, limit=100)
+
+    # Merge scores
+    ranked = _merge_scores(exact_ids, keyword_sc, semantic_sc, limit)
+
+    if not ranked:
+        log.info("Search complete", result_count=0, search_mode=search_mode)
+        return [], search_mode
+
+    # Fetch full entities for top results in one query
+    top_ids = [eid for eid, _ in ranked]
+    result = await session.execute(
+        select(Entity).where(Entity.entity_id.in_(top_ids))
+    )
+    entity_map = {e.entity_id: e for e in result.scalars().all()}
+
+    # Normalize max score for 0-1 range
+    max_score = ranked[0][1] if ranked else 1.0
+    normalizer = max_score if max_score > 0 else 1.0
+
+    results: list[SearchResult] = []
+    for eid, score in ranked:
+        entity = entity_map.get(eid)
+        if not entity:
+            continue
+        results.append(SearchResult(
+            result_type="entity",
+            score=min(score / normalizer, 1.0),
+            search_mode=search_mode,
+            provenance=_provenance_for(entity),
+            entity_summary=entity_to_summary(entity),
+        ))
 
     log.info("Search complete", result_count=len(results), search_mode=search_mode)
-
     return results, search_mode
-
-
-async def _execute_hybrid_query(
-    session: AsyncSession,
-    query: str,
-    query_embedding: list[float],
-    filter_clause: str,
-    filter_params: dict[str, str],
-    limit: int,
-) -> list[SearchResult]:
-    """
-    Execute hybrid search query combining exact, semantic, and keyword.
-
-    Query structure:
-    - CTE for exact matches (signature or name)
-    - CTE for semantic matches (pgvector cosine)
-    - CTE for keyword matches (tsvector)
-    - JOIN and combine scores: exact*10 + semantic*0.6 + keyword*0.4
-
-    filter_clause and filter_params use bind parameters (no string interpolation).
-    """
-    hybrid_sql = text(f"""
-        WITH exact AS (
-            SELECT entity_id, 1.0 AS score
-            FROM entities
-            WHERE (signature = :query OR name = :query)
-            {filter_clause}
-        ),
-        semantic AS (
-            SELECT entity_id, 1 - (embedding <=> CAST(:embedding AS vector)) AS score
-            FROM entities
-            WHERE embedding IS NOT NULL
-            {filter_clause}
-            ORDER BY score DESC
-            LIMIT 100
-        ),
-        keyword AS (
-            SELECT entity_id, ts_rank(search_vector, plainto_tsquery('english', :query)) AS score
-            FROM entities
-            WHERE search_vector @@ plainto_tsquery('english', :query)
-            {filter_clause}
-            ORDER BY score DESC
-            LIMIT 100
-        )
-        SELECT
-            e.*,
-            COALESCE(ex.score, 0) * 10 + COALESCE(s.score, 0) * 0.6 + COALESCE(k.score, 0) * 0.4 AS combined_score
-        FROM entities e
-        LEFT JOIN exact ex USING (entity_id)
-        LEFT JOIN semantic s USING (entity_id)
-        LEFT JOIN keyword k USING (entity_id)
-        WHERE ex.entity_id IS NOT NULL OR s.entity_id IS NOT NULL OR k.entity_id IS NOT NULL
-        ORDER BY combined_score DESC
-        LIMIT :limit
-    """)
-
-    # Convert embedding list to pgvector string format
-    embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
-
-    result = await session.execute(
-        hybrid_sql,
-        {"query": query, "embedding": embedding_str, "limit": limit, **filter_params}
-    )
-
-    rows = result.fetchall()
-
-    # Convert to SearchResult objects
-    search_results = []
-    for row in rows:
-        entity_dict = {k: v for k, v in row._mapping.items() if k != "combined_score"}
-        entity = Entity(**entity_dict)
-        summary = entity_to_summary(entity)
-
-        # Determine provenance based on doc_state
-        provenance: Provenance = "doxygen_extracted"
-        if entity.doc_state in ("refined_summary", "refined_usage", "generated_summary"):
-            provenance = "llm_generated"
-
-        search_results.append(
-            SearchResult(
-                result_type="entity",
-                score=min(float(row._mapping["combined_score"]), 1.0),  # Normalize to 0-1
-                search_mode="hybrid",
-                provenance=provenance,
-                entity_summary=summary,
-            )
-        )
-
-    return search_results
-
-
-async def _execute_keyword_query(
-    session: AsyncSession,
-    query: str,
-    filter_clause: str,
-    filter_params: dict[str, str],
-    limit: int,
-) -> list[SearchResult]:
-    """
-    Execute keyword-only search (fallback when embeddings unavailable).
-
-    Uses PostgreSQL full-text search with exact match boost.
-    filter_clause and filter_params use bind parameters (no string interpolation).
-    """
-    keyword_sql = text(f"""
-        WITH exact AS (
-            SELECT entity_id, 1.0 AS score
-            FROM entities
-            WHERE (signature = :query OR name = :query)
-            {filter_clause}
-        ),
-        keyword AS (
-            SELECT entity_id, ts_rank(search_vector, plainto_tsquery('english', :query)) AS score
-            FROM entities
-            WHERE search_vector @@ plainto_tsquery('english', :query)
-            {filter_clause}
-            ORDER BY score DESC
-            LIMIT 100
-        )
-        SELECT
-            e.*,
-            COALESCE(ex.score, 0) * 10 + COALESCE(k.score, 0) AS combined_score
-        FROM entities e
-        LEFT JOIN exact ex USING (entity_id)
-        LEFT JOIN keyword k USING (entity_id)
-        WHERE ex.entity_id IS NOT NULL OR k.entity_id IS NOT NULL
-        ORDER BY combined_score DESC
-        LIMIT :limit
-    """)
-
-    result = await session.execute(
-        keyword_sql,
-        {"query": query, "limit": limit, **filter_params}
-    )
-
-    rows = result.fetchall()
-
-    search_results = []
-    for row in rows:
-        entity_dict = {k: v for k, v in row._mapping.items() if k != "combined_score"}
-        entity = Entity(**entity_dict)
-        summary = entity_to_summary(entity)
-
-        provenance: Provenance = "doxygen_extracted"
-        if entity.doc_state in ("refined_summary", "refined_usage", "generated_summary"):
-            provenance = "llm_generated"
-
-        search_results.append(
-            SearchResult(
-                result_type="entity",
-                score=min(float(row._mapping["combined_score"]) / 10.0, 1.0),  # Normalize
-                search_mode="keyword_fallback",
-                provenance=provenance,
-                entity_summary=summary,
-            )
-        )
-
-    return search_results

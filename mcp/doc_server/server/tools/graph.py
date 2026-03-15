@@ -1,81 +1,31 @@
 """
-Graph Navigation Tools - Dependency graph traversal and exploration.
+Graph Navigation Tools - callers, callees, dependencies, hierarchy, related.
 
-Tools:
-- get_callers: Find functions that call this entity (backward traversal)
-- get_callees: Find functions called by this entity (forward traversal)
-- get_dependencies: Get filtered dependencies by relationship type
-- get_class_hierarchy: Get base and derived classes
-- get_related_entities: Get all direct neighbors grouped by relationship
-- get_related_files: Find related files via includes/co-dependency
+Tools are decorated at module level with @mcp.tool() and remain directly importable.
 """
 
+from typing import Annotated, Literal
+
+from fastmcp import Context
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Literal
-import networkx as nx
+from sqlmodel import select
 
+from server.app import mcp, get_ctx
+from server.converters import entity_to_summary
 from server.db_models import Entity
-from server.models import EntitySummary, TruncationMetadata
-from server.resolver import entity_to_summary
-from server.graph import get_callers as get_callers_fn, get_callees as get_callees_fn, get_class_hierarchy as get_class_hierarchy_fn
+from server.graph import (
+    get_callers as get_callers_fn,
+    get_callees as get_callees_fn,
+    get_class_hierarchy as get_class_hierarchy_fn,
+    INCLUDES,
+)
 from server.logging_config import log
-from server.util import fetch_entity_summaries, fetch_entity_map, resolve_entity_id
+from server.models import EntitySummary, TruncationMetadata
+from server.util import fetch_entity_map, fetch_entity_summaries, resolve_entity_id
 
 
-# Tool Parameter Models
-
-class GetCallersParams(BaseModel):
-    """Parameters for get_callers tool."""
-    entity_id: str | None = Field(default=None, description="Entity ID")
-    signature: str | None = Field(default=None, description="Entity signature (alternative to entity_id)")
-    depth: int = Field(default=1, ge=1, le=3, description="Traversal depth (1-3)")
-    limit: int = Field(default=50, ge=1, le=200, description="Max results per depth level")
-
-
-class GetCalleesParams(BaseModel):
-    """Parameters for get_callees tool."""
-    entity_id: str | None = Field(default=None, description="Entity ID")
-    signature: str | None = Field(default=None, description="Entity signature (alternative to entity_id)")
-    depth: int = Field(default=1, ge=1, le=3, description="Traversal depth (1-3)")
-    limit: int = Field(default=50, ge=1, le=200, description="Max results per depth level")
-
-
-class GetDependenciesParams(BaseModel):
-    """Parameters for get_dependencies tool."""
-    entity_id: str | None = Field(default=None, description="Entity ID")
-    signature: str | None = Field(default=None, description="Entity signature (alternative to entity_id)")
-    relationship: Literal["calls", "uses", "inherits", "includes", "contained_by"] | None = Field(
-        default=None,
-        description="Filter by relationship type"
-    )
-    direction: Literal["incoming", "outgoing", "both"] = Field(
-        default="both",
-        description="Edge direction"
-    )
-    limit: int = Field(default=100, ge=1, le=500, description="Maximum results")
-
-
-class GetClassHierarchyParams(BaseModel):
-    """Parameters for get_class_hierarchy tool."""
-    entity_id: str | None = Field(default=None, description="Class entity ID")
-    signature: str | None = Field(default=None, description="Entity signature (alternative to entity_id)")
-
-
-class GetRelatedEntitiesParams(BaseModel):
-    """Parameters for get_related_entities tool."""
-    entity_id: str | None = Field(default=None, description="Entity ID")
-    signature: str | None = Field(default=None, description="Entity signature (alternative to entity_id)")
-    limit: int = Field(default=100, ge=1, le=500, description="Maximum results")
-
-
-class GetRelatedFilesParams(BaseModel):
-    """Parameters for get_related_files tool."""
-    file_path: str = Field(description="Source file path")
-    limit: int = Field(default=50, ge=1, le=200, description="Maximum results")
-
-
-# Tool Response Models
+# -- Response Models --
 
 class CallersResponse(BaseModel):
     """Response from get_callers tool."""
@@ -94,7 +44,7 @@ class CalleesResponse(BaseModel):
 class DependenciesResponse(BaseModel):
     """Response from get_dependencies tool."""
     entity_id: str
-    dependencies: list[dict]  # List of {entity: EntitySummary, relationship: str, direction: str}
+    dependencies: list[dict]
     truncation: TruncationMetadata
 
 
@@ -115,382 +65,340 @@ class RelatedEntitiesResponse(BaseModel):
 class RelatedFilesResponse(BaseModel):
     """Response from get_related_files tool."""
     file_path: str
-    related_files: list[dict]  # List of {file_path: str, relationship: str, entity_count: int}
+    related_files: list[dict]
     truncation: TruncationMetadata
 
 
-# Tool Implementations
-
-async def get_callers_tool(
-    session: AsyncSession,
-    params: GetCallersParams,
-    graph: nx.MultiDiGraph,
+@mcp.tool()
+async def get_callers(
+    ctx: Context,
+    entity_id: Annotated[str | None, Field(description="Entity ID")] = None,
+    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
+    depth: Annotated[int, Field(ge=1, le=3, description="Traversal depth (1-3)")] = 1,
+    limit: Annotated[int, Field(ge=1, le=200, description="Max results per depth level")] = 50,
 ) -> CallersResponse:
     """
-    Get callers (entities with CALLS edges to this entity).
-
-    Backward traversal in dependency graph up to specified depth.
-
-    Args:
-        session: Database session
-        params: Tool parameters
-        graph: Dependency graph
-
-    Returns:
-        Callers grouped by depth with truncation metadata
+    Get callers (functions that call this entity). Backward graph traversal.
     """
-    log.info("get_callers tool invoked", entity_id=params.entity_id, depth=params.depth)
+    lc = get_ctx(ctx)
+    graph = lc["graph"]
 
-    entity_id = await resolve_entity_id(session, params.entity_id, params.signature)
-    callers_by_depth_ids = get_callers_fn(graph, entity_id, params.depth, params.limit)
+    log.info("get_callers", entity_id=entity_id, depth=depth)
 
-    # Batch-fetch all entity IDs across all depths
-    all_ids = [eid for ids in callers_by_depth_ids.values() for eid in ids]
-    entity_map = await fetch_entity_map(session, all_ids)
+    async with lc["db_manager"].session() as session:
+        eid = await resolve_entity_id(session, entity_id, signature)
+        callers_by_depth_ids = get_callers_fn(graph, eid, depth, limit)
 
-    # Build summaries per depth
+        all_ids = [eid for ids in callers_by_depth_ids.values() for eid in ids]
+        entity_map = await fetch_entity_map(session, all_ids)
+
     callers_by_depth: dict[int, list[EntitySummary]] = {}
-    total_callers = 0
-
-    for depth, entity_ids in callers_by_depth_ids.items():
+    total = 0
+    for d, entity_ids in callers_by_depth_ids.items():
         summaries = [
-            entity_to_summary(entity_map[eid])
-            for eid in entity_ids
-            if eid in entity_map
+            entity_to_summary(entity_map[e])
+            for e in entity_ids if e in entity_map
         ]
-        callers_by_depth[depth] = summaries
-        total_callers += len(summaries)
+        callers_by_depth[d] = summaries
+        total += len(summaries)
 
     max_depth_reached = max(callers_by_depth.keys()) if callers_by_depth else 0
 
     return CallersResponse(
-        entity_id=entity_id,
+        entity_id=eid,
         callers_by_depth=callers_by_depth,
         truncation=TruncationMetadata(
-            truncated=any(len(ids) >= params.limit for ids in callers_by_depth_ids.values()),
-            total_available=total_callers,  # Approximation
-            node_count=total_callers,
-            max_depth_requested=params.depth,
+            truncated=any(len(ids) >= limit for ids in callers_by_depth_ids.values()),
+            total_available=total,
+            node_count=total,
+            max_depth_requested=depth,
             max_depth_reached=max_depth_reached,
         ),
     )
 
 
-async def get_callees_tool(
-    session: AsyncSession,
-    params: GetCalleesParams,
-    graph: nx.MultiDiGraph,
+@mcp.tool()
+async def get_callees(
+    ctx: Context,
+    entity_id: Annotated[str | None, Field(description="Entity ID")] = None,
+    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
+    depth: Annotated[int, Field(ge=1, le=3, description="Traversal depth (1-3)")] = 1,
+    limit: Annotated[int, Field(ge=1, le=200, description="Max results per depth level")] = 50,
 ) -> CalleesResponse:
     """
-    Get callees (entities called by this entity).
-
-    Forward traversal in dependency graph up to specified depth.
-
-    Args:
-        session: Database session
-        params: Tool parameters
-        graph: Dependency graph
-
-    Returns:
-        Callees grouped by depth with truncation metadata
+    Get callees (functions called by this entity). Forward graph traversal.
     """
-    log.info("get_callees tool invoked", entity_id=params.entity_id, depth=params.depth)
+    lc = get_ctx(ctx)
+    graph = lc["graph"]
 
-    entity_id = await resolve_entity_id(session, params.entity_id, params.signature)
-    callees_by_depth_ids = get_callees_fn(graph, entity_id, params.depth, params.limit)
+    log.info("get_callees", entity_id=entity_id, depth=depth)
 
-    # Batch-fetch all entity IDs across all depths
-    all_ids = [eid for ids in callees_by_depth_ids.values() for eid in ids]
-    entity_map = await fetch_entity_map(session, all_ids)
+    async with lc["db_manager"].session() as session:
+        eid = await resolve_entity_id(session, entity_id, signature)
+        callees_by_depth_ids = get_callees_fn(graph, eid, depth, limit)
 
-    # Build summaries per depth
+        all_ids = [eid for ids in callees_by_depth_ids.values() for eid in ids]
+        entity_map = await fetch_entity_map(session, all_ids)
+
     callees_by_depth: dict[int, list[EntitySummary]] = {}
-    total_callees = 0
-
-    for depth, entity_ids in callees_by_depth_ids.items():
+    total = 0
+    for d, entity_ids in callees_by_depth_ids.items():
         summaries = [
-            entity_to_summary(entity_map[eid])
-            for eid in entity_ids
-            if eid in entity_map
+            entity_to_summary(entity_map[e])
+            for e in entity_ids if e in entity_map
         ]
-        callees_by_depth[depth] = summaries
-        total_callees += len(summaries)
+        callees_by_depth[d] = summaries
+        total += len(summaries)
 
     max_depth_reached = max(callees_by_depth.keys()) if callees_by_depth else 0
 
     return CalleesResponse(
-        entity_id=entity_id,
+        entity_id=eid,
         callees_by_depth=callees_by_depth,
         truncation=TruncationMetadata(
-            truncated=any(len(ids) >= params.limit for ids in callees_by_depth_ids.values()),
-            total_available=total_callees,
-            node_count=total_callees,
-            max_depth_requested=params.depth,
+            truncated=any(len(ids) >= limit for ids in callees_by_depth_ids.values()),
+            total_available=total,
+            node_count=total,
+            max_depth_requested=depth,
             max_depth_reached=max_depth_reached,
         ),
     )
 
 
-async def get_dependencies_tool(
-    session: AsyncSession,
-    params: GetDependenciesParams,
-    graph: nx.MultiDiGraph,
+@mcp.tool()
+async def get_dependencies(
+    ctx: Context,
+    entity_id: Annotated[str | None, Field(description="Entity ID")] = None,
+    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
+    relationship: Annotated[
+        Literal["calls", "uses", "inherits", "includes", "contained_by"] | None,
+        Field(description="Filter by relationship type"),
+    ] = None,
+    direction: Annotated[
+        Literal["incoming", "outgoing", "both"],
+        Field(description="Edge direction"),
+    ] = "both",
+    limit: Annotated[int, Field(ge=1, le=500, description="Maximum results")] = 100,
 ) -> DependenciesResponse:
     """
     Get filtered dependencies by relationship type and direction.
 
-    Args:
-        session: Database session
-        params: Tool parameters
-        graph: Dependency graph
-
-    Returns:
-        Dependencies with relationship and direction
+    Relationship types: calls, uses, inherits, includes, contained_by.
+    Direction: incoming, outgoing, both.
     """
-    log.info(
-        "get_dependencies tool invoked",
-        entity_id=params.entity_id,
-        relationship=params.relationship,
-        direction=params.direction,
-    )
+    lc = get_ctx(ctx)
+    graph = lc["graph"]
 
-    entity_id = await resolve_entity_id(session, params.entity_id, params.signature)
+    log.info("get_dependencies", entity_id=entity_id, relationship=relationship, direction=direction)
+
+    async with lc["db_manager"].session() as session:
+        eid = await resolve_entity_id(session, entity_id, signature)
+
+        if eid not in graph:
+            return DependenciesResponse(
+                entity_id=eid,
+                dependencies=[],
+                truncation=TruncationMetadata(
+                    truncated=False, total_available=0, node_count=0,
+                ),
+            )
+
+        dep_records: list[tuple[str, str, str]] = []
+
+        if direction in ("outgoing", "both"):
+            for _, target, data in graph.out_edges(eid, data=True):
+                edge_type = data.get("type", "")
+                if relationship and edge_type != relationship:
+                    continue
+                dep_records.append((target, edge_type, "outgoing"))
+
+        if direction in ("incoming", "both"):
+            for source, _, data in graph.in_edges(eid, data=True):
+                edge_type = data.get("type", "")
+                if relationship and edge_type != relationship:
+                    continue
+                dep_records.append((source, edge_type, "incoming"))
+
+        dep_records = dep_records[:limit]
+
+        all_ids = list({r[0] for r in dep_records})
+        entity_map = await fetch_entity_map(session, all_ids)
+
     dependencies = []
-
-    if entity_id not in graph:
-        return DependenciesResponse(
-            entity_id=entity_id,
-            dependencies=[],
-            truncation=TruncationMetadata(
-                truncated=False,
-                total_available=0,
-                node_count=0,
-            ),
-        )
-
-    # Collect all neighbor IDs with their edge metadata
-    dep_records: list[tuple[str, str, str]] = []  # (entity_id, edge_type, direction)
-
-    if params.direction in ("outgoing", "both"):
-        for _, target, data in graph.out_edges(entity_id, data=True):
-            edge_type = data.get("type", "")
-            if params.relationship and edge_type != params.relationship:
-                continue
-            dep_records.append((target, edge_type, "outgoing"))
-
-    if params.direction in ("incoming", "both"):
-        for source, _, data in graph.in_edges(entity_id, data=True):
-            edge_type = data.get("type", "")
-            if params.relationship and edge_type != params.relationship:
-                continue
-            dep_records.append((source, edge_type, "incoming"))
-
-    # Truncate before fetching
-    truncated = len(dep_records) > params.limit
-    dep_records = dep_records[:params.limit]
-
-    # Batch-fetch all entities
-    all_ids = list({r[0] for r in dep_records})
-    entity_map = await fetch_entity_map(session, all_ids)
-
-    for eid, edge_type, direction in dep_records:
-        if eid in entity_map:
+    for dep_id, edge_type, dep_dir in dep_records:
+        if dep_id in entity_map:
             dependencies.append({
-                "entity": entity_to_summary(entity_map[eid]).model_dump(),
+                "entity": entity_to_summary(entity_map[dep_id]),
                 "relationship": edge_type,
-                "direction": direction,
+                "direction": dep_dir,
             })
 
     return DependenciesResponse(
-        entity_id=entity_id,
+        entity_id=eid,
         dependencies=dependencies,
         truncation=TruncationMetadata(
-            truncated=len(dependencies) >= params.limit,
+            truncated=len(dependencies) >= limit,
             total_available=len(dependencies),
             node_count=len(dependencies),
         ),
     )
 
 
-async def get_class_hierarchy_tool(
-    session: AsyncSession,
-    params: GetClassHierarchyParams,
-    graph: nx.MultiDiGraph,
+@mcp.tool()
+async def get_class_hierarchy(
+    ctx: Context,
+    entity_id: Annotated[str | None, Field(description="Class entity ID")] = None,
+    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
 ) -> ClassHierarchyResponse:
     """
     Get class hierarchy (base classes and derived classes).
-
-    Args:
-        session: Database session
-        params: Tool parameters
-        graph: Dependency graph
-
-    Returns:
-        Base and derived classes
     """
-    log.info("get_class_hierarchy tool invoked", entity_id=params.entity_id)
+    lc = get_ctx(ctx)
+    graph = lc["graph"]
 
-    entity_id = await resolve_entity_id(session, params.entity_id, params.signature)
-    hierarchy = get_class_hierarchy_fn(graph, entity_id)
+    log.info("get_class_hierarchy", entity_id=entity_id)
 
-    # Batch-fetch all entities
-    all_ids = hierarchy["base_classes"] + hierarchy["derived_classes"]
-    entity_map = await fetch_entity_map(session, all_ids)
+    async with lc["db_manager"].session() as session:
+        eid = await resolve_entity_id(session, entity_id, signature)
+        hierarchy = get_class_hierarchy_fn(graph, eid)
+
+        all_ids = hierarchy["base_classes"] + hierarchy["derived_classes"]
+        entity_map = await fetch_entity_map(session, all_ids)
 
     base_classes = [
-        entity_to_summary(entity_map[eid])
-        for eid in hierarchy["base_classes"]
-        if eid in entity_map
+        entity_to_summary(entity_map[e])
+        for e in hierarchy["base_classes"] if e in entity_map
     ]
     derived_classes = [
-        entity_to_summary(entity_map[eid])
-        for eid in hierarchy["derived_classes"]
-        if eid in entity_map
+        entity_to_summary(entity_map[e])
+        for e in hierarchy["derived_classes"] if e in entity_map
     ]
 
     return ClassHierarchyResponse(
-        entity_id=entity_id,
+        entity_id=eid,
         base_classes=base_classes,
         derived_classes=derived_classes,
     )
 
 
-async def get_related_entities_tool(
-    session: AsyncSession,
-    params: GetRelatedEntitiesParams,
-    graph: nx.MultiDiGraph,
+@mcp.tool()
+async def get_related_entities(
+    ctx: Context,
+    entity_id: Annotated[str | None, Field(description="Entity ID")] = None,
+    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
+    limit: Annotated[int, Field(ge=1, le=500, description="Maximum results")] = 100,
 ) -> RelatedEntitiesResponse:
     """
     Get all direct neighbors grouped by relationship type.
-
-    Args:
-        session: Database session
-        params: Tool parameters
-        graph: Dependency graph
-
-    Returns:
-        Neighbors grouped by relationship type
     """
-    log.info("get_related_entities tool invoked", entity_id=params.entity_id)
+    lc = get_ctx(ctx)
+    graph = lc["graph"]
 
-    entity_id = await resolve_entity_id(session, params.entity_id, params.signature)
+    log.info("get_related_entities", entity_id=entity_id)
 
-    if entity_id not in graph:
-        return RelatedEntitiesResponse(
-            entity_id=entity_id,
-            neighbors_by_relationship={},
-            truncation=TruncationMetadata(
-                truncated=False,
-                total_available=0,
-                node_count=0,
-            ),
-        )
+    async with lc["db_manager"].session() as session:
+        eid = await resolve_entity_id(session, entity_id, signature)
+
+        if eid not in graph:
+            return RelatedEntitiesResponse(
+                entity_id=eid,
+                neighbors_by_relationship={},
+                truncation=TruncationMetadata(
+                    truncated=False, total_available=0, node_count=0,
+                ),
+            )
+
+        all_neighbors: list[tuple[str, str, str]] = []
+        seen = set()
+
+        for _, target, data in graph.out_edges(eid, data=True):
+            key = (target, data.get("type", "unknown"), "outgoing")
+            if key not in seen:
+                seen.add(key)
+                all_neighbors.append(key)
+
+        for source, _, data in graph.in_edges(eid, data=True):
+            key = (source, data.get("type", "unknown"), "incoming")
+            if key not in seen:
+                seen.add(key)
+                all_neighbors.append(key)
+
+        all_neighbors = all_neighbors[:limit]
+
+        all_ids = list({n[0] for n in all_neighbors})
+        entity_map = await fetch_entity_map(session, all_ids)
 
     neighbors_by_relationship: dict[str, list[EntitySummary]] = {}
-    total_neighbors = 0
-
-    # Collect all neighbor records
-    all_neighbors: list[tuple[str, str, str]] = []  # (id, rel_type, direction)
-    seen = set()
-
-    for _, target, data in graph.out_edges(entity_id, data=True):
-        key = (target, data.get("type", "unknown"), "outgoing")
-        if key not in seen:
-            seen.add(key)
-            all_neighbors.append(key)
-
-    for source, _, data in graph.in_edges(entity_id, data=True):
-        key = (source, data.get("type", "unknown"), "incoming")
-        if key not in seen:
-            seen.add(key)
-            all_neighbors.append(key)
-
-    # Truncate before fetching
-    all_neighbors = all_neighbors[:params.limit]
-
-    # Batch-fetch all entities
-    all_ids = list({n[0] for n in all_neighbors})
-    entity_map = await fetch_entity_map(session, all_ids)
-
+    total = 0
     for neighbor_id, rel_type, direction in all_neighbors:
         if neighbor_id in entity_map:
             key = f"{rel_type}_{direction}"
-            if key not in neighbors_by_relationship:
-                neighbors_by_relationship[key] = []
-            neighbors_by_relationship[key].append(entity_to_summary(entity_map[neighbor_id]))
-            total_neighbors += 1
+            neighbors_by_relationship.setdefault(key, []).append(
+                entity_to_summary(entity_map[neighbor_id])
+            )
+            total += 1
 
     return RelatedEntitiesResponse(
-        entity_id=entity_id,
+        entity_id=eid,
         neighbors_by_relationship=neighbors_by_relationship,
         truncation=TruncationMetadata(
-            truncated=total_neighbors >= params.limit,
-            total_available=total_neighbors,
-            node_count=total_neighbors,
+            truncated=total >= limit,
+            total_available=total,
+            node_count=total,
         ),
     )
 
 
-async def get_related_files_tool(
-    session: AsyncSession,
-    params: GetRelatedFilesParams,
-    graph: nx.MultiDiGraph,
+@mcp.tool()
+async def get_related_files(
+    ctx: Context,
+    file_path: Annotated[str, Field(description="Source file path")],
+    limit: Annotated[int, Field(ge=1, le=200, description="Maximum results")] = 50,
 ) -> RelatedFilesResponse:
     """
     Find related files via include relationships.
-
-    Args:
-        session: Database session
-        params: Tool parameters
-        graph: Dependency graph
-
-    Returns:
-        Related files with relationship metadata
     """
-    log.info("get_related_files tool invoked", file_path=params.file_path)
+    lc = get_ctx(ctx)
+    graph = lc["graph"]
 
-    # Find file entities in this file
-    from sqlmodel import select as sqlselect
+    log.info("get_related_files", file_path=file_path)
 
-    result = await session.execute(
-        sqlselect(Entity).where(Entity.file_path == params.file_path).where(Entity.kind == "file")
-    )
-    file_entities = list(result.scalars().all())
+    async with lc["db_manager"].session() as session:
+        result = await session.execute(
+            select(Entity).where(Entity.file_path == file_path).where(Entity.kind == "file")
+        )
+        file_entities = list(result.scalars().all())
 
-    related_files_map: dict[str, dict] = {}
+        target_ids: list[str] = []
+        for fe in file_entities:
+            if fe.entity_id not in graph:
+                continue
+            for _, target, data in graph.out_edges(fe.entity_id, data=True):
+                if data.get("type") == INCLUDES:
+                    target_ids.append(target)
 
-    # Collect all target IDs from INCLUDES edges
-    target_ids: list[str] = []
-    for file_entity in file_entities:
-        entity_id = file_entity.entity_id
-        if entity_id not in graph:
-            continue
-        for _, target, data in graph.out_edges(entity_id, data=True):
-            if data.get("type") == "includes":
-                target_ids.append(target)
+        entity_map = await fetch_entity_map(session, target_ids)
 
-    # Batch-fetch all target entities
-    entity_map = await fetch_entity_map(session, target_ids)
-
+    related_map: dict[str, dict] = {}
     for target_id in target_ids:
-        target_entity = entity_map.get(target_id)
-        if target_entity and target_entity.file_path:
-            if target_entity.file_path not in related_files_map:
-                related_files_map[target_entity.file_path] = {
-                    "file_path": target_entity.file_path,
-                    "relationship": "includes",
+        te = entity_map.get(target_id)
+        if te and te.file_path:
+            if te.file_path not in related_map:
+                related_map[te.file_path] = {
+                    "file_path": te.file_path,
+                    "relationship": INCLUDES,
                     "entity_count": 0,
                 }
-            related_files_map[target_entity.file_path]["entity_count"] += 1
+            related_map[te.file_path]["entity_count"] += 1
 
-    related_files = list(related_files_map.values())[:params.limit]
+    related_files = list(related_map.values())[:limit]
 
     return RelatedFilesResponse(
-        file_path=params.file_path,
+        file_path=file_path,
         related_files=related_files,
         truncation=TruncationMetadata(
-            truncated=len(related_files_map) > params.limit,
-            total_available=len(related_files_map),
+            truncated=len(related_map) > limit,
+            total_available=len(related_map),
             node_count=len(related_files),
         ),
     )

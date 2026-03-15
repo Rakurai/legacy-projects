@@ -7,9 +7,18 @@ All graph algorithms (call cone, callers/callees, class hierarchy) operate on th
 
 import networkx as nx
 from sqlalchemy.ext.asyncio import AsyncSession
-from collections.abc import Sequence
+from sqlmodel import select
 
+from server.db_models import Edge
 from server.logging_config import log
+
+
+# -- Edge type constants (canonical lowercase, matching build_mcp_db normalization) --
+CALLS = "calls"
+USES = "uses"
+INHERITS = "inherits"
+INCLUDES = "includes"
+CONTAINED_BY = "contained_by"
 
 
 async def load_graph(session: AsyncSession) -> nx.MultiDiGraph:
@@ -19,37 +28,32 @@ async def load_graph(session: AsyncSession) -> nx.MultiDiGraph:
     Graph is read-only after load; supports concurrent reads (GIL-safe).
     Node IDs are entity_id (string). Edges have 'type' attribute (relationship).
 
-    Args:
-        session: Async database session
-
-    Returns:
-        Loaded MultiDiGraph (~5300 nodes, ~25000 edges)
-
-    Performance: ~2-3 seconds for full graph load.
+    Also computes and stores edge_type_counts on the graph object for O(1) stats access.
     """
-    from server.db import EdgeRepository
-
     log.info("Loading dependency graph from edges table")
 
     g = nx.MultiDiGraph()
-    edge_repo = EdgeRepository()
 
-    # Fetch all edges (one query, ~25K rows)
-    edges = await edge_repo.get_all(session)
+    result = await session.execute(select(Edge))
+    edges = result.scalars().all()
 
-    # Build graph
+    edge_type_counts: dict[str, int] = {}
     for edge in edges:
         g.add_edge(
             edge.source_id,
             edge.target_id,
             key=edge.relationship,
-            type=edge.relationship
+            type=edge.relationship,
         )
+        edge_type_counts[edge.relationship] = edge_type_counts.get(edge.relationship, 0) + 1
+
+    # Store pre-computed edge counts on the graph for O(1) stats access (m-11)
+    g.graph["edge_type_counts"] = edge_type_counts
 
     log.info(
         "Dependency graph loaded",
         nodes=g.number_of_nodes(),
-        edges=g.number_of_edges()
+        edges=g.number_of_edges(),
     )
 
     return g
@@ -104,10 +108,8 @@ def compute_call_cone(
         if depth >= max_depth:
             continue
 
-        # Get CALLS edges
         for _, target, data in graph.out_edges(node_id, data=True):
-            # Filter to CALLS edges only
-            if data.get("type") != "calls":
+            if data.get("type") != CALLS:
                 continue
 
             if target in visited:
@@ -162,9 +164,8 @@ def get_callers(
         next_level: set[str] = set()
 
         for node in current_level:
-            # Get incoming CALLS edges
             for source, _, data in graph.in_edges(node, data=True):
-                if data.get("type") != "calls":
+                if data.get("type") != CALLS:
                     continue
 
                 if source not in visited:
@@ -174,7 +175,6 @@ def get_callers(
         if not next_level:
             break
 
-        # Truncate to limit
         callers_by_depth[d] = list(next_level)[:limit]
         current_level = next_level
 
@@ -210,9 +210,8 @@ def get_callees(
         next_level: set[str] = set()
 
         for node in current_level:
-            # Get outgoing CALLS edges
             for _, target, data in graph.out_edges(node, data=True):
-                if data.get("type") != "calls":
+                if data.get("type") != CALLS:
                     continue
 
                 if target not in visited:
@@ -222,7 +221,6 @@ def get_callees(
         if not next_level:
             break
 
-        # Truncate to limit
         callees_by_depth[d] = list(next_level)[:limit]
         current_level = next_level
 
@@ -253,12 +251,12 @@ def get_class_hierarchy(
 
     # Base classes (outgoing INHERITS edges)
     for _, target, data in graph.out_edges(entity_id, data=True):
-        if data.get("type") == "inherits":
+        if data.get("type") == INHERITS:
             base_classes.append(target)
 
     # Derived classes (incoming INHERITS edges)
     for source, _, data in graph.in_edges(entity_id, data=True):
-        if data.get("type") == "inherits":
+        if data.get("type") == INHERITS:
             derived_classes.append(source)
 
     return {

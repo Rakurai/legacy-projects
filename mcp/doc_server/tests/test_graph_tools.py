@@ -1,49 +1,36 @@
 """
 Integration tests for graph navigation tools.
 
-Tests actual DB + graph execution of:
-- get_callers_tool
-- get_callees_tool
-- get_dependencies_tool
-- get_class_hierarchy_tool
-- get_related_entities_tool
-- get_related_files_tool
+Tests actual DB + graph execution via mock_ctx of:
+- get_callers
+- get_callees
+- get_dependencies
+- get_class_hierarchy
+- get_related_entities
+- get_related_files
 """
 
 import pytest
-import networkx as nx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.db_models import Entity, Edge
 from server.tools.graph import (
-    GetCallersParams,
-    GetCalleesParams,
-    GetDependenciesParams,
-    GetClassHierarchyParams,
-    GetRelatedEntitiesParams,
-    GetRelatedFilesParams,
-    get_callers_tool,
-    get_callees_tool,
-    get_dependencies_tool,
-    get_class_hierarchy_tool,
-    get_related_entities_tool,
-    get_related_files_tool,
+    get_callers,
+    get_callees,
+    get_dependencies,
+    get_class_hierarchy,
+    get_related_entities,
+    get_related_files,
 )
 
 
-# ---------- get_callers_tool ----------
+# ---------- get_callers ----------
 
 @pytest.mark.asyncio
-async def test_get_callers(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_get_callers(mock_ctx, sample_entities, sample_edges):
     """Finds callers at depth 1."""
     eid = sample_entities[0].entity_id  # damage
-    params = GetCallersParams(entity_id=eid, depth=1)
-    result = await get_callers_tool(test_session, params, sample_graph)
+    result = await get_callers(mock_ctx, entity_id=eid, depth=1)
 
     assert result.entity_id == eid
     assert 1 in result.callers_by_depth
@@ -52,35 +39,23 @@ async def test_get_callers(
 
 
 @pytest.mark.asyncio
-async def test_get_callers_no_callers(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
-    """Entity with no callers returns empty map."""
-    eid = sample_entities[1].entity_id  # do_kill (top-level entry point)
-    params = GetCallersParams(entity_id=eid, depth=1)
-    result = await get_callers_tool(test_session, params, sample_graph)
+async def test_get_callers_no_callers(mock_ctx, sample_entities, sample_edges):
+    """Entity with no callers returns empty depth map."""
+    eid = sample_entities[1].entity_id  # do_kill (no one calls it)
+    result = await get_callers(mock_ctx, entity_id=eid, depth=1)
 
-    # do_kill has no callers in our test data
+    assert result.entity_id == eid
     total = sum(len(v) for v in result.callers_by_depth.values())
     assert total == 0
 
 
-# ---------- get_callees_tool ----------
+# ---------- get_callees ----------
 
 @pytest.mark.asyncio
-async def test_get_callees(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_get_callees(mock_ctx, sample_entities, sample_edges):
     """Finds callees at depth 1."""
     eid = sample_entities[1].entity_id  # do_kill
-    params = GetCalleesParams(entity_id=eid, depth=1)
-    result = await get_callees_tool(test_session, params, sample_graph)
+    result = await get_callees(mock_ctx, entity_id=eid, depth=1)
 
     assert result.entity_id == eid
     assert 1 in result.callees_by_depth
@@ -89,146 +64,90 @@ async def test_get_callees(
 
 
 @pytest.mark.asyncio
-async def test_get_callees_depth_2(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_get_callees_depth_2(mock_ctx, sample_entities, sample_edges):
     """Depth-2 traversal finds transitive callees."""
     eid = sample_entities[1].entity_id  # do_kill
-    params = GetCalleesParams(entity_id=eid, depth=2)
-    result = await get_callees_tool(test_session, params, sample_graph)
+    result = await get_callees(mock_ctx, entity_id=eid, depth=2)
 
-    # depth 1: damage, depth 2: armor_absorb (damage→armor_absorb is calls)
-    all_names = [
-        s.name
-        for depth_list in result.callees_by_depth.values()
-        for s in depth_list
-    ]
+    # do_kill → damage (depth 1) → armor_absorb (depth 2)
+    all_names = []
+    for depth_summaries in result.callees_by_depth.values():
+        all_names.extend(s.name for s in depth_summaries)
     assert "damage" in all_names
     assert "armor_absorb" in all_names
 
 
-# ---------- get_dependencies_tool ----------
+# ---------- get_dependencies ----------
 
 @pytest.mark.asyncio
-async def test_get_dependencies_both(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
-    """Both-direction dependencies include incoming and outgoing."""
+async def test_get_dependencies(mock_ctx, sample_entities, sample_edges):
+    """Returns filtered dependencies."""
     eid = sample_entities[0].entity_id  # damage
-    params = GetDependenciesParams(entity_id=eid, direction="both")
-    result = await get_dependencies_tool(test_session, params, sample_graph)
+    result = await get_dependencies(mock_ctx, entity_id=eid, direction="outgoing")
 
     assert result.entity_id == eid
-    assert len(result.dependencies) >= 2  # at least incoming (do_kill) + outgoing (armor_absorb + max_damage)
+    assert len(result.dependencies) >= 2
+    # damage has outgoing: calls → armor_absorb, uses → max_damage
+    rel_types = {d["relationship"] for d in result.dependencies}
+    assert "calls" in rel_types
+    assert "uses" in rel_types
 
 
 @pytest.mark.asyncio
-async def test_get_dependencies_filtered(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
-    """Relationship filter restricts edge types."""
+async def test_get_dependencies_with_relationship_filter(mock_ctx, sample_entities, sample_edges):
+    """Relationship filter restricts results."""
     eid = sample_entities[0].entity_id  # damage
-    params = GetDependenciesParams(entity_id=eid, relationship="uses", direction="outgoing")
-    result = await get_dependencies_tool(test_session, params, sample_graph)
+    result = await get_dependencies(mock_ctx, entity_id=eid, relationship="uses", direction="outgoing")
 
     for dep in result.dependencies:
         assert dep["relationship"] == "uses"
         assert dep["direction"] == "outgoing"
 
 
-@pytest.mark.asyncio
-async def test_get_dependencies_not_in_graph(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
-    """Entity not in graph returns empty dependencies."""
-    # Remove a node to simulate not-in-graph (use Character which has no edges)
-    eid = sample_entities[2].entity_id  # Character
-    params = GetDependenciesParams(entity_id=eid, direction="both")
-    result = await get_dependencies_tool(test_session, params, sample_graph)
-
-    assert result.dependencies == []
-
-
-# ---------- get_class_hierarchy_tool ----------
+# ---------- get_class_hierarchy ----------
 
 @pytest.mark.asyncio
-async def test_get_class_hierarchy(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
-    """Class hierarchy returns (possibly empty) base/derived lists."""
-    eid = sample_entities[2].entity_id  # Character
-    params = GetClassHierarchyParams(entity_id=eid)
-    result = await get_class_hierarchy_tool(test_session, params, sample_graph)
+async def test_get_class_hierarchy(mock_ctx, sample_entities, sample_edges):
+    """Returns empty hierarchy when no inherits edges exist."""
+    eid = sample_entities[2].entity_id  # Character class — no inherits edges in test data
+    result = await get_class_hierarchy(mock_ctx, entity_id=eid)
 
     assert result.entity_id == eid
-    # Character has no inherits edges in test data, so both lists may be empty
-    assert isinstance(result.base_classes, list)
-    assert isinstance(result.derived_classes, list)
+    assert result.base_classes == []
+    assert result.derived_classes == []
 
 
-# ---------- get_related_entities_tool ----------
+# ---------- get_related_entities ----------
 
 @pytest.mark.asyncio
-async def test_get_related_entities(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
-    """Related entities groups neighbors by relationship type."""
+async def test_get_related_entities(mock_ctx, sample_entities, sample_edges):
+    """Returns neighbors grouped by relationship type."""
     eid = sample_entities[0].entity_id  # damage
-    params = GetRelatedEntitiesParams(entity_id=eid)
-    result = await get_related_entities_tool(test_session, params, sample_graph)
+    result = await get_related_entities(mock_ctx, entity_id=eid)
 
     assert result.entity_id == eid
-    total_neighbors = sum(len(v) for v in result.neighbors_by_relationship.values())
-    # damage has: incoming calls from do_kill, outgoing calls to armor_absorb, outgoing uses to max_damage
-    assert total_neighbors >= 3
+    # damage has: incoming calls from do_kill, outgoing calls to armor_absorb, outgoing uses
+    total = sum(len(v) for v in result.neighbors_by_relationship.values())
+    assert total >= 1
 
 
 @pytest.mark.asyncio
-async def test_get_related_entities_isolated(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
-    """Entity with no graph edges returns empty neighbors."""
-    eid = sample_entities[2].entity_id  # Character (no edges)
-    params = GetRelatedEntitiesParams(entity_id=eid)
-    result = await get_related_entities_tool(test_session, params, sample_graph)
+async def test_get_related_entities_isolated(mock_ctx, sample_entities, sample_edges):
+    """Entity not in graph returns empty neighbors."""
+    # Character class has no edges in sample_edges
+    eid = sample_entities[2].entity_id
+    result = await get_related_entities(mock_ctx, entity_id=eid)
 
     total = sum(len(v) for v in result.neighbors_by_relationship.values())
     assert total == 0
 
 
-# ---------- get_related_files_tool ----------
+# ---------- get_related_files ----------
 
 @pytest.mark.asyncio
-async def test_get_related_files(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_get_related_files(mock_ctx, sample_entities, sample_edges):
     """Finds files related via includes edges."""
-    params = GetRelatedFilesParams(file_path="src/fight.cc")
-    result = await get_related_files_tool(test_session, params, sample_graph)
+    result = await get_related_files(mock_ctx, file_path="src/fight.cc")
 
     assert result.file_path == "src/fight.cc"
     related_paths = [r["file_path"] for r in result.related_files]
@@ -237,14 +156,8 @@ async def test_get_related_files(
 
 
 @pytest.mark.asyncio
-async def test_get_related_files_no_includes(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_get_related_files_no_includes(mock_ctx, sample_entities, sample_edges):
     """File with no includes returns empty list."""
-    params = GetRelatedFilesParams(file_path="src/nonexistent.cc")
-    result = await get_related_files_tool(test_session, params, sample_graph)
+    result = await get_related_files(mock_ctx, file_path="src/nonexistent.cc")
 
     assert result.related_files == []

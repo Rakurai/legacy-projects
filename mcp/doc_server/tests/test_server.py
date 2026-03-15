@@ -3,14 +3,18 @@ Tests for MCP server registration.
 
 Verifies that the FastMCP server object:
 - Imports without errors
-- Has all expected tools registered
-- Has all expected resources and prompts
+- Has all expected tools, resources, templates, and prompts registered
+
+Uses the public FastMCP async API (list_tools, list_resources, etc.)
+— no internal/private attribute access.
 """
+
+import pytest
 
 from server.server import mcp
 
 
-EXPECTED_TOOLS = [
+EXPECTED_TOOLS = {
     "resolve_entity",
     "get_entity",
     "get_source_code",
@@ -31,41 +35,72 @@ EXPECTED_TOOLS = [
     "compare_capabilities",
     "list_entry_points",
     "get_entry_point_info",
-]
+}
+
+EXPECTED_RESOURCES = {
+    "legacy://capabilities",
+    "legacy://stats",
+}
+
+EXPECTED_TEMPLATES = {
+    "legacy://capability/{name}",
+    "legacy://entity/{entity_id}",
+    "legacy://file/{path}",
+}
+
+EXPECTED_PROMPTS = {
+    "explain_entity",
+    "analyze_behavior",
+    "compare_entry_points",
+    "explore_capability",
+}
 
 
-def test_server_imports():
-    """FastMCP server object is importable and has a name."""
-    assert mcp is not None
-    assert mcp.name == "Legacy Documentation Server"
-
-
-def test_all_tools_registered():
+@pytest.mark.asyncio
+async def test_all_tools_registered():
     """All expected tools are registered on the server."""
-    # FastMCP stores tools internally; access via _tool_manager or similar
-    # Use a try/except since the FastMCP API may vary between versions
-    try:
-        registered = set(mcp._tool_manager.tools.keys())
-    except AttributeError:
-        try:
-            registered = set(mcp.get_tools().keys())
-        except Exception:
-            # Can't introspect tools — skip check but don't fail
-            return
+    tools = await mcp.list_tools()
+    registered = {t.name for t in tools}
 
-    for tool_name in EXPECTED_TOOLS:
-        assert tool_name in registered, f"Tool '{tool_name}' not registered"
+    missing = EXPECTED_TOOLS - registered
+    assert not missing, f"Tools not registered: {missing}"
 
 
-def test_no_unexpected_tools():
+@pytest.mark.asyncio
+async def test_no_unexpected_tools():
     """No extra tools registered beyond the expected set."""
-    try:
-        registered = set(mcp._tool_manager.tools.keys())
-    except AttributeError:
-        try:
-            registered = set(mcp.get_tools().keys())
-        except Exception:
-            return
+    tools = await mcp.list_tools()
+    registered = {t.name for t in tools}
 
-    unexpected = registered - set(EXPECTED_TOOLS)
+    unexpected = registered - EXPECTED_TOOLS
     assert not unexpected, f"Unexpected tools registered: {unexpected}"
+
+
+@pytest.mark.asyncio
+async def test_all_resources_registered():
+    """All expected static resources are registered."""
+    resources = await mcp.list_resources()
+    registered = {str(r.uri) for r in resources}
+
+    missing = EXPECTED_RESOURCES - registered
+    assert not missing, f"Resources not registered: {missing}"
+
+
+@pytest.mark.asyncio
+async def test_all_templates_registered():
+    """All expected resource templates are registered."""
+    templates = await mcp.list_resource_templates()
+    registered = {str(t.uri_template) for t in templates}
+
+    missing = EXPECTED_TEMPLATES - registered
+    assert not missing, f"Templates not registered: {missing}"
+
+
+@pytest.mark.asyncio
+async def test_all_prompts_registered():
+    """All expected prompts are registered."""
+    prompts = await mcp.list_prompts()
+    registered = {p.name for p in prompts}
+
+    missing = EXPECTED_PROMPTS - registered
+    assert not missing, f"Prompts not registered: {missing}"

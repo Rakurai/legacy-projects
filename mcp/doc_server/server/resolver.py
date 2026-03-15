@@ -11,8 +11,10 @@ Pipeline stages (fail-through):
 Returns ResolutionEnvelope with match metadata and candidates.
 """
 
+from dataclasses import dataclass
+
+from sqlalchemy import func, literal
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import text, func
 from sqlmodel import select
 from typing import Literal
 
@@ -20,6 +22,7 @@ from server.util import doc_quality_sort_key
 
 from server.db_models import Entity
 from server.models import ResolutionEnvelope, EntitySummary
+from server.converters import entity_to_summary
 from server.logging_config import log
 
 
@@ -27,20 +30,13 @@ MatchType = Literal["entity_id", "signature_exact", "name_exact", "name_prefix",
 ResolutionStatus = Literal["exact", "ambiguous", "not_found"]
 
 
+@dataclass
 class ResolutionResult:
     """Resolution result with metadata."""
-
-    def __init__(
-        self,
-        status: ResolutionStatus,
-        match_type: MatchType,
-        candidates: list[Entity],
-        resolved_from: str,
-    ):
-        self.status = status
-        self.match_type = match_type
-        self.candidates = candidates
-        self.resolved_from = resolved_from
+    status: ResolutionStatus
+    match_type: MatchType
+    candidates: list[Entity]
+    resolved_from: str
 
     def to_envelope(self) -> ResolutionEnvelope:
         """Convert to ResolutionEnvelope."""
@@ -56,46 +52,15 @@ class ResolutionResult:
         return [entity_to_summary(e) for e in self.candidates]
 
 
-def entity_to_summary(entity: Entity) -> EntitySummary:
-    """Convert Entity to EntitySummary."""
-    return EntitySummary(
-        entity_id=entity.entity_id,
-        signature=entity.signature,
-        name=entity.name,
-        kind=entity.kind,  # type: ignore
-        file_path=entity.file_path,
-        capability=entity.capability,
-        brief=entity.brief,
-        doc_state=entity.doc_state or "extracted_summary",
-        doc_quality=entity.doc_quality or "low",  # type: ignore
-        fan_in=entity.fan_in,
-        fan_out=entity.fan_out,
-        provenance="precomputed",
-    )
-
-
 async def resolve_entity(
     session: AsyncSession,
     query: str,
     kind: str | None = None,
     embedding_client=None,
-    embedding_model: str = "text-embedding-3-large",
+    embedding_model: str = "",
     limit: int = 20,
 ) -> ResolutionResult:
-    """
-    Resolve entity name through multi-stage pipeline.
-
-    Args:
-        session: Database session
-        query: Entity name or signature to resolve
-        kind: Optional kind filter (function, class, etc.)
-        embedding_client: Optional OpenAI embedding client for semantic search
-        embedding_model: Embedding model name
-        limit: Maximum candidates to return
-
-    Returns:
-        ResolutionResult with status, match_type, and candidates
-    """
+    """Resolve entity name through multi-stage pipeline (fail-through stages 1-6)."""
     log.info("Resolving entity", query=query, kind=kind)
 
     # Stage 1: Exact entity_id match (if query looks like entity_id)
@@ -262,32 +227,21 @@ async def _resolve_by_keyword(
     limit: int,
 ) -> ResolutionResult | None:
     """Stage 5: Keyword search (PostgreSQL full-text via tsvector)."""
-    # Build query with parameterized kind filter
-    kind_clause = "AND kind = :kind" if kind else ""
-    params: dict[str, str | int] = {"query": query, "limit": limit}
+    tsq = func.plainto_tsquery("english", query)
+    rank_expr = func.ts_rank(Entity.search_vector, tsq).label("score")
+
+    stmt = (
+        select(Entity)
+        .where(Entity.search_vector.op("@@")(tsq))
+    )
     if kind:
-        params["kind"] = kind
+        stmt = stmt.where(Entity.kind == kind)
+    stmt = stmt.order_by(rank_expr.desc()).limit(limit)
 
-    keyword_sql = text(f"""
-        SELECT *, ts_rank(search_vector, plainto_tsquery('english', :query)) AS score
-        FROM entities
-        WHERE search_vector @@ plainto_tsquery('english', :query)
-        {kind_clause}
-        ORDER BY score DESC
-        LIMIT :limit
-    """)
+    result = await session.execute(stmt)
+    entities = list(result.scalars().all())
 
-    result = await session.execute(keyword_sql, params)
-
-    rows = result.fetchall()
-
-    if rows:
-        # Convert rows to Entity objects
-        entities = []
-        for row in rows:
-            entity = Entity(**{k: v for k, v in row._mapping.items() if k != "score"})
-            entities.append(entity)
-
+    if entities:
         return ResolutionResult(
             status="ambiguous",
             match_type="keyword",
@@ -308,45 +262,28 @@ async def _resolve_by_semantic(
 ) -> ResolutionResult | None:
     """Stage 6: Semantic search (pgvector cosine similarity)."""
     try:
-        # Get query embedding
         response = await embedding_client.embeddings.create(
             model=embedding_model,
             input=query,
-            encoding_format="float"
+            encoding_format="float",
         )
         query_embedding = response.data[0].embedding
 
-        # Build query with parameterized kind filter
-        kind_clause = "AND kind = :kind" if kind else ""
-        params: dict[str, str | int] = {"limit": limit}
-        if kind:
-            params["kind"] = kind
+        cosine_dist = Entity.embedding.cosine_distance(query_embedding)
+        score_expr = (literal(1) - cosine_dist).label("score")
 
-        semantic_sql = text(f"""
-            SELECT *, 1 - (embedding <=> CAST(:embedding AS vector)) AS score
-            FROM entities
-            WHERE embedding IS NOT NULL
-            {kind_clause}
-            ORDER BY score DESC
-            LIMIT :limit
-        """)
-
-        # Convert embedding list to pgvector string format
-        embedding_str = "[" + ",".join(str(x) for x in query_embedding) + "]"
-
-        result = await session.execute(
-            semantic_sql,
-            {"embedding": embedding_str, **params}
+        stmt = (
+            select(Entity)
+            .where(Entity.embedding.isnot(None))
         )
+        if kind:
+            stmt = stmt.where(Entity.kind == kind)
+        stmt = stmt.order_by(score_expr.desc()).limit(limit)
 
-        rows = result.fetchall()
+        result = await session.execute(stmt)
+        entities = list(result.scalars().all())
 
-        if rows:
-            entities = []
-            for row in rows:
-                entity = Entity(**{k: v for k, v in row._mapping.items() if k != "score"})
-                entities.append(entity)
-
+        if entities:
             return ResolutionResult(
                 status="ambiguous",
                 match_type="semantic",

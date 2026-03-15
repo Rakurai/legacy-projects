@@ -1,43 +1,34 @@
 """
 Integration tests for capability system tools.
 
-Tests actual DB execution of:
-- list_capabilities_tool
-- get_capability_detail_tool
-- compare_capabilities_tool
-- list_entry_points_tool
-- get_entry_point_info_tool
+Tests actual DB execution via mock_ctx of:
+- list_capabilities
+- get_capability_detail
+- compare_capabilities
+- list_entry_points
+- get_entry_point_info
 """
 
 import pytest
-import networkx as nx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.db_models import Entity, Edge, Capability, CapabilityEdge, EntryPoint
-from server.errors import CapabilityNotFoundError, EntityNotFoundError
+from server.errors import CapabilityNotFoundError
 from server.tools.capability import (
-    ListCapabilitiesParams,
-    GetCapabilityDetailParams,
-    CompareCapabilitiesParams,
-    ListEntryPointsParams,
-    GetEntryPointInfoParams,
-    list_capabilities_tool,
-    get_capability_detail_tool,
-    compare_capabilities_tool,
-    list_entry_points_tool,
-    get_entry_point_info_tool,
+    list_capabilities,
+    get_capability_detail,
+    compare_capabilities,
+    list_entry_points,
+    get_entry_point_info,
 )
 
 
-# ---------- list_capabilities_tool ----------
+# ---------- list_capabilities ----------
 
 @pytest.mark.asyncio
-async def test_list_capabilities(
-    test_session: AsyncSession,
-    sample_capabilities: list[Capability],
-):
+async def test_list_capabilities(mock_ctx, sample_capabilities):
     """Lists all capabilities sorted by name."""
-    result = await list_capabilities_tool(test_session, ListCapabilitiesParams())
+    result = await list_capabilities(mock_ctx)
 
     assert len(result.capabilities) == 3
     names = [c.name for c in result.capabilities]
@@ -45,12 +36,9 @@ async def test_list_capabilities(
 
 
 @pytest.mark.asyncio
-async def test_list_capabilities_fields(
-    test_session: AsyncSession,
-    sample_capabilities: list[Capability],
-):
+async def test_list_capabilities_fields(mock_ctx, sample_capabilities):
     """Capability summaries include all expected fields."""
-    result = await list_capabilities_tool(test_session, ListCapabilitiesParams())
+    result = await list_capabilities(mock_ctx)
 
     cap = next(c for c in result.capabilities if c.name == "combat")
     assert cap.type == "domain"
@@ -59,19 +47,14 @@ async def test_list_capabilities_fields(
     assert isinstance(cap.doc_quality_dist, dict)
 
 
-# ---------- get_capability_detail_tool ----------
+# ---------- get_capability_detail ----------
 
 @pytest.mark.asyncio
 async def test_get_capability_detail(
-    test_session: AsyncSession,
-    sample_capabilities: list[Capability],
-    sample_capability_edges: list[CapabilityEdge],
-    sample_entities: list[Entity],
-    sample_entry_points: list[EntryPoint],
+    mock_ctx, sample_capabilities, sample_capability_edges, sample_entities, sample_entry_points,
 ):
     """Returns full capability detail with dependencies."""
-    params = GetCapabilityDetailParams(capability="commands")
-    result = await get_capability_detail_tool(test_session, params)
+    result = await get_capability_detail(mock_ctx, capability="commands")
 
     detail = result.detail
     assert detail.name == "commands"
@@ -83,14 +66,9 @@ async def test_get_capability_detail(
 
 
 @pytest.mark.asyncio
-async def test_get_capability_detail_with_functions(
-    test_session: AsyncSession,
-    sample_capabilities: list[Capability],
-    sample_entities: list[Entity],
-):
+async def test_get_capability_detail_with_functions(mock_ctx, sample_capabilities, sample_entities):
     """include_functions=True populates function list."""
-    params = GetCapabilityDetailParams(capability="combat", include_functions=True)
-    result = await get_capability_detail_tool(test_session, params)
+    result = await get_capability_detail(mock_ctx, capability="combat", include_functions=True)
 
     assert result.detail.functions is not None
     func_names = [f.name for f in result.detail.functions]
@@ -98,29 +76,18 @@ async def test_get_capability_detail_with_functions(
 
 
 @pytest.mark.asyncio
-async def test_get_capability_detail_not_found(
-    test_session: AsyncSession,
-    sample_capabilities: list[Capability],
-):
+async def test_get_capability_detail_not_found(mock_ctx, sample_capabilities):
     """Non-existent capability raises CapabilityNotFoundError."""
-    params = GetCapabilityDetailParams(capability="nonexistent_cap")
     with pytest.raises(CapabilityNotFoundError):
-        await get_capability_detail_tool(test_session, params)
+        await get_capability_detail(mock_ctx, capability="nonexistent_cap")
 
 
-# ---------- compare_capabilities_tool ----------
+# ---------- compare_capabilities ----------
 
 @pytest.mark.asyncio
-async def test_compare_capabilities(
-    test_session: AsyncSession,
-    sample_capabilities: list[Capability],
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_compare_capabilities(mock_ctx, sample_capabilities, sample_entities, sample_edges):
     """Compares two capabilities: shared/unique deps and bridges."""
-    params = CompareCapabilitiesParams(capabilities=["combat", "commands"], limit=50)
-    result = await compare_capabilities_tool(test_session, params, sample_graph)
+    result = await compare_capabilities(mock_ctx, capabilities=["combat", "commands"], limit=50)
 
     assert result.capabilities == ["combat", "commands"]
     assert isinstance(result.shared_dependencies, list)
@@ -130,17 +97,12 @@ async def test_compare_capabilities(
     assert isinstance(result.bridge_entities, list)
 
 
-# ---------- list_entry_points_tool ----------
+# ---------- list_entry_points ----------
 
 @pytest.mark.asyncio
-async def test_list_entry_points(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_entry_points: list[EntryPoint],
-):
+async def test_list_entry_points(mock_ctx, sample_entities, sample_entry_points):
     """Lists entry point entities."""
-    params = ListEntryPointsParams()
-    result = await list_entry_points_tool(test_session, params)
+    result = await list_entry_points(mock_ctx)
 
     assert len(result.entry_points) >= 1
     names = [ep.name for ep in result.entry_points]
@@ -148,60 +110,38 @@ async def test_list_entry_points(
 
 
 @pytest.mark.asyncio
-async def test_list_entry_points_with_capability_filter(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_entry_points: list[EntryPoint],
-):
+async def test_list_entry_points_with_capability_filter(mock_ctx, sample_entities, sample_entry_points):
     """Capability filter restricts entry points."""
-    params = ListEntryPointsParams(capability="commands")
-    result = await list_entry_points_tool(test_session, params)
+    result = await list_entry_points(mock_ctx, capability="commands")
 
     for ep in result.entry_points:
         assert ep.capability == "commands"
 
 
 @pytest.mark.asyncio
-async def test_list_entry_points_with_name_pattern(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_entry_points: list[EntryPoint],
-):
+async def test_list_entry_points_with_name_pattern(mock_ctx, sample_entities, sample_entry_points):
     """Name pattern filter (SQL LIKE) restricts entry points."""
-    params = ListEntryPointsParams(name_pattern="do_%")
-    result = await list_entry_points_tool(test_session, params)
+    result = await list_entry_points(mock_ctx, name_pattern="do_%")
 
     for ep in result.entry_points:
         assert ep.name.startswith("do_")
 
 
 @pytest.mark.asyncio
-async def test_list_entry_points_empty(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_entry_points: list[EntryPoint],
-):
+async def test_list_entry_points_empty(mock_ctx, sample_entities, sample_entry_points):
     """Non-matching filter returns empty list."""
-    params = ListEntryPointsParams(capability="nonexistent_cap")
-    result = await list_entry_points_tool(test_session, params)
+    result = await list_entry_points(mock_ctx, capability="nonexistent_cap")
 
     assert result.entry_points == []
 
 
-# ---------- get_entry_point_info_tool ----------
+# ---------- get_entry_point_info ----------
 
 @pytest.mark.asyncio
-async def test_get_entry_point_info(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_entry_points: list[EntryPoint],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_get_entry_point_info(mock_ctx, sample_entities, sample_edges, sample_entry_points):
     """Entry point info shows capabilities exercised."""
     eid = sample_entities[1].entity_id  # do_kill
-    params = GetEntryPointInfoParams(entity_id=eid)
-    result = await get_entry_point_info_tool(test_session, params, sample_graph)
+    result = await get_entry_point_info(mock_ctx, entity_id=eid)
 
     assert result.entry_point.entity_id == eid
     assert isinstance(result.capabilities_exercised, dict)
@@ -210,14 +150,8 @@ async def test_get_entry_point_info(
 
 
 @pytest.mark.asyncio
-async def test_get_entry_point_info_not_entry_point(
-    test_session: AsyncSession,
-    sample_entities: list[Entity],
-    sample_edges: list[Edge],
-    sample_graph: nx.MultiDiGraph,
-):
+async def test_get_entry_point_info_not_entry_point(mock_ctx, sample_entities, sample_edges):
     """Non-entry-point entity raises ValueError."""
     eid = sample_entities[0].entity_id  # damage (not an entry point)
-    params = GetEntryPointInfoParams(entity_id=eid)
     with pytest.raises(ValueError, match="not an entry point"):
-        await get_entry_point_info_tool(test_session, params, sample_graph)
+        await get_entry_point_info(mock_ctx, entity_id=eid)

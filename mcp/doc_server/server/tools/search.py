@@ -1,34 +1,21 @@
 """
 Search Tool - Hybrid semantic + keyword search.
 
-Combines exact matching, semantic similarity (pgvector), and keyword search (tsvector).
-Degrades gracefully to keyword-only mode when embedding service unavailable.
+Tools are decorated at module level with @mcp.tool() and remain directly importable.
 """
 
+from typing import Annotated, Literal
+
+from fastmcp import Context
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Literal
 
-from server.search import hybrid_search
-from server.models import SearchResult
+from server.app import mcp, get_ctx
 from server.logging_config import log
+from server.models import SearchResult
+from server.search import hybrid_search
 
 
-class SearchParams(BaseModel):
-    """Parameters for search tool."""
-    query: str = Field(description="Search query (natural language or keywords)")
-    source: Literal["entity"] = Field(
-        default="entity",
-        description="Search source (V2-reserved: 'entity' or 'subsystem_doc'; V1 only supports 'entity')"
-    )
-    kind: str | None = Field(default=None, description="Optional kind filter (function, class, etc.)")
-    capability: str | None = Field(default=None, description="Optional capability filter")
-    min_doc_quality: Literal["high", "medium", "low"] | None = Field(
-        default=None,
-        description="Minimum documentation quality"
-    )
-    limit: int = Field(default=20, ge=1, le=100, description="Maximum results")
-
+# -- Response Model --
 
 class SearchResponse(BaseModel):
     """Response from search tool."""
@@ -38,64 +25,57 @@ class SearchResponse(BaseModel):
     result_count: int
 
 
-async def search_tool(
-    session: AsyncSession,
-    params: SearchParams,
-    embedding_client=None,
-    embedding_model: str = "text-embedding-3-large",
+@mcp.tool()
+async def search(
+    ctx: Context,
+    query: Annotated[str, Field(description="Search query (natural language or keywords)")],
+    source: Annotated[
+        Literal["entity"],
+        Field(description="Search source ('entity' only in V1)"),
+    ] = "entity",
+    kind: Annotated[str | None, Field(description="Optional kind filter (function, class, etc.)")] = None,
+    capability: Annotated[str | None, Field(description="Optional capability filter")] = None,
+    min_doc_quality: Annotated[
+        Literal["high", "medium", "low"] | None,
+        Field(description="Minimum documentation quality"),
+    ] = None,
+    limit: Annotated[int, Field(ge=1, le=100, description="Maximum results")] = 20,
 ) -> SearchResponse:
     """
     Perform hybrid semantic + keyword search.
 
-    Search strategy:
-    1. Exact match boost (signature or name = query) - 10x weight
-    2. Semantic similarity (pgvector cosine) - 0.6 weight
-    3. Keyword relevance (tsvector ts_rank) - 0.4 weight
-
-    Degrades to keyword-only if embedding service unavailable (explicit mode reporting).
-
-    Args:
-        session: Database session
-        params: Search parameters
-        embedding_client: Optional OpenAI client for embeddings
-
-    Returns:
-        Search results with mode indicator
+    Combines exact match (10x boost), semantic similarity (0.6 weight),
+    and keyword relevance (0.4 weight). Degrades to keyword-only if
+    embedding service unavailable.
     """
-    log.info(
-        "search tool invoked",
-        query=params.query,
-        source=params.source,
-        kind=params.kind,
-        capability=params.capability,
-        limit=params.limit,
-    )
+    lc = get_ctx(ctx)
 
-    # V2-reserved: only 'entity' source is functional in V1
-    if params.source != "entity":
-        log.warning("Unsupported search source in V1", source=params.source)
+    log.info("search", query=query, kind=kind, capability=capability, limit=limit)
+
+    if source != "entity":
+        log.warning("Unsupported search source in V1", source=source)
         return SearchResponse(
             search_mode="keyword_fallback",
             results=[],
-            query=params.query,
+            query=query,
             result_count=0,
         )
 
-    # Execute hybrid search
-    results, search_mode = await hybrid_search(
-        session=session,
-        query=params.query,
-        embedding_client=embedding_client,
-        embedding_model=embedding_model,
-        kind=params.kind,
-        capability=params.capability,
-        min_doc_quality=params.min_doc_quality,
-        limit=params.limit,
-    )
+    async with lc["db_manager"].session() as session:
+        results, search_mode = await hybrid_search(
+            session=session,
+            query=query,
+            embedding_client=lc["embedding_client"],
+            embedding_model=lc["embedding_model"],
+            kind=kind,
+            capability=capability,
+            min_doc_quality=min_doc_quality,
+            limit=limit,
+        )
 
     return SearchResponse(
         search_mode=search_mode,
         results=results,
-        query=params.query,
+        query=query,
         result_count=len(results),
     )

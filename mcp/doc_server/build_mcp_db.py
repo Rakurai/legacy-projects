@@ -26,7 +26,7 @@ PROJECT_ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(PROJECT_ROOT))
 
 from server.config import ServerConfig
-from server.db import DatabaseManager, EntityRepository
+from server.db import DatabaseManager
 from server.db_models import Entity, Edge, Capability, CapabilityEdge, EntryPoint
 from server.logging_config import configure_logging, log
 
@@ -42,7 +42,6 @@ from build_helpers.entity_processor import (
     extract_source_code,
     compute_doc_quality,
     compute_is_entry_point,
-    generate_tsvector_text,
     assign_capabilities,
     MergedEntity,
 )
@@ -121,16 +120,10 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
 
     Also generates tsvector for full-text search using PostgreSQL function.
     """
-    import json
-
     log.info("Populating entities table", count=len(merged_entities))
 
+    entities_batch: list[Entity] = []
     for merged in merged_entities:
-        # Serialize dicts to JSON strings for asyncpg compatibility
-        params_json = json.dumps(merged.doc.params) if merged.doc and merged.doc.params else None
-        usages_json = json.dumps(merged.doc.usages) if merged.doc and merged.doc.usages else None
-        side_effects_json = json.dumps(merged.side_effect_markers) if merged.side_effect_markers else None
-
         entity = Entity(
             entity_id=merged.entity_id,
             compound_id=merged.compound_id,
@@ -148,11 +141,11 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             source_text=merged.source_text,
             brief=merged.doc.brief if merged.doc else None,
             details=merged.doc.details if merged.doc else None,
-            params=params_json,
+            params=merged.doc.params if merged.doc else None,
             returns=merged.doc.returns if merged.doc else None,
             notes=merged.doc.notes if merged.doc else None,
             rationale=merged.doc.rationale if merged.doc else None,
-            usages=usages_json,
+            usages=merged.doc.usages if merged.doc else None,
             doc_state=merged.doc.state if merged.doc else "extracted_summary",
             doc_quality=merged.doc_quality,
             capability=merged.capability,
@@ -160,13 +153,13 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             fan_in=merged.fan_in,
             fan_out=merged.fan_out,
             is_bridge=merged.is_bridge,
-            side_effect_markers=side_effects_json,
+            side_effect_markers=merged.side_effect_markers,
             embedding=merged.embedding if hasattr(merged, 'embedding') else None,
-            search_vector=None,  # Will be populated via SQL below
+            search_vector=None,
         )
+        entities_batch.append(entity)
 
-        session.add(entity)
-
+    session.add_all(entities_batch)
     await session.commit()
 
     # Generate tsvectors via SQL (weighted composition)
@@ -191,14 +184,11 @@ async def populate_edges(session: AsyncSession, edges: list[tuple[str, str, str]
     """Populate edges table."""
     log.info("Populating edges table", count=len(edges))
 
-    for source, target, relationship in edges:
-        edge = Edge(
-            source_id=source,
-            target_id=target,
-            relationship=relationship.lower()
-        )
-        session.add(edge)
-
+    edge_batch = [
+        Edge(source_id=source, target_id=target, relationship=relationship.lower())
+        for source, target, relationship in edges
+    ]
+    session.add_all(edge_batch)
     await session.commit()
     log.info("Edges table populated")
 
@@ -210,8 +200,6 @@ async def populate_capabilities(
     merged_entities: list[MergedEntity],
 ) -> None:
     """Populate capabilities and capability_edges tables."""
-    import json
-
     log.info("Populating capabilities table")
 
     # Pre-compute doc_quality distribution per capability from entities
@@ -353,7 +341,6 @@ async def main() -> None:
     # Stage 8: Compute other derived fields
     compute_doc_quality(merged_entities)
     compute_is_entry_point(merged_entities)
-    generate_tsvector_text(merged_entities)
 
     # Stage 9: Load embeddings
     embeddings = load_embeddings(config.artifacts_path)

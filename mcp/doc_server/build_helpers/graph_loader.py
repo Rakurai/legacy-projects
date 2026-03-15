@@ -162,8 +162,8 @@ def compute_bridge_flags(
         callee_caps.discard(None)
         callee_caps.discard(entity_cap)
 
-        # Bridge if neighbors span multiple capabilities
-        if caller_caps and callee_caps and (caller_caps != callee_caps or len(caller_caps) > 0):
+        # Bridge if callers AND callees span different capabilities than this entity
+        if caller_caps and callee_caps:
             merged.is_bridge = True
             bridge_count += 1
 

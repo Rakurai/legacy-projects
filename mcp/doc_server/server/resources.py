@@ -9,14 +9,25 @@ Resources:
 - legacy://stats                 — Server statistics
 """
 
+from importlib.metadata import version, PackageNotFoundError
+from functools import lru_cache
+
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from server.db_models import Capability, CapabilityEdge, Entity, EntryPoint
 from server.logging_config import log
-from server.resolver import entity_to_summary
-from server.util import parse_json_field
+from server.converters import entity_to_summary
+
+
+@lru_cache(maxsize=1)
+def _get_version() -> str:
+    """Read version from installed package metadata (falls back to unknown)."""
+    try:
+        return version("legacy-mcp-doc-server")
+    except PackageNotFoundError:
+        return "unknown"
 
 
 async def get_capabilities_resource(session: AsyncSession) -> dict:
@@ -41,7 +52,7 @@ async def get_capabilities_resource(session: AsyncSession) -> dict:
                 "description": cap.description,
                 "function_count": cap.function_count,
                 "stability": cap.stability,
-                "doc_quality_dist": parse_json_field(cap.doc_quality_dist) or {},
+                "doc_quality_dist": cap.doc_quality_dist or {},
             }
             for cap in capabilities
         ]
@@ -102,7 +113,7 @@ async def get_capability_detail_resource(
         "description": cap.description,
         "function_count": cap.function_count,
         "stability": cap.stability,
-        "doc_quality_dist": parse_json_field(cap.doc_quality_dist) or {},
+        "doc_quality_dist": cap.doc_quality_dist or {},
         "dependencies": [
             {
                 "target_capability": e.target_cap,
@@ -173,12 +184,12 @@ async def get_entity_resource(
         "is_entry_point": entity.is_entry_point,
         "brief": entity.brief,
         "details": entity.details,
-        "params": parse_json_field(entity.params),
+        "params": entity.params,
         "returns": entity.returns,
         "rationale": entity.rationale,
-        "usages": parse_json_field(entity.usages),
+        "usages": entity.usages,
         "notes": entity.notes,
-        "side_effect_markers": parse_json_field(entity.side_effect_markers),
+        "side_effect_markers": entity.side_effect_markers,
     }
 
 
@@ -269,12 +280,7 @@ async def get_stats_resource(
     if graph is not None:
         graph_stats["total_nodes"] = graph.number_of_nodes()
         graph_stats["total_edges"] = graph.number_of_edges()
-        # Count edges by type
-        edge_types: dict[str, int] = {}
-        for _, _, data in graph.edges(data=True):
-            t = data.get("type", "unknown")
-            edge_types[t] = edge_types.get(t, 0) + 1
-        graph_stats["edges_by_type"] = edge_types
+        graph_stats["edges_by_type"] = graph.graph.get("edge_type_counts", {})
 
     # Capability stats
     total_capabilities = await session.scalar(
@@ -305,7 +311,7 @@ async def get_stats_resource(
             "total_entry_points": total_entry_points,
         },
         "server_info": {
-            "version": "1.0.0",
+            "version": _get_version(),
             "embedding_endpoint_available": embedding_available,
             "database_connection_status": "connected",
         },

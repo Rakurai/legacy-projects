@@ -1,11 +1,12 @@
 """
-Server Lifespan - Startup/shutdown lifecycle and global context.
+Server Lifespan - Startup/shutdown lifecycle.
 
-Initializes database connection, loads dependency graph, and sets up
-the embedding client during server startup. Cleans up on shutdown.
+Yields a dict that FastMCP makes available via ctx.lifespan_context
+in every tool/resource handler. No module-level singletons.
 """
 
 from contextlib import asynccontextmanager
+from typing import TypedDict
 
 import networkx as nx
 from fastmcp import FastMCP
@@ -17,18 +18,13 @@ from server.graph import load_graph
 from server.logging_config import configure_logging, log
 
 
-class ServerContext:
-    """Server context holding database and graph instances."""
-
-    def __init__(self):
-        self.config: ServerConfig | None = None
-        self.db_manager: DatabaseManager | None = None
-        self.graph: nx.MultiDiGraph | None = None
-        self.embedding_client: AsyncOpenAI | None = None
-        self.embedding_model: str = "text-embedding-3-large"
-
-
-server_context = ServerContext()
+class LifespanContext(TypedDict):
+    """Typed dict yielded by lifespan, accessible via ctx.lifespan_context."""
+    config: ServerConfig
+    db_manager: DatabaseManager
+    graph: nx.MultiDiGraph
+    embedding_client: AsyncOpenAI | None
+    embedding_model: str
 
 
 @asynccontextmanager
@@ -36,16 +32,14 @@ async def lifespan(app: FastMCP):
     """
     Server lifespan manager.
 
-    Initializes database connection and loads dependency graph at startup.
-    Cleans up resources at shutdown.
+    Yields a LifespanContext dict that FastMCP injects into every
+    tool/resource/prompt via ctx.lifespan_context.
     """
-    # Startup
     log.info("Starting Legacy Documentation Server")
 
     # Load configuration
     config = ServerConfig()
     configure_logging(config.log_level)
-    server_context.config = config
 
     log.info(
         "Configuration loaded",
@@ -56,7 +50,6 @@ async def lifespan(app: FastMCP):
 
     # Initialize database manager
     db_manager = DatabaseManager(config)
-    server_context.db_manager = db_manager
 
     log.info("Database connection established")
 
@@ -64,7 +57,6 @@ async def lifespan(app: FastMCP):
     log.info("Loading dependency graph from database")
     async with db_manager.session() as session:
         graph = await load_graph(session)
-        server_context.graph = graph
 
     log.info(
         "Dependency graph loaded",
@@ -73,29 +65,36 @@ async def lifespan(app: FastMCP):
     )
 
     # Initialize embedding client (optional)
+    embedding_client: AsyncOpenAI | None = None
+    embedding_model = "text-embedding-3-large"
+
     if config.embedding_enabled:
         try:
             embedding_client = AsyncOpenAI(
                 base_url=config.embedding_base_url,
                 api_key=config.embedding_api_key or "default",
             )
-            server_context.embedding_client = embedding_client
             if config.embedding_model:
-                server_context.embedding_model = config.embedding_model
+                embedding_model = config.embedding_model
             log.info(
                 "Embedding client initialized",
                 base_url=config.embedding_base_url,
-                model=server_context.embedding_model,
+                model=embedding_model,
             )
         except Exception as e:
             log.warning("Embedding client initialization failed", error=str(e))
-            server_context.embedding_client = None
     else:
         log.info("Embedding endpoint not configured; semantic search disabled")
 
     log.info("Server ready")
 
-    yield
+    yield LifespanContext(
+        config=config,
+        db_manager=db_manager,
+        graph=graph,
+        embedding_client=embedding_client,
+        embedding_model=embedding_model,
+    )
 
     # Shutdown
     log.info("Shutting down server")

@@ -65,7 +65,6 @@ class MergedEntity:
         self.is_bridge: bool = False
         self.is_entry_point: bool = False
         self.side_effect_markers: dict[str, list[str]] = {}
-        self.search_vector_text: str | None = None
         self._capability: str | None = None
 
     @property
@@ -266,52 +265,6 @@ def compute_is_entry_point(merged_entities: list[MergedEntity]) -> None:
                 entry_point_count += 1
 
     log.info("Entry point flags computed", entry_point_count=entry_point_count)
-
-
-def generate_tsvector_text(merged_entities: list[MergedEntity]) -> None:
-    """
-    Generate weighted tsvector text for full-text search.
-
-    Weights:
-        - name: A (highest)
-        - brief + details: B
-        - definition_text: C
-        - source_text: D (lowest)
-
-    Format: Each field will be stored, and PostgreSQL will apply weights during
-    tsvector creation: setweight(to_tsvector(name), 'A') || setweight(..., 'B') || ...
-
-    This function just combines the text; actual tsvector creation happens in SQL.
-
-    Updates merged_entity.search_vector_text in place.
-
-    Args:
-        merged_entities: List of merged entity records
-    """
-    log.info("Generating search vector text")
-
-    for merged in merged_entities:
-        parts = []
-
-        # Name (weight A)
-        parts.append(merged.entity.name or "")
-
-        # Brief + details (weight B)
-        if merged.doc:
-            if merged.doc.brief:
-                parts.append(merged.doc.brief)
-            if merged.doc.details:
-                parts.append(merged.doc.details)
-
-        # Definition (weight C)
-        if merged.definition_text:
-            parts.append(merged.definition_text)
-
-        # Source text (weight D) - truncate to first 1000 chars to avoid bloat
-        if merged.source_text:
-            parts.append(merged.source_text[:1000])
-
-        merged.search_vector_text = " ".join(parts)
 
 
 def assign_capabilities(

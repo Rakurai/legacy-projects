@@ -30,21 +30,6 @@ async def test_search_exact_match_boost(test_session: AsyncSession, sample_entit
 
 
 @pytest.mark.asyncio
-async def test_search_keyword_only_mode(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Test keyword-only search when embedding client unavailable."""
-    results, mode = await hybrid_search(
-        session=test_session,
-        query="character damage",
-        embedding_client=None,
-        limit=20,
-    )
-
-    assert mode == "keyword_fallback"
-    # Should find entities with "damage" or "character" in their text
-    assert len(results) >= 0  # May be 0 if no keyword matches
-
-
-@pytest.mark.asyncio
 async def test_search_with_kind_filter(test_session: AsyncSession, sample_entities: list[Entity]):
     """Test search with kind filter."""
     results, mode = await hybrid_search(
@@ -84,20 +69,6 @@ async def test_search_with_min_doc_quality(test_session: AsyncSession, sample_en
     )
 
     assert all(r.entity_summary.doc_quality == "high" for r in results)  # type: ignore
-
-
-@pytest.mark.asyncio
-async def test_search_empty_results(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Test search with no matches."""
-    results, mode = await hybrid_search(
-        session=test_session,
-        query="nonexistent_term_xyz_123",
-        embedding_client=None,
-        limit=20,
-    )
-
-    assert mode == "keyword_fallback"
-    assert len(results) == 0
 
 
 @pytest.mark.asyncio

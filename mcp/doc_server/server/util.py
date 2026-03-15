@@ -4,69 +4,34 @@ Shared Utilities - Common helpers used across server modules.
 Keeps utility code DRY and avoids duplication across tool/resource modules.
 """
 
-import json
-from typing import Any
-
 from sqlalchemy import case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from server.db_models import Entity
+from server.errors import EntityNotFoundError
 from server.logging_config import log
+from server.models import EntitySummary
 
 
 def doc_quality_sort_key():
-    """
-    Return a SQLAlchemy CASE expression that maps doc_quality text values
-    to integers for proper semantic ordering (high=1, medium=2, low=3).
-
-    Use with .asc() for best-first ordering.
-    """
+    """CASE expression mapping doc_quality → int for best-first ordering."""
     return case(
-        {"high": 1, "medium": 2, "low": 3},
-        value=Entity.doc_quality,
+        (Entity.doc_quality == "high", 1),
+        (Entity.doc_quality == "medium", 2),
+        (Entity.doc_quality == "low", 3),
         else_=4,
     )
-
-
-def parse_json_field(val: Any) -> Any:
-    """
-    Parse a JSON column value that may arrive as a string from asyncpg.
-
-    PostgreSQL JSON/JSONB columns are sometimes returned as raw strings
-    by asyncpg depending on the query path. This normalizes them.
-
-    Args:
-        val: Column value (dict, list, str, or None)
-
-    Returns:
-        Parsed Python object, or None if unparseable
-    """
-    if isinstance(val, str):
-        try:
-            return json.loads(val)
-        except (json.JSONDecodeError, TypeError):
-            return None
-    return val
 
 
 async def fetch_entity_summaries(
     session: AsyncSession,
     entity_ids: list[str],
-) -> list["EntitySummary"]:
-    """
-    Batch-fetch entities by ID and convert to EntitySummary objects.
-
-    Preserves ordering of input IDs. Silently skips IDs not found in DB.
-
-    Args:
-        session: Async database session
-        entity_ids: Entity IDs to fetch
-
-    Returns:
-        Ordered list of EntitySummary objects
-    """
-    from server.resolver import entity_to_summary
+) -> list[EntitySummary]:
+    """Batch-fetch entities by ID and convert to EntitySummary. Preserves input ordering."""
+    # Import here would be circular (converters → models, util → converters).
+    # converters is lightweight and has no transitive deps back to util.
+    from server.converters import entity_to_summary
 
     if not entity_ids:
         return []
@@ -88,16 +53,7 @@ async def fetch_entity_map(
     session: AsyncSession,
     entity_ids: list[str],
 ) -> dict[str, Entity]:
-    """
-    Batch-fetch entities by ID and return as a dict.
-
-    Args:
-        session: Async database session
-        entity_ids: Entity IDs to fetch
-
-    Returns:
-        Dict mapping entity_id → Entity
-    """
+    """Batch-fetch entities by ID and return as {entity_id → Entity} dict."""
     if not entity_ids:
         return {}
 
@@ -113,18 +69,9 @@ async def resolve_entity_id(
     signature: str | None,
 ) -> str:
     """
-    Resolve an entity_id from either entity_id or signature.
+    Resolve an entity_id from either entity_id or signature (FR-004).
 
-    Used by tools that accept entity_id|signature per FR-004.
     Prefers entity_id when both are provided.
-
-    Args:
-        session: Database session
-        entity_id: Optional direct entity ID
-        signature: Optional entity signature
-
-    Returns:
-        Resolved entity_id string
 
     Raises:
         ValueError: If neither parameter is provided
@@ -142,7 +89,6 @@ async def resolve_entity_id(
         )
         row = result.scalar_one_or_none()
         if not row:
-            from server.errors import EntityNotFoundError
             raise EntityNotFoundError(signature, kind="entity")
         return row
 

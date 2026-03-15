@@ -5,23 +5,18 @@ Provides test database, mock artifacts, and async support for integration tests.
 """
 
 import pytest
-import asyncio
+from contextlib import asynccontextmanager
 from pathlib import Path
+from unittest.mock import MagicMock
+
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from sqlalchemy import text
 from sqlmodel import SQLModel
 
 import networkx as nx
 
 from server.config import ServerConfig
 from server.db_models import Entity, Edge, Capability, CapabilityEdge, EntryPoint
-
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """Create event loop for async tests."""
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 
 @pytest.fixture(scope="session")
@@ -247,6 +242,15 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
 
     await test_session.commit()
 
+    # Populate tsvector for full-text search in tests
+    await test_session.execute(text(
+        "UPDATE entities SET search_vector = "
+        "setweight(to_tsvector('english', coalesce(name, '')), 'A') || "
+        "setweight(to_tsvector('english', coalesce(brief, '')), 'B') || "
+        "setweight(to_tsvector('english', coalesce(details, '')), 'B')"
+    ))
+    await test_session.commit()
+
     return entities
 
 
@@ -404,3 +408,59 @@ def sample_graph(sample_entities: list[Entity], sample_edges: list[Edge]) -> nx.
         )
 
     return g
+
+
+@pytest.fixture
+def mock_ctx(test_session: AsyncSession, sample_graph: nx.MultiDiGraph, test_config: ServerConfig):
+    """
+    Create a mock FastMCP Context for direct tool invocation in tests.
+
+    The mock wraps test_session inside a db_manager.session() context manager
+    so tools that do ``async with lc["db_manager"].session() as session:`` get
+    the same session that already contains the test fixtures.
+    """
+    mock_db_manager = MagicMock()
+
+    @asynccontextmanager
+    async def _yield_session():
+        yield test_session
+
+    mock_db_manager.session = _yield_session
+
+    lifespan_context = {
+        "config": test_config,
+        "db_manager": mock_db_manager,
+        "graph": sample_graph,
+        "embedding_client": None,
+        "embedding_model": "text-embedding-3-small",
+    }
+
+    ctx = MagicMock()
+    ctx.lifespan_context = lifespan_context
+
+    return ctx
+
+
+@pytest.fixture
+def mock_ctx_no_graph(test_session: AsyncSession, test_config: ServerConfig):
+    """Mock Context without a graph (for tools that don't need it)."""
+    mock_db_manager = MagicMock()
+
+    @asynccontextmanager
+    async def _yield_session():
+        yield test_session
+
+    mock_db_manager.session = _yield_session
+
+    lifespan_context = {
+        "config": test_config,
+        "db_manager": mock_db_manager,
+        "graph": nx.MultiDiGraph(),
+        "embedding_client": None,
+        "embedding_model": "text-embedding-3-small",
+    }
+
+    ctx = MagicMock()
+    ctx.lifespan_context = lifespan_context
+
+    return ctx

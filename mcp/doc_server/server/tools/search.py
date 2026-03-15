@@ -4,12 +4,13 @@ Search Tool - Hybrid semantic + keyword search.
 Tools are decorated at module level with @mcp.tool() and remain directly importable.
 """
 
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
 
 from server.app import mcp, get_ctx
+from server.enums import DocQuality, SearchMode
 from server.logging_config import log
 from server.models import SearchResult
 from server.search import hybrid_search
@@ -19,7 +20,7 @@ from server.search import hybrid_search
 
 class SearchResponse(BaseModel):
     """Response from search tool."""
-    search_mode: Literal["hybrid", "semantic_only", "keyword_fallback"]
+    search_mode: SearchMode
     results: list[SearchResult]
     query: str
     result_count: int
@@ -30,13 +31,13 @@ async def search(
     ctx: Context,
     query: Annotated[str, Field(description="Search query (natural language or keywords)")],
     source: Annotated[
-        Literal["entity"],
+        str,
         Field(description="Search source ('entity' only in V1)"),
     ] = "entity",
     kind: Annotated[str | None, Field(description="Optional kind filter (function, class, etc.)")] = None,
     capability: Annotated[str | None, Field(description="Optional capability filter")] = None,
     min_doc_quality: Annotated[
-        Literal["high", "medium", "low"] | None,
+        DocQuality | None,
         Field(description="Minimum documentation quality"),
     ] = None,
     limit: Annotated[int, Field(ge=1, le=100, description="Maximum results")] = 20,
@@ -55,7 +56,7 @@ async def search(
     if source != "entity":
         log.warning("Unsupported search source in V1", source=source)
         return SearchResponse(
-            search_mode="keyword_fallback",
+            search_mode=SearchMode.KEYWORD_FALLBACK,
             results=[],
             query=query,
             result_count=0,

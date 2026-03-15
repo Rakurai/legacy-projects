@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from server.db_models import Entity
+from server.enums import DocQuality
 from server.errors import EntityNotFoundError
 from server.logging_config import log
 from server.models import EntitySummary
@@ -17,9 +18,9 @@ from server.models import EntitySummary
 def doc_quality_sort_key():
     """CASE expression mapping doc_quality → int for best-first ordering."""
     return case(
-        (Entity.doc_quality == "high", 1),
-        (Entity.doc_quality == "medium", 2),
-        (Entity.doc_quality == "low", 3),
+        (Entity.doc_quality == DocQuality.HIGH, 1),
+        (Entity.doc_quality == DocQuality.MEDIUM, 2),
+        (Entity.doc_quality == DocQuality.LOW, 3),
         else_=4,
     )
 

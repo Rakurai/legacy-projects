@@ -21,6 +21,7 @@ from build_helpers.artifact_models import (
     Document,
     DocumentDB,
 )
+from server.enums import DocQuality, DocState
 from server.logging_config import log
 
 
@@ -219,24 +220,24 @@ def compute_doc_quality(merged_entities: list[MergedEntity]) -> None:
     for merged in merged_entities:
         doc = merged.doc
         if not doc:
-            merged.doc_quality = "low"
+            merged.doc_quality = DocQuality.LOW
             continue
 
-        doc_state = doc.state or "extracted_summary"
+        doc_state = doc.state or DocState.EXTRACTED_SUMMARY
 
         # High quality
-        if doc_state in ("refined_summary", "refined_usage") and doc.details:
+        if doc_state in (DocState.REFINED_SUMMARY, DocState.REFINED_USAGE) and doc.details:
             if merged.entity.kind != "function" or doc.params:
-                merged.doc_quality = "high"
+                merged.doc_quality = DocQuality.HIGH
                 continue
 
         # Medium quality
-        if doc_state == "generated_summary" or (doc.brief and not doc.details):
-            merged.doc_quality = "medium"
+        if doc_state == DocState.GENERATED_SUMMARY or (doc.brief and not doc.details):
+            merged.doc_quality = DocQuality.MEDIUM
             continue
 
         # Low quality (default)
-        merged.doc_quality = "low"
+        merged.doc_quality = DocQuality.LOW
 
 
 def compute_is_entry_point(merged_entities: list[MergedEntity]) -> None:

@@ -5,6 +5,7 @@ All ORM-to-API-model conversions live here. No defensive fallbacks — if the da
 is wrong, we fail loudly rather than silently coercing.
 """
 
+from server.enums import DocQuality, DocState, Provenance
 from server.db_models import Entity, Capability
 from server.models import EntitySummary, EntityDetail, CapabilitySummary
 
@@ -19,11 +20,11 @@ def entity_to_summary(entity: Entity) -> EntitySummary:
         file_path=entity.file_path,
         capability=entity.capability,
         brief=entity.brief,
-        doc_state=entity.doc_state or "extracted_summary",
-        doc_quality=entity.doc_quality or "low",
+        doc_state=entity.doc_state or DocState.EXTRACTED_SUMMARY,
+        doc_quality=entity.doc_quality or DocQuality.LOW,
         fan_in=entity.fan_in,
         fan_out=entity.fan_out,
-        provenance="precomputed",
+        provenance=Provenance.PRECOMPUTED,
     )
 
 
@@ -49,8 +50,8 @@ def entity_to_detail(
         definition_text=entity.definition_text,
         source_text=entity.source_text if include_code else None,
         capability=entity.capability,
-        doc_state=entity.doc_state or "extracted_summary",
-        doc_quality=entity.doc_quality or "low",
+        doc_state=entity.doc_state or DocState.EXTRACTED_SUMMARY,
+        doc_quality=entity.doc_quality or DocQuality.LOW,
         fan_in=entity.fan_in,
         fan_out=entity.fan_out,
         is_bridge=entity.is_bridge,
@@ -63,7 +64,7 @@ def entity_to_detail(
         usages=entity.usages,
         notes=entity.notes,
         side_effect_markers=entity.side_effect_markers,
-        provenance="doxygen_extracted" if entity.doc_state == "extracted_summary" else "llm_generated",
+        provenance=Provenance.DOXYGEN_EXTRACTED if entity.doc_state == DocState.EXTRACTED_SUMMARY else Provenance.LLM_GENERATED,
     )
 
 
@@ -79,5 +80,5 @@ def capability_to_summary(cap: Capability) -> CapabilitySummary:
         function_count=cap.function_count,
         stability=cap.stability,
         doc_quality_dist=dqd,
-        provenance="precomputed",
+        provenance=Provenance.PRECOMPUTED,
     )

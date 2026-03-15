@@ -5,7 +5,7 @@ Tools are decorated at module level with @mcp.tool() and remain directly importa
 """
 
 from pathlib import Path
-from typing import Annotated, Literal
+from typing import Annotated
 
 import networkx as nx
 from fastmcp import Context
@@ -17,28 +17,20 @@ from sqlmodel import select
 from server.app import mcp, get_ctx
 from server.converters import entity_to_summary, entity_to_detail
 from server.db_models import Entity
+from server.enums import EntityKind, MatchType, ResolutionStatus
 from server.errors import EntityNotFoundError
 from server.logging_config import log
 from server.models import EntityDetail, EntityNeighbor, EntitySummary, TruncationMetadata
 from server.resolver import resolve_entity as resolve_entity_fn
 from server.util import fetch_entity_map, doc_quality_sort_key
 
-# -- Kind literal used by multiple tools --
-EntityKind = Literal[
-    "function", "variable", "class", "struct", "file",
-    "enum", "define", "typedef", "namespace", "dir", "group",
-]
-
 # -- Response Models --
 
 class ResolveEntityResponse(BaseModel):
     """Response from resolve_entity tool."""
-    resolution_status: Literal["exact", "ambiguous", "not_found"]
+    resolution_status: ResolutionStatus
     resolved_from: str
-    match_type: Literal[
-        "entity_id", "signature_exact", "name_exact",
-        "name_prefix", "keyword", "semantic",
-    ]
+    match_type: MatchType
     resolution_candidates: int
     candidates: list[EntitySummary]
 

@@ -10,6 +10,8 @@ from __future__ import annotations
 
 from typing import Any
 
+from server.enums import ResolutionStatus
+
 
 class EntityNotFoundError(Exception):
     """
@@ -53,7 +55,7 @@ def not_found_response(
         Dict suitable for returning directly from an MCP tool
     """
     return {
-        "resolution_status": "not_found",
+        "resolution_status": ResolutionStatus.NOT_FOUND,
         "message": f"{kind.capitalize()} not found: {identifier}",
         "query": identifier,
         "candidates": candidates or [],

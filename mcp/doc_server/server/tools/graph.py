@@ -4,7 +4,7 @@ Graph Navigation Tools - callers, callees, dependencies, hierarchy, related.
 Tools are decorated at module level with @mcp.tool() and remain directly importable.
 """
 
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
@@ -14,6 +14,7 @@ from sqlmodel import select
 from server.app import mcp, get_ctx
 from server.converters import entity_to_summary
 from server.db_models import Entity
+from server.enums import Relationship
 from server.graph import (
     get_callers as get_callers_fn,
     get_callees as get_callees_fn,
@@ -171,12 +172,12 @@ async def get_dependencies(
     entity_id: Annotated[str | None, Field(description="Entity ID")] = None,
     signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
     relationship: Annotated[
-        Literal["calls", "uses", "inherits", "includes", "contained_by"] | None,
+        Relationship | None,
         Field(description="Filter by relationship type"),
     ] = None,
     direction: Annotated[
-        Literal["incoming", "outgoing", "both"],
-        Field(description="Edge direction"),
+        str,
+        Field(description="Edge direction: incoming, outgoing, both"),
     ] = "both",
     limit: Annotated[int, Field(ge=1, le=500, description="Maximum results")] = 100,
 ) -> DependenciesResponse:

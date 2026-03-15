@@ -6,19 +6,22 @@ Provenance fields track data source per FR-044.
 """
 
 from pydantic import BaseModel, Field, field_validator
-from typing import Literal
 
-
-# Provenance type (data source tracking per FR-044)
-Provenance = Literal[
-    "doxygen_extracted",      # From Doxygen XML
-    "llm_generated",          # From LLM documentation generation
-    "subsystem_narrative",    # From subsystem docs (V2)
-    "precomputed",            # Pre-computed from build script (metrics, graph)
-    "inferred",               # Inferred via algorithms (call cones, behavior slices)
-    "heuristic",              # Heuristic-based (side effects, entry point detection)
-    "measured"                # Measured at runtime (not used in V1)
-]
+from server.enums import (
+    AccessType,
+    CapabilityType,
+    Confidence,
+    DocQuality,
+    EntityKind,
+    EntityType,
+    FocusType,
+    MatchType,
+    Provenance,
+    ResolutionStatus,
+    SearchMode,
+    SideEffectCategory,
+    TruncationReason,
+)
 
 
 class EntitySummary(BaseModel):
@@ -30,15 +33,15 @@ class EntitySummary(BaseModel):
     entity_id: str = Field(description="Internal Doxygen ID (for passing to get_entity)")
     signature: str = Field(description="Full human-readable signature")
     name: str = Field(description="Bare name")
-    kind: Literal["function", "variable", "class", "struct", "file", "enum", "define", "typedef", "namespace", "dir", "group"]
+    kind: EntityKind
     file_path: str | None = Field(default=None, description="Source file path")
     capability: str | None = Field(default=None, description="Capability group")
     brief: str | None = Field(default=None, description="One-line summary")
     doc_state: str = Field(description="Documentation pipeline state")
-    doc_quality: Literal["high", "medium", "low"] = Field(description="Derived quality bucket")
+    doc_quality: DocQuality = Field(description="Derived quality bucket")
     fan_in: int = Field(ge=0, description="Incoming CALLS edges")
     fan_out: int = Field(ge=0, description="Outgoing CALLS edges")
-    provenance: Provenance = Field(default="precomputed", description="Data source")
+    provenance: Provenance = Field(default=Provenance.PRECOMPUTED, description="Data source")
 
     @field_validator("signature", "name")
     @classmethod
@@ -54,8 +57,8 @@ class EntityNeighbor(BaseModel):
     name: str
     kind: str
     relationship: str  # CALLS, USES, INHERITS, INCLUDES, CONTAINED_BY
-    direction: Literal["incoming", "outgoing"]
-    provenance: Provenance = Field(default="precomputed")
+    direction: str  # "incoming" or "outgoing" (set dynamically from graph traversal)
+    provenance: Provenance = Field(default=Provenance.PRECOMPUTED)
 
 
 class EntityDetail(BaseModel):
@@ -73,7 +76,7 @@ class EntityDetail(BaseModel):
 
     # Classification
     kind: str
-    entity_type: Literal["compound", "member"]
+    entity_type: EntityType
 
     # Source location
     file_path: str | None
@@ -87,7 +90,7 @@ class EntityDetail(BaseModel):
     # Capability & metrics
     capability: str | None
     doc_state: str
-    doc_quality: Literal["high", "medium", "low"]
+    doc_quality: DocQuality
     fan_in: int
     fan_out: int
     is_bridge: bool
@@ -109,14 +112,14 @@ class EntityDetail(BaseModel):
     neighbors: list[EntityNeighbor] | None = None
 
     # Provenance
-    provenance: Provenance = Field(default="doxygen_extracted")
+    provenance: Provenance = Field(default=Provenance.DOXYGEN_EXTRACTED)
 
 
 class ResolutionEnvelope(BaseModel):
     """Metadata about entity resolution."""
-    resolution_status: Literal["exact", "ambiguous", "not_found"]
+    resolution_status: ResolutionStatus
     resolved_from: str  # Original query string
-    match_type: Literal["entity_id", "signature_exact", "name_exact", "name_prefix", "keyword", "semantic"]
+    match_type: MatchType
     resolution_candidates: int  # Total matches found
 
 
@@ -127,7 +130,7 @@ class TruncationMetadata(BaseModel):
     node_count: int  # Actual result count returned
     max_depth_requested: int | None = None
     max_depth_reached: int | None = None
-    truncation_reason: Literal["depth_limit", "node_limit", "none"] | None = None
+    truncation_reason: TruncationReason | None = None
 
 
 class SearchResult(BaseModel):
@@ -137,9 +140,9 @@ class SearchResult(BaseModel):
     V1: result_type is always "entity"
     V2: adds "subsystem_doc" type
     """
-    result_type: Literal["entity", "subsystem_doc"]  # V2: subsystem_doc not used in V1
+    result_type: str  # "entity" in V1; V2 adds "subsystem_doc"
     score: float = Field(ge=0, le=1, description="Normalized combined score")
-    search_mode: Literal["hybrid", "semantic_only", "keyword_fallback"]
+    search_mode: SearchMode
     provenance: Provenance
     entity_summary: EntitySummary | None = None  # Present when result_type="entity"
 
@@ -150,26 +153,26 @@ class CapabilityTouch(BaseModel):
     direct_count: int
     transitive_count: int
     functions: list[EntitySummary]  # Sample (truncated if >10)
-    provenance: Provenance = Field(default="inferred")
+    provenance: Provenance = Field(default=Provenance.INFERRED)
 
 
 class GlobalTouch(BaseModel):
     """Global variable usage in behavior analysis."""
     entity_id: str
     name: str
-    kind: Literal["variable"]
-    access_type: Literal["direct", "transitive"]
-    provenance: Provenance = Field(default="inferred")
+    kind: EntityKind = EntityKind.VARIABLE
+    access_type: AccessType
+    provenance: Provenance = Field(default=Provenance.INFERRED)
 
 
 class SideEffectMarker(BaseModel):
     """Side effect marker in behavior analysis."""
     function_id: str
     function_name: str
-    category: Literal["messaging", "persistence", "state_mutation", "scheduling"]
-    access_type: Literal["direct", "transitive"]
-    confidence: Literal["direct", "heuristic", "transitive"]
-    provenance: Provenance = Field(default="heuristic")
+    category: SideEffectCategory
+    access_type: AccessType
+    confidence: Confidence
+    provenance: Provenance = Field(default=Provenance.HEURISTIC)
 
 
 class BehaviorSlice(BaseModel):
@@ -195,18 +198,18 @@ class BehaviorSlice(BaseModel):
     # Side effects (categorized)
     side_effects: dict[str, list[SideEffectMarker]]  # category → markers
 
-    provenance: Provenance = Field(default="inferred")
+    provenance: Provenance = Field(default=Provenance.INFERRED)
 
 
 class CapabilitySummary(BaseModel):
     """Summary of a capability group."""
     name: str
-    type: Literal["domain", "policy", "projection", "infrastructure", "utility"]
+    type: CapabilityType
     description: str
     function_count: int
     stability: str | None
     doc_quality_dist: dict[str, int]  # {high: N, medium: N, low: N}
-    provenance: Provenance = Field(default="precomputed")
+    provenance: Provenance = Field(default=Provenance.PRECOMPUTED)
 
 
 class CapabilityDetail(BaseModel):
@@ -220,7 +223,7 @@ class CapabilityDetail(BaseModel):
     dependencies: list[dict]  # Typed edges to other capabilities
     entry_points: list[str]  # Entry point function names
     functions: list[EntitySummary] | None = None  # Optional full function list
-    provenance: Provenance = Field(default="precomputed")
+    provenance: Provenance = Field(default=Provenance.PRECOMPUTED)
 
 
 # V2-Reserved Shapes (defined now to prevent response-shape drift)
@@ -253,7 +256,7 @@ class SubsystemDocSummary(BaseModel):
 
 class ContextBundle(BaseModel):
     """V2: Mixed entity/system context assembly (not used in V1)."""
-    focus_type: Literal["entity", "subsystem", "capability", "entry_point"]
+    focus_type: FocusType
     focus: dict  # EntitySummary | SubsystemSummary | dict
     related_entities: list[EntitySummary]
     related_capabilities: list[dict]

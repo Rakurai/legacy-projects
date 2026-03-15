@@ -4,7 +4,7 @@ Behavioral Analysis Tools - call cone, state touches, hotspot detection.
 Tools are decorated at module level with @mcp.tool() and remain directly importable.
 """
 
-from typing import Annotated, Literal
+from typing import Annotated
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
@@ -14,6 +14,7 @@ from sqlmodel import select
 from server.app import mcp, get_ctx
 from server.converters import entity_to_summary
 from server.db_models import Entity
+from server.enums import AccessType, Confidence, DocQuality, HotspotMetric, Provenance, SideEffectCategory, TruncationReason
 from server.errors import EntityNotFoundError
 from server.graph import compute_call_cone, CALLS, USES
 from server.logging_config import log
@@ -56,7 +57,7 @@ class HotspotsResponse(BaseModel):
 def _extract_side_effects_for_entities(
     entities: dict[str, Entity],
     entity_ids: list[str],
-    access_type: Literal["direct", "transitive"],
+    access_type: AccessType,
 ) -> list[SideEffectMarker]:
     """Extract side effect markers from a set of entities."""
     markers: list[SideEffectMarker] = []
@@ -68,7 +69,7 @@ def _extract_side_effects_for_entities(
         if not sem or not isinstance(sem, dict):
             continue
         for category, functions in sem.items():
-            if category not in ("messaging", "persistence", "state_mutation", "scheduling"):
+            if category not in (SideEffectCategory.MESSAGING, SideEffectCategory.PERSISTENCE, SideEffectCategory.STATE_MUTATION, SideEffectCategory.SCHEDULING):
                 continue
             if isinstance(functions, list) and functions:
                 markers.append(SideEffectMarker(
@@ -76,8 +77,8 @@ def _extract_side_effects_for_entities(
                     function_name=entity.name or eid,
                     category=category,
                     access_type=access_type,
-                    confidence="direct" if access_type == "direct" else "transitive",
-                    provenance="heuristic",
+                    confidence=Confidence.DIRECT if access_type == AccessType.DIRECT else Confidence.TRANSITIVE,
+                    provenance=Provenance.HEURISTIC,
                 ))
     return markers
 
@@ -165,7 +166,7 @@ async def get_behavior_slice(
                 if te and te.kind == "variable":
                     globals_used.append(GlobalTouch(
                         entity_id=target, name=te.name or target,
-                        kind="variable", access_type="direct",
+                        kind="variable", access_type=AccessType.DIRECT,
                     ))
 
     seen_globals = {g.entity_id for g in globals_used}
@@ -179,16 +180,16 @@ async def get_behavior_slice(
                     seen_globals.add(target)
                     globals_used.append(GlobalTouch(
                         entity_id=target, name=te.name or target,
-                        kind="variable", access_type="transitive",
+                        kind="variable", access_type=AccessType.TRANSITIVE,
                     ))
 
     # Side effects
     side_effects: dict[str, list[SideEffectMarker]] = {}
-    for m in _extract_side_effects_for_entities(all_entities_map, [eid], "direct"):
+    for m in _extract_side_effects_for_entities(all_entities_map, [eid], AccessType.DIRECT):
         side_effects.setdefault(m.category, []).append(m)
-    for m in _extract_side_effects_for_entities(all_entities_map, direct_ids, "direct"):
+    for m in _extract_side_effects_for_entities(all_entities_map, direct_ids, AccessType.DIRECT):
         side_effects.setdefault(m.category, []).append(m)
-    for m in _extract_side_effects_for_entities(all_entities_map, transitive_ids, "transitive"):
+    for m in _extract_side_effects_for_entities(all_entities_map, transitive_ids, AccessType.TRANSITIVE):
         side_effects.setdefault(m.category, []).append(m)
 
     behavior = BehaviorSlice(
@@ -200,7 +201,7 @@ async def get_behavior_slice(
         capabilities_touched=cap_touches,
         globals_used=globals_used,
         side_effects=side_effects,
-        provenance="inferred",
+        provenance=Provenance.INFERRED,
     )
 
     total_cone = len(direct_summaries) + len(transitive_summaries)
@@ -212,7 +213,7 @@ async def get_behavior_slice(
             node_count=total_cone,
             max_depth_requested=max_depth,
             max_depth_reached=cone["max_depth_reached"],
-            truncation_reason="node_limit" if truncated else "none",
+            truncation_reason=TruncationReason.NODE_LIMIT if truncated else TruncationReason.NONE,
         ),
     )
 
@@ -293,8 +294,8 @@ async def get_state_touches(
         for e in transitive_use_ids
         if e in entity_map and entity_map[e].kind == "variable"
     ]
-    direct_side_effects = _extract_side_effects_for_entities(entity_map, direct_callee_ids, "direct")
-    transitive_side_effects = _extract_side_effects_for_entities(entity_map, indirect_callee_ids, "transitive")
+    direct_side_effects = _extract_side_effects_for_entities(entity_map, direct_callee_ids, AccessType.DIRECT)
+    transitive_side_effects = _extract_side_effects_for_entities(entity_map, indirect_callee_ids, AccessType.TRANSITIVE)
 
     return StateTouchesResponse(
         entity_id=eid,
@@ -310,7 +311,7 @@ async def get_state_touches(
 async def get_hotspots(
     ctx: Context,
     metric: Annotated[
-        Literal["fan_in", "fan_out", "bridge", "underdocumented"],
+        HotspotMetric,
         Field(description="Ranking metric"),
     ],
     kind: Annotated[str | None, Field(description="Optional kind filter")] = None,
@@ -334,15 +335,15 @@ async def get_hotspots(
         if capability:
             stmt = stmt.where(Entity.capability == capability)
 
-        if metric == "fan_in":
+        if metric == HotspotMetric.FAN_IN:
             stmt = stmt.order_by(Entity.fan_in.desc())
-        elif metric == "fan_out":
+        elif metric == HotspotMetric.FAN_OUT:
             stmt = stmt.order_by(Entity.fan_out.desc())
-        elif metric == "bridge":
+        elif metric == HotspotMetric.BRIDGE:
             stmt = stmt.where(Entity.is_bridge == True)  # noqa: E712
             stmt = stmt.order_by(Entity.fan_in.desc())
-        elif metric == "underdocumented":
-            stmt = stmt.where(Entity.doc_quality.in_(["low", "medium"]))
+        elif metric == HotspotMetric.UNDERDOCUMENTED:
+            stmt = stmt.where(Entity.doc_quality.in_([DocQuality.LOW, DocQuality.MEDIUM]))
             stmt = stmt.order_by(Entity.fan_in.desc())
 
         stmt = stmt.limit(limit)

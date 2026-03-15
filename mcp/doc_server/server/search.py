@@ -19,15 +19,12 @@ All queries use SQLAlchemy ORM — no raw SQL.
 from sqlalchemy import func, literal, or_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-from typing import Literal
 
+from server.enums import DocQuality, DocState, Provenance, SearchMode
 from server.db_models import Entity
-from server.models import SearchResult, Provenance
+from server.models import SearchResult
 from server.converters import entity_to_summary
 from server.logging_config import log
-
-
-SearchMode = Literal["hybrid", "semantic_only", "keyword_fallback"]
 
 # Scoring weights (matching spec)
 _EXACT_WEIGHT = 10.0
@@ -45,17 +42,17 @@ def _apply_filters(stmt, kind: str | None, capability: str | None, min_doc_quali
         quality_order = {"high": 3, "medium": 2, "low": 1}
         min_order = quality_order.get(min_doc_quality, 1)
         if min_order == 3:
-            stmt = stmt.where(Entity.doc_quality == "high")
+            stmt = stmt.where(Entity.doc_quality == DocQuality.HIGH)
         elif min_order == 2:
-            stmt = stmt.where(Entity.doc_quality.in_(["high", "medium"]))
+            stmt = stmt.where(Entity.doc_quality.in_([DocQuality.HIGH, DocQuality.MEDIUM]))
     return stmt
 
 
 def _provenance_for(entity: Entity) -> Provenance:
     """Determine provenance label from entity doc_state."""
-    if entity.doc_state in ("refined_summary", "refined_usage", "generated_summary"):
-        return "llm_generated"
-    return "doxygen_extracted"
+    if entity.doc_state in (DocState.REFINED_SUMMARY, DocState.REFINED_USAGE, DocState.GENERATED_SUMMARY):
+        return Provenance.LLM_GENERATED
+    return Provenance.DOXYGEN_EXTRACTED
 
 
 async def _exact_match_ids(
@@ -159,7 +156,7 @@ async def hybrid_search(
     log.info("Hybrid search", query=query, kind=kind, capability=capability)
 
     query_embedding: list[float] | None = None
-    search_mode: SearchMode = "hybrid"
+    search_mode: SearchMode = SearchMode.HYBRID
 
     if embedding_client:
         try:
@@ -171,16 +168,16 @@ async def hybrid_search(
             query_embedding = response.data[0].embedding
         except Exception as e:
             log.warning("Embedding generation failed; falling back to keyword-only", error=str(e))
-            search_mode = "keyword_fallback"
+            search_mode = SearchMode.KEYWORD_FALLBACK
     else:
-        search_mode = "keyword_fallback"
+        search_mode = SearchMode.KEYWORD_FALLBACK
 
     # Run sub-queries
     exact_ids = await _exact_match_ids(session, query, kind, capability, min_doc_quality)
     keyword_sc = await _keyword_scores(session, query, kind, capability, min_doc_quality, limit=100)
 
     semantic_sc: dict[str, float] = {}
-    if search_mode == "hybrid" and query_embedding:
+    if search_mode == SearchMode.HYBRID and query_embedding:
         semantic_sc = await _semantic_scores(session, query_embedding, kind, capability, min_doc_quality, limit=100)
 
     # Merge scores

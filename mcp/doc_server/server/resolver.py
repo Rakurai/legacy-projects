@@ -16,18 +16,14 @@ from dataclasses import dataclass
 from sqlalchemy import func, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
-from typing import Literal
 
+from server.enums import MatchType, ResolutionStatus
 from server.util import doc_quality_sort_key
 
 from server.db_models import Entity
 from server.models import ResolutionEnvelope, EntitySummary
 from server.converters import entity_to_summary
 from server.logging_config import log
-
-
-MatchType = Literal["entity_id", "signature_exact", "name_exact", "name_prefix", "keyword", "semantic"]
-ResolutionStatus = Literal["exact", "ambiguous", "not_found"]
 
 
 @dataclass
@@ -104,8 +100,8 @@ async def resolve_entity(
     # No matches found
     log.info("Entity not found", query=query)
     return ResolutionResult(
-        status="not_found",
-        match_type="semantic",  # Last attempted stage
+        status=ResolutionStatus.NOT_FOUND,
+        match_type=MatchType.SEMANTIC,  # Last attempted stage
         candidates=[],
         resolved_from=query,
     )
@@ -120,8 +116,8 @@ async def _resolve_by_entity_id(session: AsyncSession, entity_id: str) -> Resolu
 
     if entity:
         return ResolutionResult(
-            status="exact",
-            match_type="entity_id",
+            status=ResolutionStatus.EXACT,
+            match_type=MatchType.ENTITY_ID,
             candidates=[entity],
             resolved_from=entity_id,
         )
@@ -146,10 +142,10 @@ async def _resolve_by_signature(
     entities = list(result.scalars().all())
 
     if entities:
-        status: ResolutionStatus = "exact" if len(entities) == 1 else "ambiguous"
+        status: ResolutionStatus = ResolutionStatus.EXACT if len(entities) == 1 else ResolutionStatus.AMBIGUOUS
         return ResolutionResult(
             status=status,
-            match_type="signature_exact",
+            match_type=MatchType.SIGNATURE_EXACT,
             candidates=entities,
             resolved_from=signature,
         )
@@ -178,10 +174,10 @@ async def _resolve_by_name(
     entities = list(result.scalars().all())
 
     if entities:
-        status: ResolutionStatus = "exact" if len(entities) == 1 else "ambiguous"
+        status: ResolutionStatus = ResolutionStatus.EXACT if len(entities) == 1 else ResolutionStatus.AMBIGUOUS
         return ResolutionResult(
             status=status,
-            match_type="name_exact",
+            match_type=MatchType.NAME_EXACT,
             candidates=entities,
             resolved_from=name,
         )
@@ -211,8 +207,8 @@ async def _resolve_by_prefix(
 
     if entities:
         return ResolutionResult(
-            status="ambiguous",
-            match_type="name_prefix",
+            status=ResolutionStatus.AMBIGUOUS,
+            match_type=MatchType.NAME_PREFIX,
             candidates=entities,
             resolved_from=prefix,
         )
@@ -243,8 +239,8 @@ async def _resolve_by_keyword(
 
     if entities:
         return ResolutionResult(
-            status="ambiguous",
-            match_type="keyword",
+            status=ResolutionStatus.AMBIGUOUS,
+            match_type=MatchType.KEYWORD,
             candidates=entities,
             resolved_from=query,
         )
@@ -285,8 +281,8 @@ async def _resolve_by_semantic(
 
         if entities:
             return ResolutionResult(
-                status="ambiguous",
-                match_type="semantic",
+                status=ResolutionStatus.AMBIGUOUS,
+                match_type=MatchType.SEMANTIC,
                 candidates=entities,
                 resolved_from=query,
             )

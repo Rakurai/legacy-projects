@@ -53,6 +53,27 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
 - **Bid Validation**: Verification that bidders have sufficient funds
 - **Cancel Logic**: Rules for when and how auctions can be cancelled
 
+### Banking System
+- **Banking**: Persistent gold storage across sessions
+  - Deposit, withdraw, and balance commands
+  - Gold stored independently of carried gold
+  - Clan banking for organizational funds
+  - Available at designated banker NPCs
+
+### Currency System
+- **Currency**: Dual gold and silver economy
+  - Gold and silver as distinct currency types with exchange rates
+  - Money-related commands: drop gold/silver, get gold/silver, split loot
+  - Automatic gold/silver handling in shops and auctions
+
+### Shop System
+- **Shops**: NPC merchant system for buying and selling items
+  - Buy/sell price calculations with profit margins
+  - Item type restrictions per shop (what a merchant will buy/sell)
+  - Shop hours (open/close times)
+  - Haggling and pricing based on charisma
+  - Shop inventory management (NPCs restock via area resets)
+
 ## Implementation Details
 
 ### Auction Process
@@ -122,14 +143,3 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
 - **Item Distribution**: Provides alternative means of obtaining items
 - **Gold Sink**: Potentially removes currency from economy through fees
 - **Social Trading**: Enables economic interaction between players
-
-## Future Improvements
-- Add more auction types including sealed bid auctions
-- Implement buyout option for immediate purchase
-- Enhance notification system with more detailed tracking
-- Create auction search and filtering features
-- Integrate with a more formal shop and barter system
-- Add auction house locations in major cities
-- Implement auction item categories and sorting
-- Create scheduled specialty auctions for rare items
-- Develop auction statistics and market trend tracking

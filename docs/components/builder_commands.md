@@ -119,7 +119,7 @@ The Builder Commands subsystem provides comprehensive tools for content creators
   - Reset timing and conditions
   - Special reset instructions
 
-## Key Files and Components
+## Key Files
 
 ### Implementation Files
 - `wiz_build.cc` (348 LOC) - Core world building tools
@@ -256,29 +256,3 @@ The Builder Commands subsystem provides comprehensive tools for content creators
   - Special NPC setup
   - Event trigger placement
   - Dynamic content management
-
-## Future Improvements
-
-### Enhanced Building Tools
-- Implement visual map-based room creation and connection
-- Add template libraries for common object and mobile types
-- Create smart validation for detecting common building errors
-- Develop better tools for mass creation with variations
-
-### Workflow Improvements
-- Add version control for tracking changes to areas
-- Implement builder workspaces for collaborative development
-- Create checkpoint and restoration system for experimental changes
-- Add commenting and documentation tools for complex areas
-
-### Integration Enhancements
-- Develop better connection with quest and event systems
-- Create external building interfaces for offline development
-- Implement import/export capabilities for sharing content
-- Build visualization tools for complex area structures
-
-### Advanced Features
-- Add scripting capabilities for procedural generation
-- Implement conditional reset behaviors based on game state
-- Create more sophisticated prototype inheritance
-- Develop area simulation tools for testing and balancing

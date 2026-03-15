@@ -20,6 +20,15 @@ The Utilities system provides a comprehensive collection of helper libraries and
 
 ## Core Components
 
+### Custom String Class
+- **String**: Copy-on-write string type used throughout the codebase
+  - Lightweight alternative to std::string
+  - Copy-on-write semantics for efficient passing and storage
+  - Null-awareness: nullptr is distinct from empty string ("" ≠ nullptr)
+  - Used as the standard string type across all game systems
+  - Implicit construction from C strings
+  - Comparison, concatenation, and mutation operators
+
 ### String Processing
 - **Format System**: Type-safe string formatting
   - Parameter substitution
@@ -271,7 +280,7 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Normalization
   - Validation and bounds checking
 
-## File Relationships
+## Key Files
 - **format.hh/Format.cc**: String formatting utilities
   - 380 lines
   - Type-safe string formatting
@@ -314,6 +323,16 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Type-safe manipulation
   - Flag testing and setting
 
+- **const.cc**: Flag definition tables
+  - Named constants for every flag category (act, affect, room, object extra, wear location, etc.)
+  - Used for serialization, display, and OLC editing
+  - Also contains race/guild/skill/weapon/attack type tables (shared with Character and Object systems)
+
+- **tables.hh/tables.cc**: Table structure declarations and lookup helpers
+  - Structures for flag_type, race_type, guild_type, etc.
+  - Serialization/deserialization of table entries
+  - Name-to-value and value-to-name lookup functions
+
 - **macros.hh**: Utility macros
   - 350 lines
   - Debug helpers
@@ -336,7 +355,7 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Dynamic updates
   - Pattern matching
 
-## System Behavior
+## System Behaviors
 1. **String Formatting Workflow**:
    - Format string parsing and token identification
    - Type-aware parameter substitution
@@ -375,28 +394,7 @@ The Utilities system provides a comprehensive collection of helper libraries and
    - Special case handling (critical successes/failures)
    - Performance optimization for frequent calls
 
-## Dependencies
+## Dependencies and Relationships
 - Used by all other components in the system
 - Minimal external dependencies (primarily standard libraries)
 - Some utilities depend on others within the component
-
-## Future Improvements
-- Modernize string formatting with printf-style safety
-- Enhance argument parsing with more sophisticated validation
-- Implement more advanced fuzzy matching algorithms for lookups
-- Add support for more complex probability distributions
-- Develop comprehensive unit testing for all utilities
-- Optimize performance-critical utilities with profiling-guided improvements
-- Add support for internationalization in string utilities
-- Enhance type system with more reflection capabilities
-- Implement thread-safe versions of all utility functions
-- Develop more sophisticated ASCII visualization tools
-- Add support for structured logging with metadata
-- Implement more complete error context for debugging
-- Depends on: Standard libraries (C++), Infrastructure (core routines)
-- Depended on by: All game and admin systems
-
-## Future Improvements
-- Enhance logging with structured formats
-- Expand image and visualization capabilities
-- Add more utility functions for common patterns

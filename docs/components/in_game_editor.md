@@ -47,6 +47,19 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Reply and forward functionality
   - Board-specific formatting rules
 
+- **Note Boards**: Multiple themed message boards
+  - Board types: general notes, ideas, changes, news, immortal quests, penalties
+  - Each board has its own file-based storage
+  - Level-gated access (board visibility and posting permissions based on character level/role)
+  - Multi-recipient addressing with "to" field parsing
+
+- **Note Reading**: Browsing and reading posted notes
+  - Unread tracking per character
+  - Spool browsing with next/previous navigation
+  - Catchup command to mark all notes as read
+  - Note expiration with configurable expiry dates
+  - Timestamp and sender/recipient display
+
 - **Description Editor**: Room, object, and character description editing
   - Context-specific formatting rules
   - Length limitations and validation
@@ -92,7 +105,7 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Format conversion for storage
   - Permission checking for edit operations
 
-## Key Files and Components
+## Key Files
 
 ### Header Files
 - `Edit.hh` (28 LOC) - In-game text editor interface
@@ -225,29 +238,3 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Personal note creation
   - Mail composition
   - Custom content creation
-
-## Future Improvements
-
-### Enhanced Editing Features
-- Implement syntax highlighting for different content types
-- Add macro support for frequently used text patterns
-- Create templates for common content structures
-- Implement more advanced formatting options
-
-### User Experience Improvements
-- Add a more intuitive command set alongside traditional commands
-- Implement better visual feedback for editing operations
-- Create context-sensitive help for different editing modes
-- Add auto-completion for commands and common text
-
-### Integration Enhancements
-- Deeper connection with world building tools
-- Better versioning and change tracking
-- Collaborative editing capabilities for team projects
-- Export/import functionality for external editing
-
-### Technical Improvements
-- More robust session persistence
-- Better handling of network interruptions
-- Improved buffer management for large documents
-- More efficient search algorithms for large content

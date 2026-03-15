@@ -135,7 +135,7 @@ The Status & Look Commands subsystem implements character self-inspection and en
   - Recovery rates and estimated durations
   - Status effect stacking and interaction display
 
-## Key Files and Components
+## Key Files
 
 ### Implementation Files
 - `act_info.cc` (5493 LOC) - Primary information command implementation
@@ -266,29 +266,3 @@ The Status & Look Commands subsystem implements character self-inspection and en
   - Environment evaluation
   - Equipment status awareness
   - Condition and effect monitoring
-
-## Future Improvements
-
-### Enhanced Information Display
-- Implement more customizable information display formats
-- Add toggleable detail levels for different player preferences
-- Create specialized views for different play styles
-- Develop more intuitive organization of complex information
-
-### Context Sensitivity
-- Increase environmental factors affecting descriptions
-- Implement more character knowledge-based information filtering
-- Add profession and skill-specific observation details
-- Develop adaptive information prioritization based on context
-
-### Integration Enhancements
-- Deeper connection with quest and achievement systems
-- Better equipment comparison and optimization tools
-- Enhanced condition effect visualization with predictions
-- Improved tactical information for combat situations
-
-### Accessibility Features
-- Add configurable output formats for different terminal types
-- Implement brief modes for screen reader compatibility
-- Create symbol-based status indicators for quick reference
-- Develop color scheme options for different visual needs

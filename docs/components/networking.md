@@ -82,6 +82,14 @@ The Networking system manages all player connections to the MUD, implementing so
   - Login attempt limiting
   - Ban checking and enforcement
 
+### Server Continuity
+- **Copyover**: Hot-restart capability preserving player connections
+  - Serializes active connection state (file descriptors, character references)
+  - Passes file descriptors to newly-exec'd server process
+  - Restores connections and characters in the new process
+  - Players experience a brief pause rather than disconnection
+  - Triggered by admin `copyover` command
+
 ## Implementation Details
 
 ### Socket Implementation
@@ -147,7 +155,7 @@ The Networking system manages all player connections to the MUD, implementing so
   - Disconnection handling
   - Reconnection matching
 
-## File Relationships
+## Key Files
 - **comm.hh/comm.cc**: Core network communication
   - 940 lines
   - Socket initialization and management
@@ -200,7 +208,7 @@ The Networking system manages all player connections to the MUD, implementing so
   - Stat adjustment implementation
   - Race and class modifiers
 
-## System Behavior
+## System Behaviors
 1. **Connection Lifecycle**:
    - Socket creation and binding at startup
    - Connection acceptance in main loop
@@ -242,23 +250,9 @@ The Networking system manages all player connections to the MUD, implementing so
    - Dynamic feature adaptation
    - Renegotiation on capability changes
 
-## Dependencies
+## Dependencies and Relationships
 - **Command Interpreter**: For processing player input
 - **Game Engine**: For integration with main loop
 - **Utilities**: For string processing and logging
 - **Character System**: For binding connections to players
 - **Memory & GC**: For resource management
-
-## Future Improvements
-- Implement WebSocket support for browser-based clients
-- Add SSH protocol support for secure connections
-- Enhance compression for bandwidth optimization
-- Implement more advanced MXP/MCCP protocol extensions
-- Support UTF-8 encoding throughout the network stack
-- Add client detection for automatic feature negotiation
-- Implement connection pooling for high-volume servers
-- Enhance DDoS protection and connection rate limiting
-- Add support for proxy protocol for better client identification
-- Implement more sophisticated idle detection and management
-- Add connection statistics and performance metrics
-- Improve connection security and encryption

@@ -52,6 +52,28 @@ The Social Actions and Channels subsystem manages social interactions between pl
   - Color code support for rich text
   - Dynamic content insertion
 
+### Music System
+- **Music/Jukebox**: In-game song playback
+  - Music files containing song lyrics/text
+  - Jukebox objects in rooms that can be interacted with
+  - Play command to start song playback
+  - Tick-based lyric broadcast to the room (songs play line by line over time)
+  - Song listing and selection
+
+### Marriage System
+- **Marriage**: Character relationship mechanics
+  - Proposal and acceptance protocol
+  - Wedding ceremony process
+  - Partner status tracking (visible in score/who)
+  - Divorce mechanics
+  - Special partner commands and social status effects
+
+### Pose System
+- **Pose**: Custom character descriptors
+  - Class-specific pose options
+  - Custom title/description appearing in room descriptions and who lists
+  - Per-character configuration
+
 ## Implementation Details
 
 ### Channel Implementation
@@ -126,13 +148,3 @@ The Social Actions and Channels subsystem manages social interactions between pl
 - **Group System**: Relies on special communication channels
 - **Admin Controls**: Uses special channels for staff communication
 - **Event System**: Events may trigger special messages or channels
-
-## Future Improvements
-- Expand social action customization with player-defined emotes
-- Add more channel types including temporary discussion channels
-- Improve ignore/filtering granularity with more specific controls
-- Enhance formatting and localization support
-- Implement channel moderation tools
-- Add support for saved conversation logs
-- Create channel-specific color schemes
-- Develop more sophisticated emotes with animations or special effects

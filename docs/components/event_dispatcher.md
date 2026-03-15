@@ -114,7 +114,7 @@ The Event Dispatcher subsystem implements a global publish-subscribe event syste
   - Memory management for large contexts
   - Lazy evaluation for expensive data
 
-## Key Files and Components
+## Key Files
 
 ### Header Files
 - `event/Dispatcher.hh` - Core dispatcher interface
@@ -240,29 +240,3 @@ The Event Dispatcher subsystem implements a global publish-subscribe event syste
   - Progress milestone events
   - Fail condition detection
   - Reward distribution events
-
-## Future Improvements
-
-### Event System Expansion
-- Implement hierarchical event types with inheritance
-- Add pattern-based subscription for broader event matching
-- Support event batching for performance optimization
-- Create event metadata for improved filtering and routing
-
-### Performance Optimizations
-- Implement more efficient handler lookup structures
-- Add handler prioritization within event types
-- Create specialized fast paths for high-frequency events
-- Optimize memory usage for large numbers of subscriptions
-
-### Monitoring and Debugging
-- Add comprehensive event logging and tracing
-- Create visualization tools for event flow analysis
-- Implement subscription auditing and leak detection
-- Add performance metrics for dispatcher and handlers
-
-### Advanced Features
-- Implement event queuing for deferred processing
-- Add conditional event suppression mechanisms
-- Create event correlation for complex pattern detection
-- Support distributed events across server instances

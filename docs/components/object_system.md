@@ -68,6 +68,24 @@ The Object System manages all tangible items in the game world other than charac
   - Custom drop tables for different scenarios
   - Specialized item generation for unique drops
 
+### Shop System
+- **Shops**: NPC merchant system for buying and selling items
+  - Shop data assigned to MobilePrototypes (which NPCs are merchants)
+  - Buy/sell price calculations with profit margins
+  - Item type restrictions per shop
+  - Shop hours (open/close times)
+  - Haggling based on charisma
+  - Shop inventory populated via area resets
+  - Trade interactions via `buy`, `sell`, `list`, `value` commands
+
+### Data Tables (Object-Related)
+Static lookup tables in `const.cc`, `tables.cc`, and `merc.hh` that parameterize object mechanics.
+- **Attack Type Tables** (`attack_table`): Damage types (slash, bash, pierce, etc.), hit message nouns, and associated damage classes for melee attacks.
+- **Item Type Tables** (`type_table`): Names and properties for each object type — weapon, armor, container, food, drink, scroll, wand, staff, potion, pill, furniture, etc.
+- **Weapon Type Tables** (`weapon_table`): Weapon classes (sword, dagger, mace, axe, etc.) mapped to associated weapon skill, default damage type, and flag sets.
+- **Flag Definition Tables**: Named constants for every flag category (act flags, affect flags, room flags, object extra flags, wear location flags, etc.) used for serialization, display, and OLC editing.
+- **Loot Generation Tables**: Name prefixes/suffixes, base stat ranges, modifier pools, and rarity weights for the dynamic loot system in `loot_tables.cc`.
+
 ## Implementation Details
 
 ### Object Implementation
@@ -124,6 +142,10 @@ The Object System manages all tangible items in the game world other than charac
 - `/src/objstate.cc` - Object persistence between server restarts (184 LOC)
 - `/src/loot_tables.cc` - Core loot distribution system (1317 LOC)
 - `/src/lootv2.cc` - Enhanced loot generation system (556 LOC)
+- `/src/const.cc` - Attack type, item type, weapon type, and flag definition tables
+- `/src/include/tables.hh` - Table structure declarations
+- `/src/tables.cc` - Table serialization and lookup helpers
+- `/src/include/merc.hh` - Item type and weapon type struct definitions
 
 ## System Behaviors
 
@@ -153,11 +175,3 @@ The Object System manages all tangible items in the game world other than charac
 - **Combat System**: For weapons, armor, and combat calculations
 - **Quest System**: For quest items, tokens, and objective tracking
 - **Shop System**: For buying, selling, and item transactions
-
-## Future Improvements
-- Refactor object value system for greater type safety
-- Add new object types for expanded gameplay mechanics
-- Expand object-environment interactions and puzzles
-- Enhance socket and crafting systems for more depth
-- Implement more sophisticated durability and repair systems
-- Develop a more extensive crafting system integrated with existing enhancement mechanics

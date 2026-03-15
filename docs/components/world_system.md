@@ -115,6 +115,23 @@ The World System forms the core spatial environment of the game, providing the p
   - Enables efficient area queries
   - Supports neighbor finding
 
+### Navigation and Awareness
+- **Scan**: Multi-directional room scanning
+  - Shows characters and features in adjacent rooms up to several rooms away
+  - Distance-based detail degradation (closer rooms show more info)
+  - Skill-based range modifiers
+  - Respects visibility rules (hidden, invisible, dark rooms)
+- **Hunt/Track**: BFS pathfinding for locating targets
+  - Breadth-first search across room exits to find shortest path
+  - Skill-based success checks with environmental modifiers (terrain, weather)
+  - Returns directional guidance toward the target
+  - Used by both player `track` command and NPC hunting behavior
+- **Movement**: Directional navigation between rooms
+  - Movement point cost based on sector type (terrain)
+  - Door opening, swim checks, fly requirements
+  - Movement-triggered events (greet progs, aggression checks)
+  - Position requirements (must be standing)
+
 ## Implementation Details
 
 ### Area Implementation
@@ -203,11 +220,3 @@ The World System forms the core spatial environment of the game, providing the p
 - **Combat System**: For battlefield properties and terrain effects
 - **Quest System**: For location-based objectives and triggers
 - **Mobile System**: For NPC placement, behavior, and navigation
-
-## Future Improvements
-- Enhance support for instanced dungeons with more sophisticated instancing mechanics
-- Expand region system with more geographic features and terrain effects
-- Increase gameplay impact of weather and environmental effects
-- Refine area reset mechanics for more dynamic content respawning
-- Implement more sophisticated room lighting and visibility systems
-- Develop enhanced mapping tools for players and administrators

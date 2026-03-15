@@ -29,6 +29,14 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Safe command processing specific to NPCs
   - Action sequencing and chaining
 
+### Special Functions
+- **spec_fun**: Hardcoded C++ NPC behaviors predating the MobProg scripting system
+  - Assigned to mobiles via function pointer in their prototype
+  - Fire during the NPC update tick (every pulse)
+  - Examples: spec_cast_mage (NPC casts offensive spells), spec_cast_cleric (NPC heals/buffs), spec_breath_fire/acid/gas/frost/lightning (dragon breath attacks), spec_executioner (attacks criminals), spec_guard (protects area), spec_thief (picks pockets), spec_fido (eats corpses), spec_janitor (picks up trash)
+  - Looked up by name via a function pointer table in `special.cc`
+  - Simpler than MobProgs but more performant for common behaviors
+
 ### Trigger System
 - **Time Triggers**: Schedule-based activation
   - Hour/minute specific triggers
@@ -112,7 +120,7 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Actor and victim parameter substitution
   - Random selection capabilities
 
-## Key Files and Components
+## Key Files
 
 ### Header Files
 - `MobProg.hh` (71 LOC) - NPC scripting system
@@ -241,33 +249,3 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Time-sensitive events
   - Special holiday events
   - World-changing event reactions
-
-## Future Improvements
-
-### AI Enhancements
-- Implement more sophisticated decision trees with learning capabilities
-- Add memory systems for NPCs to remember player interactions
-- Create more complex conversation systems with topic tracking
-- Develop NPC personality traits that affect behavior choices
-- Implement faction relationships that dynamically modify NPC responses
-
-### Scripting Capabilities
-- Add more trigger types for expanded activation conditions
-- Implement function calls for modular script components
-- Create libraries of common behaviors for reuse
-- Add support for more complex variable types and operations
-- Develop a more expressive scripting language with improved syntax
-
-### Management Tools
-- Build better debugging tools for script testing and validation
-- Create visual editors for MobProg creation and editing
-- Add runtime monitoring tools for active scripts
-- Implement script versioning and backup capabilities
-- Develop metrics for measuring script performance and usage
-
-### Integration Features
-- Deeper connection with the quest system for complex quest behaviors
-- Enhanced group behaviors for coordinated NPC actions
-- Better integration with the event system for world-scale reactions
-- Improved object interaction capabilities for environmental storytelling
-- Path planning and navigation enhancements for more realistic movement

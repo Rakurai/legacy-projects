@@ -137,7 +137,7 @@ The Persistence system handles the saving and loading of all game data, ensuring
   - Validation rules
   - Scope management
 
-## File Relationships
+## Key Files
 - **sql.hh/sqlite.cc**: Core SQLite database interface
   - 750 lines
   - Database connection management
@@ -192,7 +192,7 @@ The Persistence system handles the saving and loading of all game data, ensuring
   - World state saving
   - Reset state management
 
-## System Behavior
+## System Behaviors
 1. **Player Data Lifecycle**:
    - Character creation stores initial state
    - Periodic automatic saving during gameplay
@@ -225,22 +225,10 @@ The Persistence system handles the saving and loading of all game data, ensuring
    - Error handling and recovery
    - Resource cleanup
 
-## Dependencies
+## Dependencies and Relationships
 - **Character System**: For player data structures
 - **Object System**: For item persistence
 - **World System**: For area and room data
 - **Game Engine**: For lifecycle management
 - **Memory & GC**: For efficient resource usage
 - **Utilities**: For support functions
-
-## Future Improvements
-- Implement full database migration system for schema evolution
-- Add support for player data versioning and automatic migration
-- Improve backup systems with differential backup support
-- Enhance transaction safety with journaling for critical operations
-- Develop data consistency checking and repair utilities
-- Implement cache layer for frequently accessed persistence data
-- Optimize bulk loading and saving operations
-- Add support for compressed storage formats
-- Improve concurrent access patterns for multi-threaded operation
-- Develop monitoring tools for persistence performance

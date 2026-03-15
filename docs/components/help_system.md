@@ -122,7 +122,7 @@ Organized topic collections providing logical grouping:
 - Some specialized topics require specific character attributes
 - Progressive revelation of complex topics based on player experience
 
-## Dependencies
+## Dependencies and Relationships
 
 ### Dependencies On
 - **Command System**: For processing help commands and arguments
@@ -135,29 +135,3 @@ Organized topic collections providing logical grouping:
 - **New Player Onboarding**: For structured learning progression
 - **Administrative Systems**: For staff documentation and policies
 - **Command System**: For providing command-specific assistance
-
-## Future Improvements
-
-### Search Enhancements
-- Implement more sophisticated search algorithms with fuzzy matching
-- Add natural language processing for question-based queries
-- Develop a more comprehensive keyword and synonym database
-- Create a help topic recommender system based on player activity
-
-### Content Management
-- Develop a web-based help entry management interface
-- Implement version control for help content changes
-- Create templates for consistent help formatting
-- Add multimedia support for diagrams or ASCII art illustrations
-
-### User Experience
-- Add a help browser with graphical navigation of topics
-- Implement contextual help triggers based on player actions
-- Create interactive tutorials linked to help content
-- Develop a "tip of the day" system using help content
-
-### Integration
-- Connect help system more deeply with command feedback
-- Create a help API for custom integrations with other systems
-- Implement help content translation support
-- Add player-contributed notes and tips with moderation

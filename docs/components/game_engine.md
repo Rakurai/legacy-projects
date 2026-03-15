@@ -55,6 +55,28 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Event queue management
   - System-wide synchronization
 
+### Entity Lifecycle
+- **Entity Factory**: Creation of live game objects from templates
+  - Character instances created from MobilePrototype templates during area resets
+  - Object instances created from ObjectPrototype templates
+  - Prototype-to-instance initialization with stat calculation
+- **Entity Movement**: Moving entities between containers
+  - Characters moved between rooms via direction commands, teleportation, and transfer
+  - Objects moved between rooms, inventories, containers, and equipment slots
+  - Proper notification to source/destination rooms
+- **Entity Extraction**: Destroying entities with proper cleanup
+  - Character extraction removes affects, group membership, fighting state, and room references
+  - Object extraction handles nested contents, quest item protection, and reference cleanup
+  - Deferred deletion via Garbage system ensures safe removal during iteration
+
+### Message Dispatch
+- **act() System**: Context-sensitive message formatting and delivery
+  - Pronoun/name token substitution ($n, $N, $e, $m, $s, $p, etc.) based on source/target
+  - Recipient classes: actor-only, victim-only, bystanders, whole room, global
+  - Visibility checks (can the recipient see the actor/target?)
+  - Snoop forwarding (staff monitoring sees relayed messages)
+  - Arena spectating support for forwarding combat messages to observers
+
 ### Boot and Shutdown
 - **Initialization**: Startup sequence
   - Orderly subsystem initialization
@@ -148,7 +170,7 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - System dependency verification
   - Performance capability testing
 
-## Key Files and Components
+## Key Files
 
 ### Header Files
 - `GameTime.hh` - In-game time management
@@ -302,29 +324,3 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Resource management
   - Administrative functions
   - Event processing and scheduling
-
-## Future Improvements
-
-### Performance Optimization
-- Implement more sophisticated load balancing for update cycles
-- Add profiling for subsystem update performance
-- Create adaptive timing based on system load
-- Develop priority-based deferral for non-critical updates
-- Implement parallel processing for independent subsystems
-- Add better instrumentation for timing and resource usage
-
-### Event Scheduling Enhancement
-- Create a more sophisticated event priority system
-- Implement better cancellation and modification for pending events
-- Add conditional events with dynamic triggers
-- Develop event dependencies and sequences
-- Create a visual debugger for event scheduling
-- Implement event logging and analysis tools
-
-### System Integration Improvements
-- Redesign subsystem interfaces for better modularity
-- Create a plugin architecture for optional systems
-- Implement a configuration-driven update cycle
-- Add dynamic resource allocation based on usage patterns
-- Develop better isolation between critical and non-critical systems
-- Create comprehensive system health monitoring

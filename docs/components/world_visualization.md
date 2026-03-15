@@ -76,7 +76,7 @@ The World Visualization subsystem provides ASCII-based mapping and spatial aware
   - Environmental modifiers (terrain, weather)
   - Pursuit assistance with directional guidance
 
-## Key Files and Components
+## Key Files
 
 ### Header Files
 - `worldmap/Worldmap.hh` (30 LOC) - World map functionality
@@ -222,29 +222,3 @@ The World Visualization subsystem provides ASCII-based mapping and spatial aware
   - Special location identification
   - Area-based event tracking
   - Geographic milestone recording
-
-## Future Improvements
-
-### Map Enhancements
-- Implement higher resolution ASCII maps with more detailed terrain
-- Add multiple map layers for different information types
-- Create interactive maps with clickable features
-- Support user-added annotations and waypoints
-
-### Visualization Technology
-- Implement better color blending for terrain transitions
-- Add simple animation for dynamic features (water, weather)
-- Support custom map styles and preferences
-- Create downloadable map exports for external viewing
-
-### Integration Features
-- Deeper integration with quest tracking and objectives
-- Route planning and optimal path suggestions
-- Integration with group/party positioning
-- Automatic discovery recording and completion tracking
-
-### Performance Optimizations
-- More efficient spatial partitioning for large worlds
-- Cached map rendering for frequently viewed areas
-- Progressive loading for large map views
-- Memory-efficient storage of map data

@@ -208,3 +208,283 @@ def test_entity_detail_schema():
     assert detail.entity_id == "test_id"
     assert detail.doc_quality == "high"
     assert detail.provenance == "llm_generated"
+
+
+# ---- Phase 6: Behavioral Analysis Tool Contract Tests (T067) ----
+
+
+def test_get_behavior_slice_params_valid():
+    """Test valid GetBehaviorSliceParams."""
+    from server.tools.behavior import GetBehaviorSliceParams
+    params = GetBehaviorSliceParams(entity_id="test_id", max_depth=5, max_cone_size=200)
+    assert params.entity_id == "test_id"
+    assert params.max_depth == 5
+    assert params.max_cone_size == 200
+
+
+def test_get_behavior_slice_params_defaults():
+    """Test GetBehaviorSliceParams defaults."""
+    from server.tools.behavior import GetBehaviorSliceParams
+    params = GetBehaviorSliceParams(entity_id="test_id")
+    assert params.max_depth == 5
+    assert params.max_cone_size == 200
+
+
+def test_get_behavior_slice_params_validation():
+    """Test GetBehaviorSliceParams validation."""
+    from server.tools.behavior import GetBehaviorSliceParams
+    with pytest.raises(ValidationError):
+        GetBehaviorSliceParams(entity_id="test_id", max_depth=0)
+    with pytest.raises(ValidationError):
+        GetBehaviorSliceParams(entity_id="test_id", max_cone_size=0)
+
+
+def test_get_state_touches_params_valid():
+    """Test valid GetStateTouchesParams."""
+    from server.tools.behavior import GetStateTouchesParams
+    params = GetStateTouchesParams(entity_id="test_id")
+    assert params.entity_id == "test_id"
+
+
+def test_get_hotspots_params_valid():
+    """Test valid GetHotspotsParams."""
+    from server.tools.behavior import GetHotspotsParams
+    params = GetHotspotsParams(metric="fan_in", kind="function", capability="combat", limit=20)
+    assert params.metric == "fan_in"
+    assert params.kind == "function"
+    assert params.capability == "combat"
+    assert params.limit == 20
+
+
+def test_get_hotspots_params_metric_validation():
+    """Test GetHotspotsParams metric validation."""
+    from server.tools.behavior import GetHotspotsParams
+    with pytest.raises(ValidationError):
+        GetHotspotsParams(metric="invalid_metric")
+
+
+def test_behavior_slice_response_schema():
+    """Test BehaviorSliceResponse schema."""
+    from server.tools.behavior import BehaviorSliceResponse
+    from server.models import (
+        BehaviorSlice, EntitySummary, TruncationMetadata,
+        CapabilityTouch, SideEffectMarker, GlobalTouch,
+    )
+
+    summary = EntitySummary(
+        entity_id="test_id", signature="void test()", name="test",
+        kind="function", doc_state="extracted_summary", doc_quality="high",
+        fan_in=10, fan_out=5,
+    )
+
+    behavior = BehaviorSlice(
+        entry_point=summary,
+        direct_callees=[summary],
+        transitive_cone=[],
+        max_depth=3,
+        truncated=False,
+        capabilities_touched={
+            "combat": CapabilityTouch(
+                capability="combat", direct_count=1, transitive_count=0,
+                functions=[summary],
+            )
+        },
+        globals_used=[
+            GlobalTouch(entity_id="var1", name="gsn_backstab", kind="variable", access_type="direct")
+        ],
+        side_effects={
+            "messaging": [SideEffectMarker(
+                function_id="fn1", function_name="send_to_char",
+                category="messaging", access_type="direct",
+                confidence="direct", provenance="heuristic",
+            )]
+        },
+    )
+
+    response = BehaviorSliceResponse(
+        behavior=behavior,
+        truncation=TruncationMetadata(truncated=False, total_available=1, node_count=1),
+    )
+
+    assert response.behavior.entry_point.entity_id == "test_id"
+    assert "combat" in response.behavior.capabilities_touched
+    assert len(response.behavior.globals_used) == 1
+    assert "messaging" in response.behavior.side_effects
+
+
+def test_state_touches_response_schema():
+    """Test StateTouchesResponse schema."""
+    from server.tools.behavior import StateTouchesResponse
+    from server.models import EntitySummary, SideEffectMarker
+
+    summary = EntitySummary(
+        entity_id="test_id", signature="void test()", name="test",
+        kind="function", doc_state="extracted_summary", doc_quality="high",
+        fan_in=10, fan_out=5,
+    )
+
+    response = StateTouchesResponse(
+        entity_id="test_id",
+        signature="void test()",
+        direct_uses=[summary],
+        direct_side_effects=[],
+        transitive_uses=[],
+        transitive_side_effects=[],
+    )
+
+    assert response.entity_id == "test_id"
+    assert len(response.direct_uses) == 1
+
+
+def test_hotspots_response_schema():
+    """Test HotspotsResponse schema."""
+    from server.tools.behavior import HotspotsResponse
+    from server.models import EntitySummary, TruncationMetadata
+
+    summary = EntitySummary(
+        entity_id="test_id", signature="void test()", name="test",
+        kind="function", doc_state="extracted_summary", doc_quality="high",
+        fan_in=100, fan_out=5,
+    )
+
+    response = HotspotsResponse(
+        metric="fan_in",
+        hotspots=[summary],
+        truncation=TruncationMetadata(truncated=False, total_available=1, node_count=1),
+    )
+
+    assert response.metric == "fan_in"
+    assert len(response.hotspots) == 1
+    assert response.hotspots[0].fan_in == 100
+
+
+# ---- Phase 7: Capability System Tool Contract Tests (T078) ----
+
+
+def test_list_capabilities_params():
+    """Test ListCapabilitiesParams (no params)."""
+    from server.tools.capability import ListCapabilitiesParams
+    params = ListCapabilitiesParams()
+    assert params is not None
+
+
+def test_get_capability_detail_params_valid():
+    """Test valid GetCapabilityDetailParams."""
+    from server.tools.capability import GetCapabilityDetailParams
+    params = GetCapabilityDetailParams(capability="combat", include_functions=True)
+    assert params.capability == "combat"
+    assert params.include_functions is True
+
+
+def test_compare_capabilities_params_valid():
+    """Test valid CompareCapabilitiesParams."""
+    from server.tools.capability import CompareCapabilitiesParams
+    params = CompareCapabilitiesParams(capabilities=["combat", "magic"], limit=50)
+    assert params.capabilities == ["combat", "magic"]
+    assert params.limit == 50
+
+
+def test_compare_capabilities_params_min_length():
+    """Test CompareCapabilitiesParams requires at least 2 capabilities."""
+    from server.tools.capability import CompareCapabilitiesParams
+    with pytest.raises(ValidationError):
+        CompareCapabilitiesParams(capabilities=["combat"])
+
+
+def test_list_entry_points_params_valid():
+    """Test valid ListEntryPointsParams."""
+    from server.tools.capability import ListEntryPointsParams
+    params = ListEntryPointsParams(capability="combat", name_pattern="do_%", limit=50)
+    assert params.capability == "combat"
+    assert params.name_pattern == "do_%"
+    assert params.limit == 50
+
+
+def test_get_entry_point_info_params_valid():
+    """Test valid GetEntryPointInfoParams."""
+    from server.tools.capability import GetEntryPointInfoParams
+    params = GetEntryPointInfoParams(entity_id="test_id")
+    assert params.entity_id == "test_id"
+
+
+def test_list_capabilities_response_schema():
+    """Test ListCapabilitiesResponse schema."""
+    from server.tools.capability import ListCapabilitiesResponse
+    from server.models import CapabilitySummary
+
+    cap = CapabilitySummary(
+        name="combat", type="domain",
+        description="Combat mechanics",
+        function_count=127, stability="stable",
+        doc_quality_dist={"high": 95, "medium": 25, "low": 7},
+    )
+
+    response = ListCapabilitiesResponse(capabilities=[cap])
+    assert len(response.capabilities) == 1
+    assert response.capabilities[0].name == "combat"
+
+
+def test_capability_detail_response_schema():
+    """Test GetCapabilityDetailResponse schema."""
+    from server.tools.capability import GetCapabilityDetailResponse
+    from server.models import CapabilityDetail
+
+    detail = CapabilityDetail(
+        name="combat", type="domain",
+        description="Combat mechanics",
+        function_count=127, stability="stable",
+        doc_quality_dist={"high": 95, "medium": 25, "low": 7},
+        dependencies=[{"target_capability": "character_state", "edge_type": "requires_core", "call_count": 342}],
+        entry_points=["do_kill", "do_flee"],
+        functions=None,
+    )
+
+    response = GetCapabilityDetailResponse(detail=detail)
+    assert response.detail.name == "combat"
+    assert len(response.detail.dependencies) == 1
+    assert len(response.detail.entry_points) == 2
+
+
+def test_compare_capabilities_response_schema():
+    """Test CompareCapabilitiesResponse schema."""
+    from server.tools.capability import CompareCapabilitiesResponse
+    from server.models import EntitySummary, TruncationMetadata
+
+    summary = EntitySummary(
+        entity_id="test_id", signature="void test()", name="test",
+        kind="function", doc_state="extracted_summary", doc_quality="high",
+        fan_in=10, fan_out=5,
+    )
+
+    response = CompareCapabilitiesResponse(
+        capabilities=["combat", "magic"],
+        shared_dependencies=[summary],
+        unique_dependencies={"combat": [summary], "magic": []},
+        bridge_entities=[],
+        truncation=TruncationMetadata(truncated=False, total_available=2, node_count=2),
+    )
+
+    assert response.capabilities == ["combat", "magic"]
+    assert len(response.shared_dependencies) == 1
+
+
+def test_entry_point_info_response_schema():
+    """Test EntryPointInfoResponse schema."""
+    from server.tools.capability import EntryPointInfoResponse
+    from server.models import EntitySummary
+
+    summary = EntitySummary(
+        entity_id="test_id", signature="void do_kill(Character *ch, String argument)",
+        name="do_kill", kind="function", doc_state="refined_summary",
+        doc_quality="high", fan_in=20, fan_out=12,
+    )
+
+    response = EntryPointInfoResponse(
+        entry_point=summary,
+        capabilities_exercised={
+            "combat": {"capability": "combat", "direct_count": 8, "transitive_count": 42},
+        },
+    )
+
+    assert response.entry_point.name == "do_kill"
+    assert "combat" in response.capabilities_exercised

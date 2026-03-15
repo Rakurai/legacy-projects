@@ -543,3 +543,90 @@ docker exec -it mcp-postgres psql -U postgres -d legacy_docs -c "CREATE EXTENSIO
 - [pgvector GitHub](https://github.com/pgvector/pgvector)
 - [asyncpg Documentation](https://magicstack.github.io/asyncpg/)
 - Docker Compose Reference: [docker-compose.yml](docker-compose.yml)
+
+---
+
+## MCP Server
+
+### Running the Server
+
+```bash
+cd .ai/mcp/doc_server/
+uv run python -m server.server
+```
+
+The server runs over stdio and communicates via the MCP JSON-RPC protocol.
+
+### Available Tools (20)
+
+**Entity Resolution & Lookup (5)**
+| Tool | Description |
+|------|-------------|
+| `resolve_entity` | Resolve entity name to ranked candidates via multi-stage pipeline |
+| `get_entity` | Fetch full entity details by ID or signature |
+| `get_source_code` | Retrieve source code with optional context lines |
+| `list_file_entities` | List all entities defined in a source file |
+| `get_file_summary` | Get file-level statistics and top entities |
+
+**Search (1)**
+| Tool | Description |
+|------|-------------|
+| `search` | Hybrid semantic + keyword search with exact match boost |
+
+**Graph Navigation (6)**
+| Tool | Description |
+|------|-------------|
+| `get_callers` | Get functions that call this entity (backward traversal) |
+| `get_callees` | Get functions called by this entity (forward traversal) |
+| `get_dependencies` | Get filtered dependencies by relationship type and direction |
+| `get_class_hierarchy` | Get base classes and derived classes |
+| `get_related_entities` | Get all direct neighbors grouped by relationship type |
+| `get_related_files` | Find related files via include relationships |
+
+**Behavioral Analysis (3)**
+| Tool | Description |
+|------|-------------|
+| `get_behavior_slice` | Compute transitive call cone with capabilities touched, globals, side effects |
+| `get_state_touches` | Analyze direct and transitive global variable usage |
+| `get_hotspots` | Find architectural hotspots ranked by metric (fan_in, fan_out, bridge, underdocumented) |
+
+**Capability System (5)**
+| Tool | Description |
+|------|-------------|
+| `list_capabilities` | List all 30 capability groups with metadata |
+| `get_capability_detail` | Get detailed capability info with dependencies and entry points |
+| `compare_capabilities` | Compare capabilities: shared/unique dependencies, bridge entities |
+| `list_entry_points` | List entry points (do_*, spell_*, spec_*) filterable by capability |
+| `get_entry_point_info` | Analyze which capabilities an entry point exercises |
+
+### Available Resources (5)
+
+| URI | Description |
+|-----|-------------|
+| `legacy://capabilities` | List all capability groups |
+| `legacy://capability/{name}` | Get capability detail |
+| `legacy://entity/{entity_id}` | Get full entity details |
+| `legacy://file/{path}` | List entities in a file |
+| `legacy://stats` | Server statistics |
+
+### Available Prompts (4)
+
+| Prompt | Description |
+|--------|-------------|
+| `explain_entity` | Comprehensive entity explanation workflow |
+| `analyze_behavior` | Behavioral analysis with call cone and side effects |
+| `compare_entry_points` | Compare entry points for shared dependencies |
+| `explore_capability` | Explore a capability group's architecture |
+
+### Running Tests
+
+```bash
+# Contract tests (no live DB required)
+uv run pytest tests/test_tools.py -v
+
+# Integration tests (requires running PostgreSQL)
+uv run python integration_test_phase678.py
+
+# MCP protocol test (requires running PostgreSQL)
+uv run python test_mcp_protocol.py
+```

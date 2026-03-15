@@ -5,11 +5,11 @@ Long-lived async server handling multiple sequential MCP tool invocations.
 Uses stdio transport for communication with MCP clients.
 """
 
-import sys
+import json
 from contextlib import asynccontextmanager
 from typing import Any
-import networkx as nx
 
+import networkx as nx
 from fastmcp import FastMCP
 from openai import AsyncOpenAI
 
@@ -17,33 +17,66 @@ from server.config import ServerConfig
 from server.db import DatabaseManager
 from server.graph import load_graph
 from server.logging_config import configure_logging, log
+from server.prompts import (
+    analyze_behavior_prompt,
+    compare_entry_points_prompt,
+    explain_entity_prompt,
+    explore_capability_prompt,
+)
+from server.resources import (
+    get_capabilities_resource,
+    get_capability_detail_resource,
+    get_entity_resource,
+    get_file_entities_resource,
+    get_stats_resource,
+)
+from server.tools.behavior import (
+    GetBehaviorSliceParams,
+    GetHotspotsParams,
+    GetStateTouchesParams,
+    get_behavior_slice_tool,
+    get_hotspots_tool,
+    get_state_touches_tool,
+)
+from server.tools.capability import (
+    CompareCapabilitiesParams,
+    GetCapabilityDetailParams,
+    GetEntryPointInfoParams,
+    ListCapabilitiesParams,
+    ListEntryPointsParams,
+    compare_capabilities_tool,
+    get_capability_detail_tool,
+    get_entry_point_info_tool,
+    list_capabilities_tool,
+    list_entry_points_tool,
+)
 from server.tools.entity import (
-    ResolveEntityParams,
     GetEntityParams,
+    GetFileSummaryParams,
     GetSourceCodeParams,
     ListFileEntitiesParams,
-    GetFileSummaryParams,
-    resolve_entity_tool,
+    ResolveEntityParams,
     get_entity_tool,
+    get_file_summary_tool,
     get_source_code_tool,
     list_file_entities_tool,
-    get_file_summary_tool,
+    resolve_entity_tool,
 )
-from server.tools.search import SearchParams, search_tool
 from server.tools.graph import (
-    GetCallersParams,
     GetCalleesParams,
-    GetDependenciesParams,
+    GetCallersParams,
     GetClassHierarchyParams,
+    GetDependenciesParams,
     GetRelatedEntitiesParams,
     GetRelatedFilesParams,
-    get_callers_tool,
     get_callees_tool,
-    get_dependencies_tool,
+    get_callers_tool,
     get_class_hierarchy_tool,
+    get_dependencies_tool,
     get_related_entities_tool,
     get_related_files_tool,
 )
+from server.tools.search import SearchParams, search_tool
 
 
 # Lifespan context for server initialization
@@ -498,6 +531,352 @@ async def get_related_files(file_path: str, limit: int = 50) -> dict[str, Any]:
         )
 
     return result.model_dump()
+
+
+# ---- Phase 6: Behavioral Analysis Tools (US4) ----
+
+
+@mcp.tool()
+async def get_behavior_slice(
+    entity_id: str,
+    max_depth: int = 5,
+    max_cone_size: int = 200,
+) -> dict[str, Any]:
+    """
+    Compute transitive call cone with behavioral analysis.
+
+    Analyzes:
+    - Direct and transitive callees (BFS through CALLS edges)
+    - Capabilities touched (which capability groups the cone spans)
+    - Global variables used (direct and transitive USES edges)
+    - Side effects (messaging, persistence, state_mutation, scheduling)
+
+    Args:
+        entity_id: Seed entity ID
+        max_depth: Maximum traversal depth (1-10, default 5)
+        max_cone_size: Maximum cone size before truncation (1-1000, default 200)
+
+    Returns:
+        BehaviorSlice with full analysis and truncation metadata
+    """
+    params = GetBehaviorSliceParams(
+        entity_id=entity_id,
+        max_depth=max_depth,
+        max_cone_size=max_cone_size,
+    )
+
+    async with server_context.db_manager.session() as session:  # type: ignore
+        result = await get_behavior_slice_tool(
+            session=session,
+            params=params,
+            graph=server_context.graph,  # type: ignore
+        )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+async def get_state_touches(entity_id: str) -> dict[str, Any]:
+    """
+    Analyze global variable usage and side effects (direct + transitive).
+
+    Direct: Variables this entity uses directly (USES edges, depth=1)
+    Transitive: Variables reachable via CALLS→USES (depth=2 hops)
+    Side effects: Categorized markers from entity's call chain
+
+    Args:
+        entity_id: Entity ID
+
+    Returns:
+        Direct and transitive state touches with side effect markers
+    """
+    params = GetStateTouchesParams(entity_id=entity_id)
+
+    async with server_context.db_manager.session() as session:  # type: ignore
+        result = await get_state_touches_tool(
+            session=session,
+            params=params,
+            graph=server_context.graph,  # type: ignore
+        )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+async def get_hotspots(
+    metric: str,
+    kind: str | None = None,
+    capability: str | None = None,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """
+    Find architectural hotspots ranked by metric.
+
+    Metrics:
+    - fan_in: Most called functions (highest incoming edges)
+    - fan_out: Functions calling the most things (highest outgoing edges)
+    - bridge: Functions spanning multiple capabilities
+    - underdocumented: Important functions with low documentation quality
+
+    Args:
+        metric: Ranking metric (fan_in, fan_out, bridge, underdocumented)
+        kind: Optional kind filter (function, class, variable, etc.)
+        capability: Optional capability filter
+        limit: Maximum results (1-100, default 20)
+
+    Returns:
+        Ranked hotspot entities with truncation metadata
+    """
+    params = GetHotspotsParams(
+        metric=metric,  # type: ignore
+        kind=kind,
+        capability=capability,
+        limit=limit,
+    )
+
+    async with server_context.db_manager.session() as session:  # type: ignore
+        result = await get_hotspots_tool(session=session, params=params)
+
+    return result.model_dump()
+
+
+# ---- Phase 7: Capability System Tools (US5) ----
+
+
+@mcp.tool()
+async def list_capabilities() -> dict[str, Any]:
+    """
+    List all capability groups with metadata.
+
+    Returns all 30 capability groups with their type, description,
+    function count, stability, and documentation quality distribution.
+
+    Returns:
+        List of capability summaries
+    """
+    params = ListCapabilitiesParams()
+
+    async with server_context.db_manager.session() as session:  # type: ignore
+        result = await list_capabilities_tool(session=session, params=params)
+
+    return result.model_dump()
+
+
+@mcp.tool()
+async def get_capability_detail(
+    capability: str,
+    include_functions: bool = False,
+) -> dict[str, Any]:
+    """
+    Get detailed capability information.
+
+    Includes dependencies on other capabilities, entry points exercising
+    this capability, and optionally the full function list.
+
+    Args:
+        capability: Capability name (e.g., combat, magic, persistence)
+        include_functions: Include full function list (may be large)
+
+    Returns:
+        Detailed capability information with dependencies and entry points
+    """
+    params = GetCapabilityDetailParams(
+        capability=capability,
+        include_functions=include_functions,
+    )
+
+    async with server_context.db_manager.session() as session:  # type: ignore
+        result = await get_capability_detail_tool(session=session, params=params)
+
+    return result.model_dump()
+
+
+@mcp.tool()
+async def compare_capabilities(
+    capabilities: list[str],
+    limit: int = 50,
+) -> dict[str, Any]:
+    """
+    Compare multiple capabilities showing shared/unique dependencies and bridges.
+
+    Analyzes which functions are shared between capabilities, which are unique
+    to each, and which serve as bridge functions connecting them.
+
+    Args:
+        capabilities: 2+ capability names to compare
+        limit: Maximum results per section (1-200, default 50)
+
+    Returns:
+        Comparison with shared/unique dependencies and bridge entities
+    """
+    params = CompareCapabilitiesParams(
+        capabilities=capabilities,
+        limit=limit,
+    )
+
+    async with server_context.db_manager.session() as session:  # type: ignore
+        result = await compare_capabilities_tool(
+            session=session,
+            params=params,
+            graph=server_context.graph,  # type: ignore
+        )
+
+    return result.model_dump()
+
+
+@mcp.tool()
+async def list_entry_points(
+    capability: str | None = None,
+    name_pattern: str | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
+    """
+    List entry points (do_*, spell_*, spec_* functions).
+
+    Entry points are the primary user-facing functions in the MUD server.
+    Filterable by capability group and name pattern.
+
+    Args:
+        capability: Optional capability filter
+        name_pattern: Optional SQL LIKE pattern (e.g., 'do_look%')
+        limit: Maximum results (1-500, default 100)
+
+    Returns:
+        Entry point entity summaries with truncation metadata
+    """
+    params = ListEntryPointsParams(
+        capability=capability,
+        name_pattern=name_pattern,
+        limit=limit,
+    )
+
+    async with server_context.db_manager.session() as session:  # type: ignore
+        result = await list_entry_points_tool(session=session, params=params)
+
+    return result.model_dump()
+
+
+@mcp.tool()
+async def get_entry_point_info(entity_id: str) -> dict[str, Any]:
+    """
+    Analyze which capabilities an entry point exercises.
+
+    Computes the call cone and maps each callee to its capability group,
+    showing direct vs transitive capability exercise counts.
+
+    Args:
+        entity_id: Entry point entity ID
+
+    Returns:
+        Entry point summary with capabilities exercised (direct/transitive counts)
+    """
+    params = GetEntryPointInfoParams(entity_id=entity_id)
+
+    async with server_context.db_manager.session() as session:  # type: ignore
+        result = await get_entry_point_info_tool(
+            session=session,
+            params=params,
+            graph=server_context.graph,  # type: ignore
+        )
+
+    return result.model_dump()
+
+
+# ---- Phase 8: MCP Resources ----
+
+
+@mcp.resource("legacy://capabilities")
+async def capabilities_resource() -> str:
+    """List all capability groups with metadata."""
+    async with server_context.db_manager.session() as session:  # type: ignore
+        data = await get_capabilities_resource(session)
+    return json.dumps(data, default=str)
+
+
+@mcp.resource("legacy://capability/{name}")
+async def capability_detail_resource(name: str) -> str:
+    """Get detailed capability information."""
+    async with server_context.db_manager.session() as session:  # type: ignore
+        data = await get_capability_detail_resource(session, name)
+    return json.dumps(data, default=str)
+
+
+@mcp.resource("legacy://entity/{entity_id}")
+async def entity_resource(entity_id: str) -> str:
+    """Get full entity details by entity_id."""
+    async with server_context.db_manager.session() as session:  # type: ignore
+        data = await get_entity_resource(session, entity_id)
+    return json.dumps(data, default=str)
+
+
+@mcp.resource("legacy://file/{path}")
+async def file_entities_resource(path: str) -> str:
+    """List all entities defined in a source file."""
+    # URL-decode the path (e.g., src%2Ffight.cc → src/fight.cc)
+    from urllib.parse import unquote
+    file_path = unquote(path)
+    async with server_context.db_manager.session() as session:  # type: ignore
+        data = await get_file_entities_resource(session, file_path)
+    return json.dumps(data, default=str)
+
+
+@mcp.resource("legacy://stats")
+async def stats_resource() -> str:
+    """Get aggregate server statistics."""
+    async with server_context.db_manager.session() as session:  # type: ignore
+        data = await get_stats_resource(
+            session,
+            graph=server_context.graph,
+            embedding_available=server_context.embedding_client is not None,
+        )
+    return json.dumps(data, default=str)
+
+
+# ---- Phase 8: MCP Prompts ----
+
+
+@mcp.prompt()
+def explain_entity(entity_name: str) -> list[dict[str, str]]:
+    """
+    Comprehensive entity explanation workflow.
+
+    Guides the AI through resolving an entity, gathering its documentation,
+    callers, callees, and architectural context.
+    """
+    return explain_entity_prompt(entity_name)
+
+
+@mcp.prompt()
+def analyze_behavior(entity_name: str, max_depth: int = 5) -> list[dict[str, str]]:
+    """
+    Behavioral analysis workflow for a function.
+
+    Guides the AI through computing the call cone, analyzing capabilities
+    touched, global state interactions, and side effects.
+    """
+    return analyze_behavior_prompt(entity_name, max_depth)
+
+
+@mcp.prompt()
+def compare_entry_points(entry_point_names: list[str]) -> list[dict[str, str]]:
+    """
+    Entry point comparison workflow.
+
+    Guides the AI through comparing multiple entry points to identify
+    shared dependencies, unique functionality, and refactoring opportunities.
+    """
+    return compare_entry_points_prompt(entry_point_names)
+
+
+@mcp.prompt()
+def explore_capability(capability_name: str) -> list[dict[str, str]]:
+    """
+    Capability exploration workflow.
+
+    Guides the AI through exploring a capability group's structure,
+    dependencies, entry points, hotspots, and architectural role.
+    """
+    return explore_capability_prompt(capability_name)
 
 
 def main():

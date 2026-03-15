@@ -1,0 +1,323 @@
+"""
+MCP Resources - Read-only resource handlers for documentation artifacts.
+
+Resources:
+- legacy://capabilities          — List all capability groups
+- legacy://capability/{name}     — Get capability detail
+- legacy://entity/{entity_id}    — Get full entity details
+- legacy://file/{path}           — List entities in a file
+- legacy://stats                 — Server statistics
+"""
+
+import json
+
+from sqlalchemy import func
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlmodel import select
+
+from server.db_models import Capability, CapabilityEdge, Entity, EntryPoint
+from server.logging_config import log
+from server.resolver import entity_to_summary
+
+
+def _parse_json(val):
+    """Parse JSON field that may come back as a string from asyncpg."""
+    if isinstance(val, str):
+        try:
+            return json.loads(val)
+        except (json.JSONDecodeError, TypeError):
+            return None
+    return val
+
+
+async def get_capabilities_resource(session: AsyncSession) -> dict:
+    """
+    List all capability groups with metadata.
+
+    Returns:
+        Dict with capabilities list (for legacy://capabilities)
+    """
+    log.info("Resource: legacy://capabilities")
+
+    result = await session.execute(
+        select(Capability).order_by(Capability.name)
+    )
+    capabilities = list(result.scalars().all())
+
+    return {
+        "capabilities": [
+            {
+                "name": cap.name,
+                "type": cap.type,
+                "description": cap.description,
+                "function_count": cap.function_count,
+                "stability": cap.stability,
+                "doc_quality_dist": _parse_json(cap.doc_quality_dist) or {},
+            }
+            for cap in capabilities
+        ]
+    }
+
+
+async def get_capability_detail_resource(
+    session: AsyncSession,
+    name: str,
+) -> dict:
+    """
+    Get detailed information for a specific capability group.
+
+    Args:
+        session: Database session
+        name: Capability name
+
+    Returns:
+        Dict with full capability detail (for legacy://capability/{name})
+
+    Raises:
+        ValueError: If capability not found
+    """
+    log.info("Resource: legacy://capability/{name}", name=name)
+
+    cap = await session.get(Capability, name)
+    if not cap:
+        raise ValueError(f"Capability not found: {name}")
+
+    # Get edges
+    edge_result = await session.execute(
+        select(CapabilityEdge).where(CapabilityEdge.source_cap == name)
+    )
+    edges = list(edge_result.scalars().all())
+
+    # Get entry points
+    ep_result = await session.execute(
+        select(Entity)
+        .where(Entity.capability == name)
+        .where(Entity.is_entry_point == True)  # noqa: E712
+        .order_by(Entity.name)
+        .limit(20)
+    )
+    entry_points = list(ep_result.scalars().all())
+
+    # Get sample functions (top by fan_in)
+    func_result = await session.execute(
+        select(Entity)
+        .where(Entity.capability == name)
+        .order_by(Entity.fan_in.desc())
+        .limit(10)
+    )
+    sample_functions = list(func_result.scalars().all())
+
+    return {
+        "name": cap.name,
+        "type": cap.type,
+        "description": cap.description,
+        "function_count": cap.function_count,
+        "stability": cap.stability,
+        "doc_quality_dist": _parse_json(cap.doc_quality_dist) or {},
+        "dependencies": [
+            {
+                "target_capability": e.target_cap,
+                "edge_type": e.edge_type,
+                "call_count": e.call_count,
+            }
+            for e in edges
+        ],
+        "entry_points": [
+            {
+                "entity_id": ep.entity_id,
+                "signature": ep.signature,
+                "name": ep.name,
+            }
+            for ep in entry_points
+        ],
+        "sample_functions": [
+            entity_to_summary(e).model_dump()
+            for e in sample_functions
+        ],
+    }
+
+
+async def get_entity_resource(
+    session: AsyncSession,
+    entity_id: str,
+) -> dict:
+    """
+    Get full entity details by entity_id.
+
+    Args:
+        session: Database session
+        entity_id: Entity ID
+
+    Returns:
+        Dict with full entity detail (for legacy://entity/{entity_id})
+
+    Raises:
+        ValueError: If entity not found
+    """
+    log.info("Resource: legacy://entity/{entity_id}", entity_id=entity_id)
+
+    entity = await session.get(Entity, entity_id)
+    if not entity:
+        raise ValueError(f"Entity not found: {entity_id}")
+
+    return {
+        "entity_id": entity.entity_id,
+        "compound_id": entity.compound_id,
+        "member_id": entity.member_id,
+        "signature": entity.signature,
+        "name": entity.name,
+        "kind": entity.kind,
+        "entity_type": entity.entity_type,
+        "file_path": entity.file_path,
+        "body_start_line": entity.body_start_line,
+        "body_end_line": entity.body_end_line,
+        "decl_file_path": entity.decl_file_path,
+        "decl_line": entity.decl_line,
+        "definition_text": entity.definition_text,
+        "source_text": entity.source_text,
+        "capability": entity.capability,
+        "doc_state": entity.doc_state,
+        "doc_quality": entity.doc_quality,
+        "fan_in": entity.fan_in,
+        "fan_out": entity.fan_out,
+        "is_bridge": entity.is_bridge,
+        "is_entry_point": entity.is_entry_point,
+        "brief": entity.brief,
+        "details": entity.details,
+        "params": _parse_json(entity.params),
+        "returns": entity.returns,
+        "rationale": entity.rationale,
+        "usages": _parse_json(entity.usages),
+        "notes": entity.notes,
+        "side_effect_markers": _parse_json(entity.side_effect_markers),
+    }
+
+
+async def get_file_entities_resource(
+    session: AsyncSession,
+    file_path: str,
+) -> dict:
+    """
+    List all entities defined in a source file.
+
+    Args:
+        session: Database session
+        file_path: Relative file path
+
+    Returns:
+        Dict with file entities (for legacy://file/{path})
+    """
+    log.info("Resource: legacy://file/{path}", path=file_path)
+
+    result = await session.execute(
+        select(Entity)
+        .where(Entity.file_path == file_path)
+        .order_by(Entity.body_start_line)
+    )
+    entities = list(result.scalars().all())
+
+    return {
+        "file_path": file_path,
+        "entity_count": len(entities),
+        "entities": [
+            entity_to_summary(e).model_dump()
+            for e in entities
+        ],
+    }
+
+
+async def get_stats_resource(
+    session: AsyncSession,
+    graph=None,
+    embedding_available: bool = False,
+) -> dict:
+    """
+    Get aggregate server statistics.
+
+    Args:
+        session: Database session
+        graph: NetworkX graph (optional)
+        embedding_available: Whether embedding endpoint is available
+
+    Returns:
+        Dict with server stats (for legacy://stats)
+    """
+    log.info("Resource: legacy://stats")
+
+    # Entity stats
+    total_entities = await session.scalar(
+        select(func.count(Entity.entity_id))
+    ) or 0
+
+    # Entities by kind
+    kind_result = await session.execute(
+        select(Entity.kind, func.count(Entity.entity_id))
+        .group_by(Entity.kind)
+    )
+    entities_by_kind = {row[0]: row[1] for row in kind_result.all()}
+
+    # Entities by doc quality
+    dq_result = await session.execute(
+        select(Entity.doc_quality, func.count(Entity.entity_id))
+        .group_by(Entity.doc_quality)
+    )
+    entities_by_doc_quality = {
+        row[0] or "unknown": row[1] for row in dq_result.all()
+    }
+
+    # Entities with embeddings
+    entities_with_embeddings = await session.scalar(
+        select(func.count(Entity.entity_id))
+        .where(Entity.embedding.isnot(None))
+    ) or 0
+
+    # Graph stats
+    graph_stats = {
+        "total_nodes": 0,
+        "total_edges": 0,
+        "edges_by_type": {},
+    }
+    if graph is not None:
+        graph_stats["total_nodes"] = graph.number_of_nodes()
+        graph_stats["total_edges"] = graph.number_of_edges()
+        # Count edges by type
+        edge_types: dict[str, int] = {}
+        for _, _, data in graph.edges(data=True):
+            t = data.get("type", "unknown")
+            edge_types[t] = edge_types.get(t, 0) + 1
+        graph_stats["edges_by_type"] = edge_types
+
+    # Capability stats
+    total_capabilities = await session.scalar(
+        select(func.count(Capability.name))
+    ) or 0
+
+    cap_type_result = await session.execute(
+        select(Capability.type, func.count(Capability.name))
+        .group_by(Capability.type)
+    )
+    capabilities_by_type = {row[0]: row[1] for row in cap_type_result.all()}
+
+    total_entry_points = await session.scalar(
+        select(func.count(EntryPoint.entity_id))
+    ) or 0
+
+    return {
+        "entity_stats": {
+            "total_entities": total_entities,
+            "entities_by_kind": entities_by_kind,
+            "entities_by_doc_quality": entities_by_doc_quality,
+            "entities_with_embeddings": entities_with_embeddings,
+        },
+        "graph_stats": graph_stats,
+        "capability_stats": {
+            "total_capabilities": total_capabilities,
+            "capabilities_by_type": capabilities_by_type,
+            "total_entry_points": total_entry_points,
+        },
+        "server_info": {
+            "version": "1.0.0",
+            "embedding_endpoint_available": embedding_available,
+            "database_connection_status": "connected",
+        },
+    }

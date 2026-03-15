@@ -6,7 +6,7 @@ Build helpers import from here to populate the database.
 """
 
 from sqlmodel import SQLModel, Field, Column
-from sqlalchemy.dialects.postgresql import TSVECTOR, JSON
+from sqlalchemy.dialects.postgresql import TSVECTOR, JSONB
 from pgvector.sqlalchemy import Vector
 
 
@@ -44,11 +44,11 @@ class Entity(SQLModel, table=True):
     # Documentation
     brief: str | None = Field(default=None, description="One-line summary")
     details: str | None = Field(default=None, description="Detailed documentation")
-    params: str | None = Field(default=None, sa_column=Column(JSON), description="JSON: {param_name: description}")
+    params: str | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {param_name: description}")
     returns: str | None = Field(default=None, description="Return value description")
     notes: str | None = Field(default=None, description="Implementation notes")
     rationale: str | None = Field(default=None, description="Design rationale")
-    usages: str | None = Field(default=None, sa_column=Column(JSON), description="JSON: {caller_key: usage_description}")
+    usages: str | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {caller_key: usage_description}")
     doc_state: str | None = Field(default=None, description="extracted_summary, refined_summary, etc.")
     doc_quality: str | None = Field(default=None, description="Derived: high, medium, low")
 
@@ -62,7 +62,7 @@ class Entity(SQLModel, table=True):
     is_bridge: bool = Field(default=False, description="Callers/callees span different capabilities")
     side_effect_markers: str | None = Field(
         default=None,
-        sa_column=Column(JSON),
+        sa_column=Column(JSONB),
         description="JSON: {messaging: [...], persistence: [...], state_mutation: [...], scheduling: [...]}"
     )
 
@@ -113,7 +113,7 @@ class Capability(SQLModel, table=True):
     function_count: int = Field(ge=0, description="Number of functions in this capability")
     stability: str | None = Field(default=None, description="stable, evolving, experimental")
     doc_quality_dist: dict = Field(
-        sa_column=Column(JSON),
+        sa_column=Column(JSONB),
         description="{high: N, medium: N, low: N}"
     )
 
@@ -148,7 +148,7 @@ class EntryPoint(SQLModel, table=True):
     name: str = Field(description="do_kill, spell_fireball, spec_cast_cleric, etc.")
     capabilities: list | None = Field(
         default=None,
-        sa_column=Column(JSON),
+        sa_column=Column(JSONB),
         description="List of capability names exercised"
     )
     entry_type: str | None = Field(default=None, description="do_, spell_, spec_")

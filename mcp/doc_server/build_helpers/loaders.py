@@ -11,16 +11,16 @@ Validates all required files exist before parsing.
 """
 
 import json
-import sys
 from pathlib import Path
 from typing import Any
 
-# Add clustering module to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parents[4] / ".ai" / "gen_docs" / "clustering"))
-
-from doxygen_parse import load_db as load_entity_db, EntityDatabase, DoxygenEntity
-from doc_db import DocumentDB, Document
-
+from build_helpers.artifact_models import (
+    load_entity_db,
+    EntityDatabase,
+    DoxygenEntity,
+    DocumentDB,
+    Document,
+)
 from server.logging_config import log
 
 

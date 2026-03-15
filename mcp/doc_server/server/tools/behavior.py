@@ -8,7 +8,6 @@ Tools:
 - get_hotspots: Find architectural hotspots ranked by metric
 """
 
-import json
 from typing import Literal
 
 import networkx as nx
@@ -17,6 +16,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from server.db_models import Entity
+from server.errors import EntityNotFoundError
 from server.graph import compute_call_cone
 from server.logging_config import log
 from server.models import (
@@ -28,19 +28,22 @@ from server.models import (
     TruncationMetadata,
 )
 from server.resolver import entity_to_summary
+from server.util import parse_json_field, fetch_entity_summaries, resolve_entity_id
 
 # ---------- Parameter Models ----------
 
 class GetBehaviorSliceParams(BaseModel):
     """Parameters for get_behavior_slice tool."""
-    entity_id: str = Field(description="Seed entity ID")
+    entity_id: str | None = Field(default=None, description="Seed entity ID")
+    signature: str | None = Field(default=None, description="Entity signature (alternative to entity_id)")
     max_depth: int = Field(default=5, ge=1, le=10, description="Maximum traversal depth")
     max_cone_size: int = Field(default=200, ge=1, le=1000, description="Maximum cone size")
 
 
 class GetStateTouchesParams(BaseModel):
     """Parameters for get_state_touches tool."""
-    entity_id: str = Field(description="Entity ID")
+    entity_id: str | None = Field(default=None, description="Entity ID")
+    signature: str | None = Field(default=None, description="Entity signature (alternative to entity_id)")
 
 
 class GetHotspotsParams(BaseModel):
@@ -80,35 +83,6 @@ class HotspotsResponse(BaseModel):
 
 # ---------- Helpers ----------
 
-def _parse_json(val):
-    """Parse JSON field that may come back as a string from asyncpg."""
-    if isinstance(val, str):
-        try:
-            return json.loads(val)
-        except (json.JSONDecodeError, TypeError):
-            return None
-    return val
-
-
-async def _fetch_entity_summaries(
-    session: AsyncSession,
-    entity_ids: list[str],
-) -> list[EntitySummary]:
-    """Batch-fetch entities and convert to summaries."""
-    if not entity_ids:
-        return []
-    result = await session.execute(
-        select(Entity).where(Entity.entity_id.in_(entity_ids))
-    )
-    entities = result.scalars().all()
-    entity_map = {e.entity_id: e for e in entities}
-    # Preserve ordering of input IDs
-    return [
-        entity_to_summary(entity_map[eid])
-        for eid in entity_ids
-        if eid in entity_map
-    ]
-
 
 def _extract_side_effects_for_entities(
     entities: dict[str, Entity],
@@ -121,7 +95,7 @@ def _extract_side_effects_for_entities(
         entity = entities.get(eid)
         if not entity:
             continue
-        sem = _parse_json(entity.side_effect_markers)
+        sem = parse_json_field(entity.side_effect_markers)
         if not sem or not isinstance(sem, dict):
             continue
         for category, functions in sem.items():
@@ -168,17 +142,20 @@ async def get_behavior_slice_tool(
         max_cone_size=params.max_cone_size,
     )
 
+    # Resolve entity_id from entity_id or signature
+    entity_id = await resolve_entity_id(session, params.entity_id, params.signature)
+
     # Get seed entity
-    seed_entity = await session.get(Entity, params.entity_id)
+    seed_entity = await session.get(Entity, entity_id)
     if not seed_entity:
-        raise ValueError(f"Entity not found: {params.entity_id}")
+        raise EntityNotFoundError(entity_id)
 
     seed_summary = entity_to_summary(seed_entity)
 
     # Compute call cone via BFS
     cone = compute_call_cone(
         graph,
-        params.entity_id,
+        entity_id,
         max_depth=params.max_depth,
         max_size=params.max_cone_size,
     )
@@ -189,11 +166,11 @@ async def get_behavior_slice_tool(
     truncated: bool = cone["truncated"]
 
     # Fetch all cone entities
-    direct_summaries = await _fetch_entity_summaries(session, direct_ids)
-    transitive_summaries = await _fetch_entity_summaries(session, transitive_ids)
+    direct_summaries = await fetch_entity_summaries(session, direct_ids)
+    transitive_summaries = await fetch_entity_summaries(session, transitive_ids)
 
     # Fetch full entity objects for capability/side-effect analysis
-    all_entity_ids = [params.entity_id] + all_cone_ids
+    all_entity_ids = [entity_id] + all_cone_ids
     result = await session.execute(
         select(Entity).where(Entity.entity_id.in_(all_entity_ids))
     )
@@ -225,8 +202,8 @@ async def get_behavior_slice_tool(
     # --- Globals used ---
     globals_used: list[GlobalTouch] = []
     # Direct USES edges from seed
-    if params.entity_id in graph:
-        for _, target, data in graph.out_edges(params.entity_id, data=True):
+    if entity_id in graph:
+        for _, target, data in graph.out_edges(entity_id, data=True):
             if data.get("type") == "uses":
                 target_entity = all_entities_map.get(target)
                 if target_entity and target_entity.kind == "variable":
@@ -274,7 +251,7 @@ async def get_behavior_slice_tool(
 
     # Also check the seed entity itself
     seed_markers = _extract_side_effects_for_entities(
-        all_entities_map, [params.entity_id], "direct"
+        all_entities_map, [entity_id], "direct"
     )
     for m in seed_markers:
         side_effects.setdefault(m.category, []).append(m)
@@ -326,17 +303,19 @@ async def get_state_touches_tool(
     """
     log.info("get_state_touches tool invoked", entity_id=params.entity_id)
 
-    entity = await session.get(Entity, params.entity_id)
+    entity_id = await resolve_entity_id(session, params.entity_id, params.signature)
+
+    entity = await session.get(Entity, entity_id)
     if not entity:
-        raise ValueError(f"Entity not found: {params.entity_id}")
+        raise EntityNotFoundError(entity_id)
 
     direct_use_ids: list[str] = []
     transitive_use_ids: list[str] = []
     direct_callee_ids: list[str] = []
 
-    if params.entity_id in graph:
+    if entity_id in graph:
         # Direct USES
-        for _, target, data in graph.out_edges(params.entity_id, data=True):
+        for _, target, data in graph.out_edges(entity_id, data=True):
             if data.get("type") == "uses":
                 direct_use_ids.append(target)
             elif data.get("type") == "calls":
@@ -353,7 +332,7 @@ async def get_state_touches_tool(
                     transitive_use_ids.append(target)
 
     # Fetch entities for uses
-    all_use_ids = direct_use_ids + transitive_use_ids + direct_callee_ids + [params.entity_id]
+    all_use_ids = direct_use_ids + transitive_use_ids + direct_callee_ids + [entity_id]
     result = await session.execute(
         select(Entity).where(Entity.entity_id.in_(all_use_ids))
     )
@@ -399,7 +378,7 @@ async def get_state_touches_tool(
     )
 
     return StateTouchesResponse(
-        entity_id=params.entity_id,
+        entity_id=entity_id,
         signature=entity.signature,
         direct_uses=direct_uses,
         direct_side_effects=direct_side_effects,

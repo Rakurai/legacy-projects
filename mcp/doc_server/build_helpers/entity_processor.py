@@ -15,11 +15,12 @@ import re
 from pathlib import Path
 from typing import Any
 
-import sys
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / ".ai" / "gen_docs" / "clustering"))
-from doxygen_parse import DoxygenEntity, EntityDatabase
-from doc_db import Document, DocumentDB
-
+from build_helpers.artifact_models import (
+    DoxygenEntity,
+    EntityDatabase,
+    Document,
+    DocumentDB,
+)
 from server.logging_config import log
 
 

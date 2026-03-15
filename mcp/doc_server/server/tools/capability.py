@@ -9,14 +9,13 @@ Tools:
 - get_entry_point_info: Analyze which capabilities an entry point exercises
 """
 
-import json
-
 import networkx as nx
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from server.db_models import Capability, CapabilityEdge, Entity, EntryPoint
+from server.errors import CapabilityNotFoundError, EntityNotFoundError
 from server.logging_config import log
 from server.models import (
     CapabilityDetail,
@@ -24,6 +23,7 @@ from server.models import (
     EntitySummary,
     TruncationMetadata,
 )
+from server.util import parse_json_field, resolve_entity_id
 from server.resolver import entity_to_summary
 
 # ---------- Parameter Models ----------
@@ -60,7 +60,8 @@ class ListEntryPointsParams(BaseModel):
 
 class GetEntryPointInfoParams(BaseModel):
     """Parameters for get_entry_point_info tool."""
-    entity_id: str = Field(description="Entry point entity ID")
+    entity_id: str | None = Field(default=None, description="Entry point entity ID")
+    signature: str | None = Field(default=None, description="Entity signature (alternative to entity_id)")
 
 
 # ---------- Response Models ----------
@@ -98,19 +99,10 @@ class EntryPointInfoResponse(BaseModel):
 
 # ---------- Helpers ----------
 
-def _parse_json(val):
-    """Parse JSON field that may come back as a string from asyncpg."""
-    if isinstance(val, str):
-        try:
-            return json.loads(val)
-        except (json.JSONDecodeError, TypeError):
-            return None
-    return val
-
 
 def _capability_to_summary(cap: Capability) -> CapabilitySummary:
     """Convert Capability DB model to CapabilitySummary."""
-    dqd = _parse_json(cap.doc_quality_dist)
+    dqd = parse_json_field(cap.doc_quality_dist)
     if not isinstance(dqd, dict):
         dqd = {"high": 0, "medium": 0, "low": 0}
     return CapabilitySummary(
@@ -170,7 +162,7 @@ async def get_capability_detail_tool(
 
     cap = await session.get(Capability, params.capability)
     if not cap:
-        raise ValueError(f"Capability not found: {params.capability}")
+        raise CapabilityNotFoundError(params.capability)
 
     # Get capability edges (dependencies)
     edge_result = await session.execute(
@@ -206,7 +198,7 @@ async def get_capability_detail_tool(
         func_entities = list(func_result.scalars().all())
         functions = [entity_to_summary(e) for e in func_entities]
 
-    dqd = _parse_json(cap.doc_quality_dist)
+    dqd = parse_json_field(cap.doc_quality_dist)
     if not isinstance(dqd, dict):
         dqd = {"high": 0, "medium": 0, "low": 0}
 
@@ -414,18 +406,20 @@ async def get_entry_point_info_tool(
     """
     log.info("get_entry_point_info tool invoked", entity_id=params.entity_id)
 
-    entity = await session.get(Entity, params.entity_id)
+    entity_id = await resolve_entity_id(session, params.entity_id, params.signature)
+
+    entity = await session.get(Entity, entity_id)
     if not entity:
-        raise ValueError(f"Entity not found: {params.entity_id}")
+        raise EntityNotFoundError(entity_id)
 
     if not entity.is_entry_point:
-        raise ValueError(f"Entity is not an entry point: {params.entity_id}")
+        raise ValueError(f"Entity is not an entry point: {entity_id}")
 
     ep_summary = entity_to_summary(entity)
 
     # Compute call cone (depth=5) to find all capabilities exercised
     from server.graph import compute_call_cone
-    cone = compute_call_cone(graph, params.entity_id, max_depth=5, max_size=200)
+    cone = compute_call_cone(graph, entity_id, max_depth=5, max_size=200)
 
     direct_ids = cone["direct"]
     transitive_ids = cone["transitive"]

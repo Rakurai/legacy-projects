@@ -13,6 +13,7 @@ from contextlib import asynccontextmanager
 from server.db_models import Entity, Edge, Capability, CapabilityEdge, EntryPoint
 from server.config import ServerConfig
 from server.logging_config import log
+from server.util import doc_quality_sort_key
 
 
 def build_engine(config: ServerConfig) -> AsyncEngine:
@@ -116,7 +117,7 @@ class EntityRepository:
         result = await session.execute(
             select(Entity)
             .where(Entity.name == name)
-            .order_by(Entity.doc_quality.desc(), Entity.fan_in.desc())
+            .order_by(doc_quality_sort_key(), Entity.fan_in.desc())
             .limit(limit)
         )
         return result.scalars().all()
@@ -138,7 +139,7 @@ class EntityRepository:
         result = await session.execute(
             select(Entity)
             .where(Entity.name.startswith(prefix))
-            .order_by(func.length(Entity.name), Entity.doc_quality.desc())
+            .order_by(func.length(Entity.name), doc_quality_sort_key())
             .limit(limit)
         )
         return result.scalars().all()

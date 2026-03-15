@@ -9,8 +9,6 @@ Resources:
 - legacy://stats                 — Server statistics
 """
 
-import json
-
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -18,16 +16,7 @@ from sqlmodel import select
 from server.db_models import Capability, CapabilityEdge, Entity, EntryPoint
 from server.logging_config import log
 from server.resolver import entity_to_summary
-
-
-def _parse_json(val):
-    """Parse JSON field that may come back as a string from asyncpg."""
-    if isinstance(val, str):
-        try:
-            return json.loads(val)
-        except (json.JSONDecodeError, TypeError):
-            return None
-    return val
+from server.util import parse_json_field
 
 
 async def get_capabilities_resource(session: AsyncSession) -> dict:
@@ -52,7 +41,7 @@ async def get_capabilities_resource(session: AsyncSession) -> dict:
                 "description": cap.description,
                 "function_count": cap.function_count,
                 "stability": cap.stability,
-                "doc_quality_dist": _parse_json(cap.doc_quality_dist) or {},
+                "doc_quality_dist": parse_json_field(cap.doc_quality_dist) or {},
             }
             for cap in capabilities
         ]
@@ -113,7 +102,7 @@ async def get_capability_detail_resource(
         "description": cap.description,
         "function_count": cap.function_count,
         "stability": cap.stability,
-        "doc_quality_dist": _parse_json(cap.doc_quality_dist) or {},
+        "doc_quality_dist": parse_json_field(cap.doc_quality_dist) or {},
         "dependencies": [
             {
                 "target_capability": e.target_cap,
@@ -184,12 +173,12 @@ async def get_entity_resource(
         "is_entry_point": entity.is_entry_point,
         "brief": entity.brief,
         "details": entity.details,
-        "params": _parse_json(entity.params),
+        "params": parse_json_field(entity.params),
         "returns": entity.returns,
         "rationale": entity.rationale,
-        "usages": _parse_json(entity.usages),
+        "usages": parse_json_field(entity.usages),
         "notes": entity.notes,
-        "side_effect_markers": _parse_json(entity.side_effect_markers),
+        "side_effect_markers": parse_json_field(entity.side_effect_markers),
     }
 
 

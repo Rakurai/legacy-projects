@@ -10,14 +10,11 @@ Loads dependency graph from GML file and:
 Uses existing doxygen_graph.py parser to load GML.
 """
 
-import sys
 from pathlib import Path
 from typing import Any
 from collections import defaultdict
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / ".ai" / "gen_docs" / "clustering"))
-from doxygen_graph import load_graph as load_gml_graph
-
+from build_helpers.artifact_models import load_gml_graph
 from build_helpers.entity_processor import MergedEntity, SIDE_EFFECT_FUNCTIONS
 from server.logging_config import log
 

@@ -6,17 +6,13 @@ Uses stdio transport for communication with MCP clients.
 """
 
 import json
-from contextlib import asynccontextmanager
 from typing import Any
 
-import networkx as nx
 from fastmcp import FastMCP
-from openai import AsyncOpenAI
 
-from server.config import ServerConfig
-from server.db import DatabaseManager
-from server.graph import load_graph
-from server.logging_config import configure_logging, log
+from server.errors import CapabilityNotFoundError, EntityNotFoundError, not_found_response
+from server.lifespan import lifespan, server_context
+from server.logging_config import log
 from server.prompts import (
     analyze_behavior_prompt,
     compare_entry_points_prompt,
@@ -79,86 +75,6 @@ from server.tools.graph import (
 from server.tools.search import SearchParams, search_tool
 
 
-# Lifespan context for server initialization
-class ServerContext:
-    """Server context holding database and graph instances."""
-
-    def __init__(self):
-        self.config: ServerConfig | None = None
-        self.db_manager: DatabaseManager | None = None
-        self.graph: nx.MultiDiGraph | None = None
-        self.embedding_client: AsyncOpenAI | None = None
-
-
-server_context = ServerContext()
-
-
-@asynccontextmanager
-async def lifespan(app: FastMCP):
-    """
-    Server lifespan manager.
-
-    Initializes database connection and loads dependency graph at startup.
-    Cleans up resources at shutdown.
-    """
-    # Startup
-    log.info("Starting Legacy Documentation Server")
-
-    # Load configuration
-    config = ServerConfig()
-    configure_logging(config.log_level)
-    server_context.config = config
-
-    log.info(
-        "Configuration loaded",
-        db_host=config.db_host,
-        db_name=config.db_name,
-        project_root=str(config.project_root),
-    )
-
-    # Initialize database manager
-    db_manager = DatabaseManager(config)
-    server_context.db_manager = db_manager
-
-    log.info("Database connection established")
-
-    # Load dependency graph
-    log.info("Loading dependency graph from database")
-    async with db_manager.session() as session:
-        graph = await load_graph(session)
-        server_context.graph = graph
-
-    log.info(
-        "Dependency graph loaded",
-        nodes=graph.number_of_nodes(),
-        edges=graph.number_of_edges(),
-    )
-
-    # Initialize embedding client (optional)
-    if config.embedding_enabled:
-        try:
-            embedding_client = AsyncOpenAI(
-                base_url=config.embedding_base_url,
-                api_key=config.embedding_api_key or "default",
-            )
-            server_context.embedding_client = embedding_client
-            log.info("Embedding client initialized", base_url=config.embedding_base_url)
-        except Exception as e:
-            log.warning("Embedding client initialization failed", error=str(e))
-            server_context.embedding_client = None
-    else:
-        log.info("Embedding endpoint not configured; semantic search disabled")
-
-    log.info("Server ready")
-
-    yield
-
-    # Shutdown
-    log.info("Shutting down server")
-    await db_manager.dispose()
-    log.info("Server shutdown complete")
-
-
 # Create FastMCP app
 mcp = FastMCP(
     "Legacy Documentation Server",
@@ -194,6 +110,7 @@ async def resolve_entity(query: str, kind: str | None = None) -> dict[str, Any]:
             session=session,
             params=params,
             embedding_client=server_context.embedding_client,
+            embedding_model=server_context.embedding_model,
         )
 
     return result.model_dump()
@@ -234,7 +151,14 @@ async def get_entity(
     )
 
     async with server_context.db_manager.session() as session:  # type: ignore
-        result = await get_entity_tool(session=session, params=params)
+        try:
+            result = await get_entity_tool(
+                session=session,
+                params=params,
+                graph=server_context.graph,
+            )
+        except EntityNotFoundError as e:
+            return not_found_response(e.identifier, e.kind)
 
     return result.model_dump()
 
@@ -254,7 +178,14 @@ async def get_source_code(entity_id: str, context_lines: int = 5) -> dict[str, A
     params = GetSourceCodeParams(entity_id=entity_id, context_lines=context_lines)
 
     async with server_context.db_manager.session() as session:  # type: ignore
-        result = await get_source_code_tool(session=session, params=params)
+        try:
+            result = await get_source_code_tool(
+                session=session,
+                params=params,
+                project_root=server_context.config.project_root if server_context.config else None,
+            )
+        except EntityNotFoundError as e:
+            return not_found_response(e.identifier, e.kind)
 
     return result
 
@@ -304,7 +235,10 @@ async def get_file_summary(file_path: str) -> dict[str, Any]:
     params = GetFileSummaryParams(file_path=file_path)
 
     async with server_context.db_manager.session() as session:  # type: ignore
-        result = await get_file_summary_tool(session=session, params=params)
+        try:
+            result = await get_file_summary_tool(session=session, params=params)
+        except EntityNotFoundError as e:
+            return not_found_response(e.identifier, e.kind)
 
     return result.model_dump()
 
@@ -354,13 +288,19 @@ async def search(
             session=session,
             params=params,
             embedding_client=server_context.embedding_client,
+            embedding_model=server_context.embedding_model,
         )
 
     return result.model_dump()
 
 
 @mcp.tool()
-async def get_callers(entity_id: str, depth: int = 1, limit: int = 50) -> dict[str, Any]:
+async def get_callers(
+    entity_id: str | None = None,
+    signature: str | None = None,
+    depth: int = 1,
+    limit: int = 50,
+) -> dict[str, Any]:
     """
     Get callers (functions that call this entity).
 
@@ -369,13 +309,14 @@ async def get_callers(entity_id: str, depth: int = 1, limit: int = 50) -> dict[s
 
     Args:
         entity_id: Entity ID
+        signature: Entity signature (alternative to entity_id)
         depth: Traversal depth (1-3)
         limit: Max results per depth level (1-200)
 
     Returns:
         Callers grouped by depth with truncation metadata
     """
-    params = GetCallersParams(entity_id=entity_id, depth=depth, limit=limit)
+    params = GetCallersParams(entity_id=entity_id, signature=signature, depth=depth, limit=limit)
 
     async with server_context.db_manager.session() as session:  # type: ignore
         result = await get_callers_tool(
@@ -388,7 +329,12 @@ async def get_callers(entity_id: str, depth: int = 1, limit: int = 50) -> dict[s
 
 
 @mcp.tool()
-async def get_callees(entity_id: str, depth: int = 1, limit: int = 50) -> dict[str, Any]:
+async def get_callees(
+    entity_id: str | None = None,
+    signature: str | None = None,
+    depth: int = 1,
+    limit: int = 50,
+) -> dict[str, Any]:
     """
     Get callees (functions called by this entity).
 
@@ -397,13 +343,14 @@ async def get_callees(entity_id: str, depth: int = 1, limit: int = 50) -> dict[s
 
     Args:
         entity_id: Entity ID
+        signature: Entity signature (alternative to entity_id)
         depth: Traversal depth (1-3)
         limit: Max results per depth level (1-200)
 
     Returns:
         Callees grouped by depth with truncation metadata
     """
-    params = GetCalleesParams(entity_id=entity_id, depth=depth, limit=limit)
+    params = GetCalleesParams(entity_id=entity_id, signature=signature, depth=depth, limit=limit)
 
     async with server_context.db_manager.session() as session:  # type: ignore
         result = await get_callees_tool(
@@ -417,7 +364,8 @@ async def get_callees(entity_id: str, depth: int = 1, limit: int = 50) -> dict[s
 
 @mcp.tool()
 async def get_dependencies(
-    entity_id: str,
+    entity_id: str | None = None,
+    signature: str | None = None,
     relationship: str | None = None,
     direction: str = "both",
     limit: int = 100,
@@ -434,6 +382,7 @@ async def get_dependencies(
 
     Args:
         entity_id: Entity ID
+        signature: Entity signature (alternative to entity_id)
         relationship: Filter by type (calls, uses, inherits, includes, contained_by)
         direction: Edge direction (incoming, outgoing, both)
         limit: Maximum results (1-500)
@@ -443,6 +392,7 @@ async def get_dependencies(
     """
     params = GetDependenciesParams(
         entity_id=entity_id,
+        signature=signature,
         relationship=relationship,  # type: ignore
         direction=direction,  # type: ignore
         limit=limit,
@@ -459,7 +409,10 @@ async def get_dependencies(
 
 
 @mcp.tool()
-async def get_class_hierarchy(entity_id: str) -> dict[str, Any]:
+async def get_class_hierarchy(
+    entity_id: str | None = None,
+    signature: str | None = None,
+) -> dict[str, Any]:
     """
     Get class hierarchy (base classes and derived classes).
 
@@ -467,11 +420,12 @@ async def get_class_hierarchy(entity_id: str) -> dict[str, Any]:
 
     Args:
         entity_id: Class entity ID
+        signature: Entity signature (alternative to entity_id)
 
     Returns:
         Base classes (ancestors) and derived classes (descendants)
     """
-    params = GetClassHierarchyParams(entity_id=entity_id)
+    params = GetClassHierarchyParams(entity_id=entity_id, signature=signature)
 
     async with server_context.db_manager.session() as session:  # type: ignore
         result = await get_class_hierarchy_tool(
@@ -484,7 +438,11 @@ async def get_class_hierarchy(entity_id: str) -> dict[str, Any]:
 
 
 @mcp.tool()
-async def get_related_entities(entity_id: str, limit: int = 100) -> dict[str, Any]:
+async def get_related_entities(
+    entity_id: str | None = None,
+    signature: str | None = None,
+    limit: int = 100,
+) -> dict[str, Any]:
     """
     Get all direct neighbors grouped by relationship type.
 
@@ -492,12 +450,13 @@ async def get_related_entities(entity_id: str, limit: int = 100) -> dict[str, An
 
     Args:
         entity_id: Entity ID
+        signature: Entity signature (alternative to entity_id)
         limit: Maximum results (1-500)
 
     Returns:
         Neighbors grouped by relationship type and direction
     """
-    params = GetRelatedEntitiesParams(entity_id=entity_id, limit=limit)
+    params = GetRelatedEntitiesParams(entity_id=entity_id, signature=signature, limit=limit)
 
     async with server_context.db_manager.session() as session:  # type: ignore
         result = await get_related_entities_tool(
@@ -538,7 +497,8 @@ async def get_related_files(file_path: str, limit: int = 50) -> dict[str, Any]:
 
 @mcp.tool()
 async def get_behavior_slice(
-    entity_id: str,
+    entity_id: str | None = None,
+    signature: str | None = None,
     max_depth: int = 5,
     max_cone_size: int = 200,
 ) -> dict[str, Any]:
@@ -553,6 +513,7 @@ async def get_behavior_slice(
 
     Args:
         entity_id: Seed entity ID
+        signature: Entity signature (alternative to entity_id)
         max_depth: Maximum traversal depth (1-10, default 5)
         max_cone_size: Maximum cone size before truncation (1-1000, default 200)
 
@@ -561,22 +522,29 @@ async def get_behavior_slice(
     """
     params = GetBehaviorSliceParams(
         entity_id=entity_id,
+        signature=signature,
         max_depth=max_depth,
         max_cone_size=max_cone_size,
     )
 
     async with server_context.db_manager.session() as session:  # type: ignore
-        result = await get_behavior_slice_tool(
-            session=session,
-            params=params,
-            graph=server_context.graph,  # type: ignore
-        )
+        try:
+            result = await get_behavior_slice_tool(
+                session=session,
+                params=params,
+                graph=server_context.graph,  # type: ignore
+            )
+        except EntityNotFoundError as e:
+            return not_found_response(e.identifier, e.kind)
 
     return result.model_dump()
 
 
 @mcp.tool()
-async def get_state_touches(entity_id: str) -> dict[str, Any]:
+async def get_state_touches(
+    entity_id: str | None = None,
+    signature: str | None = None,
+) -> dict[str, Any]:
     """
     Analyze global variable usage and side effects (direct + transitive).
 
@@ -586,18 +554,22 @@ async def get_state_touches(entity_id: str) -> dict[str, Any]:
 
     Args:
         entity_id: Entity ID
+        signature: Entity signature (alternative to entity_id)
 
     Returns:
         Direct and transitive state touches with side effect markers
     """
-    params = GetStateTouchesParams(entity_id=entity_id)
+    params = GetStateTouchesParams(entity_id=entity_id, signature=signature)
 
     async with server_context.db_manager.session() as session:  # type: ignore
-        result = await get_state_touches_tool(
-            session=session,
-            params=params,
-            graph=server_context.graph,  # type: ignore
-        )
+        try:
+            result = await get_state_touches_tool(
+                session=session,
+                params=params,
+                graph=server_context.graph,  # type: ignore
+            )
+        except EntityNotFoundError as e:
+            return not_found_response(e.identifier, e.kind)
 
     return result.model_dump()
 
@@ -686,7 +658,10 @@ async def get_capability_detail(
     )
 
     async with server_context.db_manager.session() as session:  # type: ignore
-        result = await get_capability_detail_tool(session=session, params=params)
+        try:
+            result = await get_capability_detail_tool(session=session, params=params)
+        except CapabilityNotFoundError as e:
+            return not_found_response(e.name, "capability")
 
     return result.model_dump()
 
@@ -757,7 +732,10 @@ async def list_entry_points(
 
 
 @mcp.tool()
-async def get_entry_point_info(entity_id: str) -> dict[str, Any]:
+async def get_entry_point_info(
+    entity_id: str | None = None,
+    signature: str | None = None,
+) -> dict[str, Any]:
     """
     Analyze which capabilities an entry point exercises.
 
@@ -766,18 +744,22 @@ async def get_entry_point_info(entity_id: str) -> dict[str, Any]:
 
     Args:
         entity_id: Entry point entity ID
+        signature: Entity signature (alternative to entity_id)
 
     Returns:
         Entry point summary with capabilities exercised (direct/transitive counts)
     """
-    params = GetEntryPointInfoParams(entity_id=entity_id)
+    params = GetEntryPointInfoParams(entity_id=entity_id, signature=signature)
 
     async with server_context.db_manager.session() as session:  # type: ignore
-        result = await get_entry_point_info_tool(
-            session=session,
-            params=params,
-            graph=server_context.graph,  # type: ignore
-        )
+        try:
+            result = await get_entry_point_info_tool(
+                session=session,
+                params=params,
+                graph=server_context.graph,  # type: ignore
+            )
+        except EntityNotFoundError as e:
+            return not_found_response(e.identifier, e.kind)
 
     return result.model_dump()
 

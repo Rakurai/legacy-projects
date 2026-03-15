@@ -42,6 +42,7 @@ async def search_tool(
     session: AsyncSession,
     params: SearchParams,
     embedding_client=None,
+    embedding_model: str = "text-embedding-3-large",
 ) -> SearchResponse:
     """
     Perform hybrid semantic + keyword search.
@@ -85,6 +86,7 @@ async def search_tool(
         session=session,
         query=params.query,
         embedding_client=embedding_client,
+        embedding_model=embedding_model,
         kind=params.kind,
         capability=params.capability,
         min_doc_quality=params.min_doc_quality,

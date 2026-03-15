@@ -13,11 +13,16 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 from typing import Literal
+from pathlib import Path
+
+import networkx as nx
 
 from server.db_models import Entity
+from server.errors import EntityNotFoundError
 from server.models import EntitySummary, EntityDetail, EntityNeighbor, TruncationMetadata
 from server.resolver import resolve_entity as resolve_entity_fn, entity_to_summary
 from server.logging_config import log
+from server.util import parse_json_field, fetch_entity_map, doc_quality_sort_key
 
 
 # Tool Parameter Models
@@ -85,6 +90,7 @@ async def resolve_entity_tool(
     session: AsyncSession,
     params: ResolveEntityParams,
     embedding_client=None,
+    embedding_model: str = "text-embedding-3-large",
 ) -> ResolveEntityResponse:
     """
     Resolve entity name to ranked candidates.
@@ -107,6 +113,7 @@ async def resolve_entity_tool(
         query=params.query,
         kind=params.kind,
         embedding_client=embedding_client,
+        embedding_model=embedding_model,
         limit=20,
     )
 
@@ -125,6 +132,7 @@ async def resolve_entity_tool(
 async def get_entity_tool(
     session: AsyncSession,
     params: GetEntityParams,
+    graph: "nx.MultiDiGraph | None" = None,
 ) -> EntityDetail:
     """
     Fetch full entity details by ID or signature.
@@ -147,7 +155,7 @@ async def get_entity_tool(
     elif params.signature:
         result = await session.execute(
             select(Entity).where(Entity.signature == params.signature)
-            .order_by(Entity.doc_quality.desc(), Entity.fan_in.desc())
+            .order_by(doc_quality_sort_key(), Entity.fan_in.desc())
             .limit(1)
         )
         entity = result.scalar_one_or_none()
@@ -155,18 +163,7 @@ async def get_entity_tool(
         raise ValueError("Either entity_id or signature must be provided")
 
     if not entity:
-        raise ValueError("Entity not found")
-
-    # Deserialize JSON fields that may come back as strings from the DB
-    import json
-
-    def _parse_json(val):
-        if isinstance(val, str):
-            try:
-                return json.loads(val)
-            except (json.JSONDecodeError, TypeError):
-                return None
-        return val
+        raise EntityNotFoundError(params.entity_id or params.signature or "unknown")
 
     # Build EntityDetail
     detail = EntityDetail(
@@ -193,15 +190,40 @@ async def get_entity_tool(
         is_entry_point=entity.is_entry_point,
         brief=entity.brief,
         details=entity.details,
-        params=_parse_json(entity.params),
+        params=parse_json_field(entity.params),
         returns=entity.returns,
         rationale=entity.rationale,
-        usages=_parse_json(entity.usages),
+        usages=parse_json_field(entity.usages),
         notes=entity.notes,
-        side_effect_markers=_parse_json(entity.side_effect_markers),
-        neighbors=None,  # TODO: implement if include_neighbors=true
+        side_effect_markers=parse_json_field(entity.side_effect_markers),
+        neighbors=None,  # Populated below if include_neighbors=true
         provenance="doxygen_extracted" if entity.doc_state == "extracted_summary" else "llm_generated",
     )
+
+    # Populate neighbors if requested and graph available
+    if params.include_neighbors and graph and entity.entity_id in graph:
+        neighbor_records: list[tuple[str, str, str]] = []  # (id, rel, dir)
+        for _, target, data in graph.out_edges(entity.entity_id, data=True):
+            neighbor_records.append((target, data.get("type", "unknown"), "outgoing"))
+        for source, _, data in graph.in_edges(entity.entity_id, data=True):
+            neighbor_records.append((source, data.get("type", "unknown"), "incoming"))
+
+        # Batch-fetch neighbor entities
+        neighbor_ids = list({r[0] for r in neighbor_records})
+        neighbor_map = await fetch_entity_map(session, neighbor_ids)
+
+        neighbors: list[EntityNeighbor] = []
+        for nid, rel, direction in neighbor_records:
+            ne = neighbor_map.get(nid)
+            if ne:
+                neighbors.append(EntityNeighbor(
+                    entity_id=ne.entity_id,
+                    name=ne.name or nid,
+                    kind=ne.kind,
+                    relationship=rel.upper(),
+                    direction=direction,  # type: ignore
+                ))
+        detail.neighbors = neighbors
 
     return detail
 
@@ -209,33 +231,55 @@ async def get_entity_tool(
 async def get_source_code_tool(
     session: AsyncSession,
     params: GetSourceCodeParams,
+    project_root: Path | None = None,
 ) -> dict:
     """
     Retrieve source code with optional context lines.
 
+    When context_lines > 0, reads surrounding lines from disk using project_root.
+
     Args:
         session: Database session
         params: Tool parameters
+        project_root: Repository root for disk reads
 
     Returns:
-        Dict with source_text, file_path, line_range
+        Dict with source_text, file_path, line_range, and optional context
     """
     log.info("get_source_code tool invoked", entity_id=params.entity_id)
 
     entity = await session.get(Entity, params.entity_id)
     if not entity:
-        raise ValueError("Entity not found")
+        raise EntityNotFoundError(params.entity_id)
 
-    return {
+    result: dict = {
         "entity_id": entity.entity_id,
         "signature": entity.signature,
         "file_path": entity.file_path,
-        "body_start_line": entity.body_start_line,
-        "body_end_line": entity.body_end_line,
+        "start_line": entity.body_start_line,
+        "end_line": entity.body_end_line,
         "source_text": entity.source_text,
         "definition_text": entity.definition_text,
         "context_lines": params.context_lines,
     }
+
+    # Read context from disk if requested
+    if params.context_lines > 0 and project_root and entity.file_path and entity.body_start_line:
+        source_file = project_root / entity.file_path
+        try:
+            lines = source_file.read_text(encoding="utf-8", errors="replace").splitlines()
+            start = entity.body_start_line - 1  # 0-indexed
+            end = entity.body_end_line or start  # 0-indexed end
+
+            ctx_start = max(0, start - params.context_lines)
+            ctx_end = min(len(lines), end + params.context_lines)
+
+            result["context_before"] = "\n".join(lines[ctx_start:start])
+            result["context_after"] = "\n".join(lines[end:ctx_end])
+        except (OSError, UnicodeDecodeError) as e:
+            log.warning("Could not read context from disk", file=str(source_file), error=str(e))
+
+    return result
 
 
 async def list_file_entities_tool(
@@ -307,7 +351,7 @@ async def get_file_summary_tool(
     entities = list(result.scalars().all())
 
     if not entities:
-        raise ValueError(f"No entities found in file: {params.file_path}")
+        raise EntityNotFoundError(params.file_path, kind="file")
 
     # Aggregate statistics
     entity_count = len(entities)

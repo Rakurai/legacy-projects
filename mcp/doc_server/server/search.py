@@ -31,6 +31,7 @@ async def hybrid_search(
     session: AsyncSession,
     query: str,
     embedding_client=None,
+    embedding_model: str = "text-embedding-3-large",
     kind: str | None = None,
     capability: str | None = None,
     min_doc_quality: str | None = None,
@@ -43,6 +44,7 @@ async def hybrid_search(
         session: Database session
         query: Search query
         embedding_client: Optional OpenAI client for embeddings
+        embedding_model: Embedding model name
         kind: Optional kind filter
         capability: Optional capability filter
         min_doc_quality: Optional minimum doc quality (high, medium, low)
@@ -60,7 +62,7 @@ async def hybrid_search(
     if embedding_client:
         try:
             response = await embedding_client.embeddings.create(
-                model="text-embedding-3-large",  # or configured model
+                model=embedding_model,
                 input=query,
                 encoding_format="float"
             )
@@ -73,32 +75,34 @@ async def hybrid_search(
         log.info("Embedding client not available; using keyword-only mode")
         search_mode = "keyword_fallback"
 
-    # Build filters
-    filters = []
+    # Build parameterized filters
+    filter_conditions: list[str] = []
+    filter_params: dict[str, str] = {}
     if kind:
-        filters.append(f"kind = '{kind}'")
+        filter_conditions.append("kind = :filter_kind")
+        filter_params["filter_kind"] = kind
     if capability:
-        filters.append(f"capability = '{capability}'")
+        filter_conditions.append("capability = :filter_cap")
+        filter_params["filter_cap"] = capability
     if min_doc_quality:
-        # Map quality to ordering: high > medium > low
         quality_order = {"high": 3, "medium": 2, "low": 1}
         min_order = quality_order.get(min_doc_quality, 1)
         if min_order == 3:
-            filters.append("doc_quality = 'high'")
+            filter_conditions.append("doc_quality = 'high'")
         elif min_order == 2:
-            filters.append("doc_quality IN ('high', 'medium')")
+            filter_conditions.append("doc_quality IN ('high', 'medium')")
         # low includes all
 
-    filter_clause = " AND " + " AND ".join(filters) if filters else ""
+    filter_clause = (" AND " + " AND ".join(filter_conditions)) if filter_conditions else ""
 
     # Execute hybrid query
     if search_mode == "hybrid" and query_embedding:
         results = await _execute_hybrid_query(
-            session, query, query_embedding, filter_clause, limit
+            session, query, query_embedding, filter_clause, filter_params, limit
         )
     else:
         results = await _execute_keyword_query(
-            session, query, filter_clause, limit
+            session, query, filter_clause, filter_params, limit
         )
 
     log.info("Search complete", result_count=len(results), search_mode=search_mode)
@@ -111,6 +115,7 @@ async def _execute_hybrid_query(
     query: str,
     query_embedding: list[float],
     filter_clause: str,
+    filter_params: dict[str, str],
     limit: int,
 ) -> list[SearchResult]:
     """
@@ -121,6 +126,8 @@ async def _execute_hybrid_query(
     - CTE for semantic matches (pgvector cosine)
     - CTE for keyword matches (tsvector)
     - JOIN and combine scores: exact*10 + semantic*0.6 + keyword*0.4
+
+    filter_clause and filter_params use bind parameters (no string interpolation).
     """
     hybrid_sql = text(f"""
         WITH exact AS (
@@ -162,7 +169,7 @@ async def _execute_hybrid_query(
 
     result = await session.execute(
         hybrid_sql,
-        {"query": query, "embedding": embedding_str, "limit": limit}
+        {"query": query, "embedding": embedding_str, "limit": limit, **filter_params}
     )
 
     rows = result.fetchall()
@@ -196,12 +203,14 @@ async def _execute_keyword_query(
     session: AsyncSession,
     query: str,
     filter_clause: str,
+    filter_params: dict[str, str],
     limit: int,
 ) -> list[SearchResult]:
     """
     Execute keyword-only search (fallback when embeddings unavailable).
 
     Uses PostgreSQL full-text search with exact match boost.
+    filter_clause and filter_params use bind parameters (no string interpolation).
     """
     keyword_sql = text(f"""
         WITH exact AS (
@@ -231,7 +240,7 @@ async def _execute_keyword_query(
 
     result = await session.execute(
         keyword_sql,
-        {"query": query, "limit": limit}
+        {"query": query, "limit": limit, **filter_params}
     )
 
     rows = result.fetchall()

@@ -16,6 +16,8 @@ from sqlalchemy import text, func
 from sqlmodel import select
 from typing import Literal
 
+from server.util import doc_quality_sort_key
+
 from server.db_models import Entity
 from server.models import ResolutionEnvelope, EntitySummary
 from server.logging_config import log
@@ -77,6 +79,7 @@ async def resolve_entity(
     query: str,
     kind: str | None = None,
     embedding_client=None,
+    embedding_model: str = "text-embedding-3-large",
     limit: int = 20,
 ) -> ResolutionResult:
     """
@@ -87,6 +90,7 @@ async def resolve_entity(
         query: Entity name or signature to resolve
         kind: Optional kind filter (function, class, etc.)
         embedding_client: Optional OpenAI embedding client for semantic search
+        embedding_model: Embedding model name
         limit: Maximum candidates to return
 
     Returns:
@@ -127,7 +131,7 @@ async def resolve_entity(
 
     # Stage 6: Semantic search (if embedding client available)
     if embedding_client:
-        result = await _resolve_by_semantic(session, query, kind, embedding_client, limit)
+        result = await _resolve_by_semantic(session, query, kind, embedding_client, embedding_model, limit)
         if result:
             log.info("Resolved by semantic search", query=query, candidates=len(result.candidates))
             return result
@@ -171,7 +175,7 @@ async def _resolve_by_signature(
     if kind:
         stmt = stmt.where(Entity.kind == kind)
 
-    stmt = stmt.order_by(Entity.doc_quality.desc(), Entity.fan_in.desc()).limit(20)
+    stmt = stmt.order_by(doc_quality_sort_key(), Entity.fan_in.desc()).limit(20)
 
     result = await session.execute(stmt)
     entities = list(result.scalars().all())
@@ -201,7 +205,7 @@ async def _resolve_by_name(
         stmt = stmt.where(Entity.kind == kind)
 
     stmt = stmt.order_by(
-        Entity.doc_quality.desc(),
+        doc_quality_sort_key(),
         Entity.fan_in.desc(),
     ).limit(limit)
 
@@ -234,7 +238,7 @@ async def _resolve_by_prefix(
 
     stmt = stmt.order_by(
         func.length(Entity.name),
-        Entity.doc_quality.desc(),
+        doc_quality_sort_key(),
     ).limit(limit)
 
     result = await session.execute(stmt)
@@ -258,22 +262,22 @@ async def _resolve_by_keyword(
     limit: int,
 ) -> ResolutionResult | None:
     """Stage 5: Keyword search (PostgreSQL full-text via tsvector)."""
-    # Build query with optional kind filter
-    kind_filter = f"AND kind = '{kind}'" if kind else ""
+    # Build query with parameterized kind filter
+    kind_clause = "AND kind = :kind" if kind else ""
+    params: dict[str, str | int] = {"query": query, "limit": limit}
+    if kind:
+        params["kind"] = kind
 
     keyword_sql = text(f"""
         SELECT *, ts_rank(search_vector, plainto_tsquery('english', :query)) AS score
         FROM entities
         WHERE search_vector @@ plainto_tsquery('english', :query)
-        {kind_filter}
+        {kind_clause}
         ORDER BY score DESC
         LIMIT :limit
     """)
 
-    result = await session.execute(
-        keyword_sql,
-        {"query": query, "limit": limit}
-    )
+    result = await session.execute(keyword_sql, params)
 
     rows = result.fetchall()
 
@@ -299,26 +303,30 @@ async def _resolve_by_semantic(
     query: str,
     kind: str | None,
     embedding_client,
+    embedding_model: str,
     limit: int,
 ) -> ResolutionResult | None:
     """Stage 6: Semantic search (pgvector cosine similarity)."""
     try:
         # Get query embedding
         response = await embedding_client.embeddings.create(
-            model="text-embedding-3-large",  # or configured model
+            model=embedding_model,
             input=query,
             encoding_format="float"
         )
         query_embedding = response.data[0].embedding
 
-        # Build query with optional kind filter
-        kind_filter = f"AND kind = '{kind}'" if kind else ""
+        # Build query with parameterized kind filter
+        kind_clause = "AND kind = :kind" if kind else ""
+        params: dict[str, str | int] = {"limit": limit}
+        if kind:
+            params["kind"] = kind
 
         semantic_sql = text(f"""
             SELECT *, 1 - (embedding <=> CAST(:embedding AS vector)) AS score
             FROM entities
             WHERE embedding IS NOT NULL
-            {kind_filter}
+            {kind_clause}
             ORDER BY score DESC
             LIMIT :limit
         """)
@@ -328,7 +336,7 @@ async def _resolve_by_semantic(
 
         result = await session.execute(
             semantic_sql,
-            {"embedding": embedding_str, "limit": limit}
+            {"embedding": embedding_str, **params}
         )
 
         rows = result.fetchall()

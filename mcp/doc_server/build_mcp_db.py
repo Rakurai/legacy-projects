@@ -43,6 +43,7 @@ from build_helpers.entity_processor import (
     compute_doc_quality,
     compute_is_entry_point,
     generate_tsvector_text,
+    assign_capabilities,
     MergedEntity,
 )
 from build_helpers.graph_loader import (
@@ -54,65 +55,64 @@ from build_helpers.graph_loader import (
 from build_helpers.embeddings_loader import load_embeddings, attach_embeddings
 
 
-async def drop_and_create_schema(session: AsyncSession) -> None:
+async def drop_and_create_schema(engine) -> None:
     """
-    Drop existing tables and recreate schema.
+    Drop existing tables and recreate schema with indexes.
 
-    This ensures idempotent builds (same input → same output).
+    Uses a single engine for all DDL operations (DROP, CREATE TABLE, CREATE INDEX)
+    to avoid split-transaction issues. This ensures idempotent builds.
+
+    Args:
+        engine: SQLAlchemy async engine from DatabaseManager
     """
+    from server import db_models  # noqa: F401 — registers models with SQLModel metadata
+    from sqlmodel import SQLModel
+
     log.info("Dropping existing tables")
 
-    await session.execute(text("DROP TABLE IF EXISTS entry_points CASCADE"))
-    await session.execute(text("DROP TABLE IF EXISTS capability_edges CASCADE"))
-    await session.execute(text("DROP TABLE IF EXISTS capabilities CASCADE"))
-    await session.execute(text("DROP TABLE IF EXISTS edges CASCADE"))
-    await session.execute(text("DROP TABLE IF EXISTS entities CASCADE"))
+    async with engine.begin() as conn:
+        await conn.execute(text("DROP TABLE IF EXISTS entry_points CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS capability_edges CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS capabilities CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS edges CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS entities CASCADE"))
+        await conn.execute(text("DROP INDEX IF EXISTS entities_signature_key"))
 
     log.info("Creating schema")
 
-    # Create pgvector extension
-    await session.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
-
-    # Create tables (SQLModel will use metadata, but we need to ensure order)
-    # Import to trigger metadata registration
-    from server import db_models
-
-    # Create tables via SQLModel metadata
-    from sqlmodel import SQLModel
-    from server.db import build_engine
-    config = ServerConfig()
-    engine = build_engine(config)
-
+    # Create pgvector extension + tables
     async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
         await conn.run_sync(SQLModel.metadata.create_all)
 
-    # Create indexes
+    # Create indexes — each in its own transaction so one failure doesn't cascade
     log.info("Creating indexes")
 
     indexes = [
-        "CREATE INDEX idx_entities_name ON entities(name)",
-        "CREATE INDEX idx_entities_kind ON entities(kind)",
-        "CREATE INDEX idx_entities_file ON entities(file_path)",
-        "CREATE INDEX idx_entities_capability ON entities(capability)",
-        "CREATE INDEX idx_entities_entry ON entities(is_entry_point) WHERE is_entry_point",
-        "CREATE INDEX idx_entities_bridge ON entities(is_bridge) WHERE is_bridge",
-        "CREATE INDEX idx_entities_search ON entities USING GIN(search_vector)",
-        "CREATE INDEX idx_entities_embedding ON entities USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50)",
-        "CREATE INDEX idx_edges_source ON edges(source_id)",
-        "CREATE INDEX idx_edges_target ON edges(target_id)",
-        "CREATE INDEX idx_edges_rel ON edges(relationship)",
-        "CREATE INDEX idx_capability_edges_source ON capability_edges(source_cap)",
-        "CREATE INDEX idx_capability_edges_target ON capability_edges(target_cap)",
+        "CREATE INDEX IF NOT EXISTS idx_entities_signature ON entities(signature)",
+        "CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name)",
+        "CREATE INDEX IF NOT EXISTS idx_entities_kind ON entities(kind)",
+        "CREATE INDEX IF NOT EXISTS idx_entities_file ON entities(file_path)",
+        "CREATE INDEX IF NOT EXISTS idx_entities_capability ON entities(capability)",
+        "CREATE INDEX IF NOT EXISTS idx_entities_entry ON entities(is_entry_point) WHERE is_entry_point",
+        "CREATE INDEX IF NOT EXISTS idx_entities_bridge ON entities(is_bridge) WHERE is_bridge",
+        "CREATE INDEX IF NOT EXISTS idx_entities_search ON entities USING GIN(search_vector)",
+        "CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities USING hnsw (embedding vector_cosine_ops)",
+        "CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_id)",
+        "CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id)",
+        "CREATE INDEX IF NOT EXISTS idx_edges_rel ON edges(relationship)",
+        "CREATE INDEX IF NOT EXISTS idx_capability_edges_source ON capability_edges(source_cap)",
+        "CREATE INDEX IF NOT EXISTS idx_capability_edges_target ON capability_edges(target_cap)",
     ]
 
     for idx_sql in indexes:
         try:
-            await session.execute(text(idx_sql))
+            async with engine.begin() as conn:
+                await conn.execute(text(idx_sql))
         except Exception as e:
-            log.warning("Index creation failed (may already exist)", sql=idx_sql[:50], error=str(e))
+            log.warning("Index creation failed", sql=idx_sql[:60], error=str(e))
 
-    await session.commit()
-    log.info("Schema created")
+    log.info("Schema created with indexes")
 
 
 async def populate_entities(session: AsyncSession, merged_entities: list[MergedEntity]) -> None:
@@ -121,9 +121,16 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
 
     Also generates tsvector for full-text search using PostgreSQL function.
     """
+    import json
+
     log.info("Populating entities table", count=len(merged_entities))
 
     for merged in merged_entities:
+        # Serialize dicts to JSON strings for asyncpg compatibility
+        params_json = json.dumps(merged.doc.params) if merged.doc and merged.doc.params else None
+        usages_json = json.dumps(merged.doc.usages) if merged.doc and merged.doc.usages else None
+        side_effects_json = json.dumps(merged.side_effect_markers) if merged.side_effect_markers else None
+
         entity = Entity(
             entity_id=merged.entity_id,
             compound_id=merged.compound_id,
@@ -141,11 +148,11 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             source_text=merged.source_text,
             brief=merged.doc.brief if merged.doc else None,
             details=merged.doc.details if merged.doc else None,
-            params=merged.doc.params if merged.doc else None,
+            params=params_json,
             returns=merged.doc.returns if merged.doc else None,
             notes=merged.doc.notes if merged.doc else None,
             rationale=merged.doc.rationale if merged.doc else None,
-            usages=merged.doc.usages if merged.doc else None,
+            usages=usages_json,
             doc_state=merged.doc.state if merged.doc else "extracted_summary",
             doc_quality=merged.doc_quality,
             capability=merged.capability,
@@ -153,7 +160,7 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             fan_in=merged.fan_in,
             fan_out=merged.fan_out,
             is_bridge=merged.is_bridge,
-            side_effect_markers=merged.side_effect_markers if merged.side_effect_markers else None,
+            side_effect_markers=side_effects_json,
             embedding=merged.embedding if hasattr(merged, 'embedding') else None,
             search_vector=None,  # Will be populated via SQL below
         )
@@ -199,22 +206,45 @@ async def populate_edges(session: AsyncSession, edges: list[tuple[str, str, str]
 async def populate_capabilities(
     session: AsyncSession,
     cap_defs: dict,
-    cap_graph: dict
+    cap_graph: dict,
+    merged_entities: list[MergedEntity],
 ) -> None:
     """Populate capabilities and capability_edges tables."""
+    import json
+
     log.info("Populating capabilities table")
+
+    # Pre-compute doc_quality distribution per capability from entities
+    cap_quality_dist: dict[str, dict[str, int]] = {}
+    for merged in merged_entities:
+        cap = merged.capability
+        if cap and merged.doc_quality:
+            if cap not in cap_quality_dist:
+                cap_quality_dist[cap] = {"high": 0, "medium": 0, "low": 0}
+            cap_quality_dist[cap][merged.doc_quality] = (
+                cap_quality_dist[cap].get(merged.doc_quality, 0) + 1
+            )
+
+    cap_graph_caps = cap_graph.get("capabilities", {})
 
     # Populate capabilities
     for cap_name, cap_def in cap_defs.items():
-        # Compute doc_quality distribution
-        # (Would need to aggregate from entities, simplifying for now)
-        doc_quality_dist = {"high": 0, "medium": 0, "low": 0}
+        # Read function_count from cap_graph (not from cap_defs which has no "functions" key)
+        function_count = 0
+        if cap_name in cap_graph_caps:
+            function_count = cap_graph_caps[cap_name].get("function_count", 0)
+
+        # Read description from "desc" key (not "description")
+        description = cap_def.get("desc", "")
+
+        # Get aggregated doc_quality distribution
+        doc_quality_dist = cap_quality_dist.get(cap_name, {"high": 0, "medium": 0, "low": 0})
 
         capability = Capability(
             name=cap_name,
             type=cap_def.get("type", "domain"),
-            description=cap_def.get("description", ""),
-            function_count=len(cap_def.get("functions", [])),
+            description=description,
+            function_count=function_count,
             stability=cap_def.get("stability"),
             doc_quality_dist=doc_quality_dist,
         )
@@ -222,21 +252,24 @@ async def populate_capabilities(
 
     await session.commit()
 
-    # Populate capability edges
+    # Populate capability edges from nested "dependencies" dict
     log.info("Populating capability_edges table")
 
-    for edge in cap_graph.get("edges", []):
-        cap_edge = CapabilityEdge(
-            source_cap=edge["source"],
-            target_cap=edge["target"],
-            edge_type=edge.get("type", "requires_core"),
-            call_count=edge.get("call_count", 0),
-            in_dag=edge.get("in_dag", False),
-        )
-        session.add(cap_edge)
+    edge_count = 0
+    for source_cap, targets in cap_graph.get("dependencies", {}).items():
+        for target_cap, edge_data in targets.items():
+            cap_edge = CapabilityEdge(
+                source_cap=source_cap,
+                target_cap=target_cap,
+                edge_type=edge_data.get("edge_type", "requires_core"),
+                call_count=edge_data.get("call_count", 0),
+                in_dag=edge_data.get("in_dag", False),
+            )
+            session.add(cap_edge)
+            edge_count += 1
 
     await session.commit()
-    log.info("Capabilities tables populated")
+    log.info("Capabilities tables populated", capabilities=len(cap_defs), edges=edge_count)
 
 
 async def populate_entry_points(
@@ -304,33 +337,38 @@ async def main() -> None:
     # Stage 4: Extract source code
     extract_source_code(merged_entities, config.project_root)
 
-    # Stage 5: Load graph and compute metrics
-    edges = load_graph_edges(config.artifacts_path)
+    # Stage 5: Load capabilities (before graph metrics so bridge detection has capability data)
+    cap_defs = load_capability_defs(config.artifacts_path)
+    cap_graph = load_capability_graph(config.artifacts_path)
+
+    # Stage 6: Assign capabilities to entities from cap_graph members
+    assign_capabilities(merged_entities, cap_graph)
+
+    # Stage 7: Load graph and compute metrics (bridge detection needs capabilities)
+    edges = load_graph_edges(config.artifacts_path, merged_entities)
     compute_fan_metrics(merged_entities, edges)
     compute_bridge_flags(merged_entities, edges)
     compute_side_effect_markers(merged_entities, edges)
 
-    # Stage 6: Compute other derived fields
+    # Stage 8: Compute other derived fields
     compute_doc_quality(merged_entities)
     compute_is_entry_point(merged_entities)
     generate_tsvector_text(merged_entities)
 
-    # Stage 7: Load embeddings
+    # Stage 9: Load embeddings
     embeddings = load_embeddings(config.artifacts_path)
     attach_embeddings(merged_entities, embeddings)
 
-    # Stage 8: Load capabilities
-    cap_defs = load_capability_defs(config.artifacts_path)
-    cap_graph = load_capability_graph(config.artifacts_path)
-
-    # Stage 9: Populate database
+    # Stage 10: Populate database
     db_manager = DatabaseManager(config)
 
+    # DDL (tables + indexes) uses engine directly, outside session
+    await drop_and_create_schema(db_manager.engine)
+
     async with db_manager.session() as session:
-        await drop_and_create_schema(session)
         await populate_entities(session, merged_entities)
         await populate_edges(session, edges)
-        await populate_capabilities(session, cap_defs, cap_graph)
+        await populate_capabilities(session, cap_defs, cap_graph, merged_entities)
         await populate_entry_points(session, merged_entities)
 
         # Analyze tables for query planner

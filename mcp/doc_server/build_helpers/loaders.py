@@ -16,7 +16,7 @@ from pathlib import Path
 from typing import Any
 
 # Add clustering module to path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parents[2] / ".ai" / "gen_docs" / "clustering"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[4] / ".ai" / "gen_docs" / "clustering"))
 
 from doxygen_parse import load_db as load_entity_db, EntityDatabase, DoxygenEntity
 from doc_db import DocumentDB, Document
@@ -131,14 +131,18 @@ def load_capability_defs(artifacts_dir: Path) -> dict[str, Any]:
     Format:
         {
             "capability_name": {
-                "name": str,
                 "type": str (domain/policy/projection/infrastructure/utility),
-                "description": str,
-                "functions": list[str] (entity IDs),
-                "stability": str (optional),
-                ...
+                "desc": str (human-readable description),
+                "stability": str (stable/evolving/experimental),
+                "avoid": list[str] (optional, entity names to avoid),
+                "migration_role": str,
+                "target_surfaces": str,
+                "locked": bool
             }
         }
+
+    Note: Description key is "desc", not "description". No "functions" key exists;
+    function counts are in capability_graph.json.
 
     Args:
         artifacts_dir: Path to artifacts directory
@@ -166,23 +170,36 @@ def load_capability_graph(artifacts_dir: Path) -> dict[str, Any]:
 
     Format:
         {
-            "nodes": [...],
-            "edges": [
-                {
-                    "source": str,
-                    "target": str,
-                    "type": str (requires_core/requires_policy/uses_utility/etc.),
-                    "call_count": int,
-                    "in_dag": bool
+            "metadata": { ... },
+            "capabilities": {
+                "cap_name": {
+                    "type": str,
+                    "description": str,
+                    "stability": str,
+                    "function_count": int,
+                    "members": [
+                        {"name": str, "brief": str|null, "min_depth": int}
+                    ]
                 }
-            ]
+            },
+            "dependencies": {
+                "source_cap": {
+                    "target_cap": {
+                        "edge_type": str (uses_utility/requires_core/...),
+                        "call_count": int,
+                        "in_dag": bool
+                    }
+                }
+            },
+            "waves": [...],
+            "entry_points": { ... }
         }
 
     Args:
         artifacts_dir: Path to artifacts directory
 
     Returns:
-        Dict with nodes and edges
+        Dict with capabilities, dependencies, and metadata
 
     Raises:
         FileNotFoundError: If capability_graph.json doesn't exist
@@ -196,7 +213,7 @@ def load_capability_graph(artifacts_dir: Path) -> dict[str, Any]:
 
     log.info(
         "Capability graph loaded",
-        node_count=len(cap_graph.get("nodes", [])),
-        edge_count=len(cap_graph.get("edges", []))
+        capability_count=len(cap_graph.get("capabilities", {})),
+        dependency_sources=len(cap_graph.get("dependencies", {}))
     )
     return cap_graph

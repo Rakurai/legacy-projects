@@ -5,9 +5,8 @@ These models define the database schema and serve as the ORM layer.
 Build helpers import from here to populate the database.
 """
 
-from sqlmodel import SQLModel, Field
-from sqlalchemy import Column
-from sqlalchemy.dialects.postgresql import TSVECTOR, JSONB
+from sqlmodel import SQLModel, Field, Column
+from sqlalchemy.dialects.postgresql import TSVECTOR, JSON
 from pgvector.sqlalchemy import Vector
 
 
@@ -26,8 +25,8 @@ class Entity(SQLModel, table=True):
     member_id: str | None = Field(default=None, description="Member hex hash (NULL for compounds)")
 
     # Identity (user-facing)
-    name: str = Field(description="Bare name: do_look, race_type, etc.")
-    signature: str = Field(unique=True, description="Full signature: void do_look(Character *ch, String argument)")
+    name: str | None = Field(default=None, description="Bare name: do_look, race_type, etc. (NULL for files/dirs)")
+    signature: str = Field(description="Full signature: void do_look(Character *ch, String argument) (not unique, indexed)")
     kind: str = Field(description="function, variable, class, struct, file, enum, define, typedef, namespace, dir, group")
     entity_type: str = Field(description="compound or member")
 
@@ -45,11 +44,11 @@ class Entity(SQLModel, table=True):
     # Documentation
     brief: str | None = Field(default=None, description="One-line summary")
     details: str | None = Field(default=None, description="Detailed documentation")
-    params: dict | None = Field(default=None, sa_column=Column(JSONB), description="{param_name: description}")
+    params: str | None = Field(default=None, sa_column=Column(JSON), description="JSON: {param_name: description}")
     returns: str | None = Field(default=None, description="Return value description")
     notes: str | None = Field(default=None, description="Implementation notes")
     rationale: str | None = Field(default=None, description="Design rationale")
-    usages: dict | None = Field(default=None, sa_column=Column(JSONB), description="{caller_key: usage_description}")
+    usages: str | None = Field(default=None, sa_column=Column(JSON), description="JSON: {caller_key: usage_description}")
     doc_state: str | None = Field(default=None, description="extracted_summary, refined_summary, etc.")
     doc_quality: str | None = Field(default=None, description="Derived: high, medium, low")
 
@@ -61,10 +60,10 @@ class Entity(SQLModel, table=True):
     fan_in: int = Field(default=0, ge=0, description="Incoming CALLS edges")
     fan_out: int = Field(default=0, ge=0, description="Outgoing CALLS edges")
     is_bridge: bool = Field(default=False, description="Callers/callees span different capabilities")
-    side_effect_markers: dict | None = Field(
+    side_effect_markers: str | None = Field(
         default=None,
-        sa_column=Column(JSONB),
-        description="{messaging: [...], persistence: [...], state_mutation: [...], scheduling: [...]}"
+        sa_column=Column(JSON),
+        description="JSON: {messaging: [...], persistence: [...], state_mutation: [...], scheduling: [...]}"
     )
 
     # Embedding
@@ -114,7 +113,7 @@ class Capability(SQLModel, table=True):
     function_count: int = Field(ge=0, description="Number of functions in this capability")
     stability: str | None = Field(default=None, description="stable, evolving, experimental")
     doc_quality_dist: dict = Field(
-        sa_column=Column(JSONB),
+        sa_column=Column(JSON),
         description="{high: N, medium: N, low: N}"
     )
 
@@ -145,11 +144,11 @@ class EntryPoint(SQLModel, table=True):
     """
     __tablename__ = "entry_points"
 
-    name: str = Field(primary_key=True, description="do_kill, spell_fireball, spec_cast_cleric, etc.")
-    entity_id: str | None = Field(default=None, foreign_key="entities.entity_id")
+    entity_id: str = Field(primary_key=True, foreign_key="entities.entity_id")
+    name: str = Field(description="do_kill, spell_fireball, spec_cast_cleric, etc.")
     capabilities: list | None = Field(
         default=None,
-        sa_column=Column(JSONB),
+        sa_column=Column(JSON),
         description="List of capability names exercised"
     )
     entry_type: str | None = Field(default=None, description="do_, spell_, spec_")

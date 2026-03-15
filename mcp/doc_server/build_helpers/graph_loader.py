@@ -22,25 +22,41 @@ from build_helpers.entity_processor import MergedEntity, SIDE_EFFECT_FUNCTIONS
 from server.logging_config import log
 
 
-def load_graph_edges(artifacts_dir: Path) -> list[tuple[str, str, str]]:
+def load_graph_edges(
+    artifacts_dir: Path,
+    merged_entities: list[MergedEntity]
+) -> list[tuple[str, str, str]]:
     """
-    Load edges from code_graph.gml.
+    Load edges from code_graph.gml and convert node IDs to entity IDs.
 
-    Returns edges as (source_id, target_id, relationship) tuples.
-    Filters to entity-to-entity edges only (excludes location nodes).
+    Graph stores node IDs as either bare member hash or compound ID.
+    We need to convert these to full entity_id format (compound_member).
 
     Args:
         artifacts_dir: Path to artifacts directory
+        merged_entities: List of merged entities for ID mapping
 
     Returns:
-        List of (source_id, target_id, relationship) tuples
+        List of (source_entity_id, target_entity_id, relationship) tuples
     """
     gml_path = artifacts_dir / "code_graph.gml"
     log.info("Loading dependency graph from GML", path=str(gml_path))
 
     g = load_gml_graph(gml_path)
 
-    edges: list[tuple[str, str, str]] = []
+    # Build mapping from graph node ID to entity ID
+    # Graph uses: member hash for members, compound ID for compounds
+    # Entity uses: "compound_member" for members, "compound" for compounds
+    node_to_entity: dict[str, str] = {}
+    for entity in merged_entities:
+        # For members: map member hash -> full entity_id
+        if entity.member_id:
+            node_to_entity[entity.member_id] = entity.entity_id
+        # For compounds: map compound -> entity_id (same)
+        node_to_entity[entity.compound_id] = entity.entity_id
+
+    edges_set: set[tuple[str, str, str]] = set()
+    skipped = 0
 
     for source, target, data in g.edges(data=True):
         # Filter to entity-to-entity edges (exclude location nodes)
@@ -48,10 +64,18 @@ def load_graph_edges(artifacts_dir: Path) -> list[tuple[str, str, str]]:
         target_type = g.nodes[target].get("type", "")
 
         if source_type in ("compound", "member") and target_type in ("compound", "member"):
-            edge_type = data.get("type", "unknown")
-            edges.append((source, target, edge_type))
+            # Convert graph node IDs to entity IDs
+            source_entity = node_to_entity.get(source)
+            target_entity = node_to_entity.get(target)
 
-    log.info("Dependency graph edges loaded", edge_count=len(edges))
+            if source_entity and target_entity:
+                edge_type = data.get("type", "unknown")
+                edges_set.add((source_entity, target_entity, edge_type))
+            else:
+                skipped += 1
+
+    edges = list(edges_set)
+    log.info("Dependency graph edges loaded", edge_count=len(edges), skipped=skipped)
     return edges
 
 

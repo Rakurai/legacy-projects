@@ -65,6 +65,7 @@ class MergedEntity:
         self.is_entry_point: bool = False
         self.side_effect_markers: dict[str, list[str]] = {}
         self.search_vector_text: str | None = None
+        self._capability: str | None = None
 
     @property
     def entity_id(self) -> str:
@@ -84,11 +85,13 @@ class MergedEntity:
         """Full signature from doc or entity name."""
         if self.doc and self.doc.definition and self.doc.argsstring:
             return f"{self.doc.definition}{self.doc.argsstring}".strip()
-        return self.entity.name
+        return self.entity.signature
 
     @property
     def capability(self) -> str | None:
-        """Capability group (from doc.system field)."""
+        """Capability group (from cap_graph assignment, fallback to doc.system)."""
+        if self._capability is not None:
+            return self._capability
         return self.doc.system if self.doc else None
 
 
@@ -110,7 +113,7 @@ def merge_entities(entity_db: EntityDatabase, doc_db: DocumentDB) -> list[Merged
     merged: list[MergedEntity] = []
     unmatched_entities = 0
 
-    for entity in entity_db.entities:
+    for entity in entity_db.entities.values():
         compound_id = entity.id.compound
 
         # Try to find matching doc by signature
@@ -308,6 +311,40 @@ def generate_tsvector_text(merged_entities: list[MergedEntity]) -> None:
             parts.append(merged.source_text[:1000])
 
         merged.search_vector_text = " ".join(parts)
+
+
+def assign_capabilities(
+    merged_entities: list[MergedEntity],
+    cap_graph: dict
+) -> None:
+    """
+    Assign capability groups to entities from capability_graph.json members.
+
+    Builds a name→capability dict from cap_graph["capabilities"][name]["members"]
+    and assigns to each entity's _capability field.
+
+    Args:
+        merged_entities: List of merged entity records
+        cap_graph: Loaded capability_graph.json data
+    """
+    log.info("Assigning capabilities from capability graph")
+
+    name_to_cap: dict[str, str] = {}
+    capabilities = cap_graph.get("capabilities", {})
+    for cap_name, cap_data in capabilities.items():
+        for member in cap_data.get("members", []):
+            member_name = member.get("name") if isinstance(member, dict) else member
+            if member_name:
+                name_to_cap[member_name] = cap_name
+
+    assigned = 0
+    for merged in merged_entities:
+        cap = name_to_cap.get(merged.entity.name)
+        if cap:
+            merged._capability = cap
+            assigned += 1
+
+    log.info("Capabilities assigned", assigned=assigned, total=len(merged_entities))
 
 
 # Note: fan_in, fan_out, is_bridge, and side_effect_markers

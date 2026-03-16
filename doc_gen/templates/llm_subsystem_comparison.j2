@@ -1,0 +1,34 @@
+You are helping refine the organization of entities in a legacy codebase. An entity has been identified as potentially belonging to a different subsystem than its current assignment.
+
+### Entity Details
+{{ entity.summary }}
+
+### Current Subsystem: {{ current_subsystem.name }}
+{{ current_subsystem.description }}
+
+### Potential New Subsystems
+{% for subsystem in candidate_subsystems %}
+Candidate {{ loop.index }}: {{ subsystem.name }}
+{{ subsystem.description }}
+{% endfor %}
+
+Analyze which subsystem this entity belongs to most naturally based on its semantic meaning, purpose, and functionality. Consider:
+1. Conceptual coherence with the subsystem's purpose
+2. Functional alignment with other entities in the subsystem
+3. Role within the overall system architecture
+
+Return your analysis in the following JSON format:
+```json
+{
+  "best_subsystem": "name_of_best_subsystem",
+  "confidence": 0.1-1.0 (higher = more confident),
+  "reasoning": "Brief explanation of your reasoning",
+  "subsystem_rankings": [
+    {"name": "subsystem1", "score": 0.1-1.0, "reason": "brief reason"},
+    {"name": "subsystem2", "score": 0.1-1.0, "reason": "brief reason"},
+    ...
+  ]
+}
+```
+
+Only include the JSON response without any other text.

@@ -1,0 +1,285 @@
+{
+  "name": "Legacy MUD System",
+  "children": [
+    {
+      "name": "Core",
+      "children": [
+        {
+          "name": "Obj Char Group",
+          "children": [
+            {
+              "name": "Spec Mprog",
+              "id": "s17",
+              "size": 357
+            },
+            {
+              "name": "Read Confirm",
+              "id": "s36",
+              "size": 29
+            },
+            {
+              "name": "String Operator!=",
+              "id": "s10",
+              "size": 42
+            },
+            {
+              "name": "Table Color",
+              "id": "s41",
+              "size": 10
+            },
+            {
+              "name": "Vnum Name",
+              "id": "s25",
+              "size": 5
+            },
+            {
+              "name": "Guild Level",
+              "id": "s13",
+              "size": 62
+            },
+            {
+              "name": "Operator= Extra",
+              "id": "s14",
+              "size": 47
+            },
+            {
+              "name": "Obj Char",
+              "id": "s6",
+              "size": 450
+            },
+            {
+              "name": "From Obj",
+              "id": "s23",
+              "size": 153
+            },
+            {
+              "name": "Weather Day",
+              "id": "s30",
+              "size": 111
+            },
+            {
+              "name": "Color Scan",
+              "id": "s16",
+              "size": 11
+            },
+            {
+              "name": "Char Group",
+              "id": "s21",
+              "size": 364
+            },
+            {
+              "name": "Array String",
+              "id": "s7",
+              "size": 116
+            },
+            {
+              "name": "Garbage List",
+              "id": "s9",
+              "size": 27
+            }
+          ]
+        },
+        {
+          "name": "Vnum Prototype Group",
+          "children": [
+            {
+              "name": "Flags Act",
+              "id": "s1",
+              "size": 38
+            },
+            {
+              "name": "Operator Flags",
+              "id": "s33",
+              "size": 75
+            },
+            {
+              "name": "Flags Name",
+              "id": "s28",
+              "size": 162
+            },
+            {
+              "name": "Bit Core",
+              "id": "s8",
+              "size": 66
+            },
+            {
+              "name": "Vnum Prototype",
+              "id": "s46",
+              "size": 297
+            },
+            {
+              "name": "Char Level",
+              "id": "s5",
+              "size": 468
+            },
+            {
+              "name": "String Prog",
+              "id": "s11",
+              "size": 27
+            },
+            {
+              "name": "Level Squestmob",
+              "id": "s31",
+              "size": 57
+            },
+            {
+              "name": "War Clan",
+              "id": "s32",
+              "size": 170
+            },
+            {
+              "name": "Core variable",
+              "id": "s18",
+              "size": 9
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Support",
+      "children": [
+        {
+          "name": "Act Dispatcher",
+          "id": "s27",
+          "size": 39
+        }
+      ]
+    },
+    {
+      "name": "Data",
+      "children": [
+        {
+          "name": "Handle Input Group",
+          "children": [
+            {
+              "name": "Duel Arena",
+              "id": "s45",
+              "size": 50
+            },
+            {
+              "name": "Help Disabled",
+              "id": "s24",
+              "size": 128
+            },
+            {
+              "name": "Handle Input",
+              "id": "s15",
+              "size": 166
+            },
+            {
+              "name": "Name Loot",
+              "id": "s35",
+              "size": 93
+            },
+            {
+              "name": "Race Name",
+              "id": "s39",
+              "size": 99
+            },
+            {
+              "name": "Afk Pwd",
+              "id": "s42",
+              "size": 12
+            }
+          ]
+        },
+        {
+          "name": "Edit Note Group",
+          "children": [
+            {
+              "name": "Edit Note",
+              "id": "s37",
+              "size": 151
+            },
+            {
+              "name": "Qtell Wizlist",
+              "id": "s43",
+              "size": 34
+            },
+            {
+              "name": "Video Color",
+              "id": "s12",
+              "size": 84
+            },
+            {
+              "name": "Social Departed",
+              "id": "s26",
+              "size": 78
+            },
+            {
+              "name": "Color Custom",
+              "id": "s22",
+              "size": 27
+            },
+            {
+              "name": "Flags T100",
+              "id": "s44",
+              "size": 43
+            }
+          ]
+        },
+        {
+          "name": "Quality Keyword",
+          "id": "s29",
+          "size": 4
+        }
+      ]
+    },
+    {
+      "name": "Interface",
+      "children": [
+        {
+          "name": "Conn:: State Group",
+          "children": [
+            {
+              "name": "Conn:: State",
+              "id": "s2",
+              "size": 61
+            },
+            {
+              "name": "Char Show",
+              "id": "s40",
+              "size": 8
+            },
+            {
+              "name": "Types Constants",
+              "id": "s4",
+              "size": 122
+            },
+            {
+              "name": "Handle Wimpy",
+              "id": "s34",
+              "size": 20
+            },
+            {
+              "name": "Name Description",
+              "id": "s3",
+              "size": 49
+            },
+            {
+              "name": "Descriptor Read",
+              "id": "s19",
+              "size": 24
+            },
+            {
+              "name": "Autograph Newbiekit",
+              "id": "s20",
+              "size": 5
+            },
+            {
+              "name": "Recall Reject",
+              "id": "s38",
+              "size": 19
+            },
+            {
+              "name": "Room Color",
+              "id": "s0",
+              "size": 80
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

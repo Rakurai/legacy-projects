@@ -1,0 +1,23 @@
+{
+  "void spell_shock_blade(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": {
+    "cid": "magic_8cc",
+    "mid": "magic_8cc_1ae5bcf420dbaa62c85c46e5eb436a49b0",
+    "etype": "member",
+    "kind": "function",
+    "name": "spell_shock_blade",
+    "qualified_name": null,
+    "definition": "void spell_shock_blade",
+    "argsstring": "(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)",
+    "brief": "Enhances a weapon with a shocking energy effect if conditions are met and provides visual feedback.",
+    "details": "This function attempts to apply a shocking energy enhancement to a specified weapon object. It first verifies that the target object is not a character itself. If the enhancement is successfully applied via enhance_blade, it dispatches messages to the character and the room indicating that the weapon crackles with energy and fills the room with sparks of electricity. The function does not return a value but performs side effects through message dispatching and object modification.",
+    "params": {
+      "sn": "The skill type identifier associated with this spell (not used directly in this implementation).",
+      "target": "Integer indicating the target type (not used directly in this implementation).",
+      "ch": "Pointer to the character attempting to enhance the weapon.",
+      "evolution": "Integer representing the evolution state or variant of the enhancement effect.",
+      "level": "The level of the spell or effect, influencing the strength of the enhancement.",
+      "vo": "Pointer to the object (weapon) to be enhanced, cast to Object*."
+    },
+    "returns": "This function has no return value; it performs side effects such as enhancing the weapon and dispatching messages."
+  }
+}

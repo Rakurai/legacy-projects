@@ -1,0 +1,27 @@
+You are evaluating whether a set of C++ entities forms a coherent subsystem.
+
+Each entity has a summary describing its purpose or behavior. These summaries were generated from source code and usage context. Your job is to analyze whether the grouping seems functionally and semantically appropriate.
+
+Please answer the following questions:
+- Do these entities appear to work together as part of a unified concept or purpose?
+- If so, what is the likely purpose or functionality of this subsystem?
+- Are there any entities that seem out of place, overly generic, or belong elsewhere?
+- If applicable, suggest a concise name or label for this group.
+
+Respond in this structured format:
+
+```json
+{
+  "coherent": true | false,
+  "subsystem_name": "concise descriptive label, if coherent",
+  "summary": "one-paragraph explanation of the subsystem's role or purpose",
+  "outliers": ["list", "of", "entity", "names", "if", "any", "seem", "misplaced"]
+}
+```
+
+Here is the cluster under evaluation:
+
+Entity Summaries:
+
+{% for entity in entities %}• {{ entity.name }}: {{ entity.brief }}
+{% endfor %}

@@ -1,0 +1,45 @@
+You are refining the documentation for a C++ {{ kind }} using three sources of information:
+1. The {{ kind }}'s source code
+2. Summaries of the lower-level functions or variables it depends on
+3. A few representative usage contexts from other parts of the codebase
+
+Your goal is to generate improved documentation with these fields:
+- brief: A one-sentence summary of what the {{ kind }} does.
+- details: A longer paragraph describing how it works internally.
+- params: A dictionary of parameter names to descriptions (omit if none).
+- returns: A short description of the return value (omit if void).
+- tparams: A dictionary of template parameter names to descriptions (omit if none).
+- throws: A description of any errors or exceptions thrown (omit if none).
+- notes: A description of any interesting behaviors or design details (optional).
+- rationale: Why or when this {{ kind }} would be used, inferred from usage examples (optional).
+
+Respond with a JSON object using these keys.
+
+---
+
+{{ kind.capitalize() }}: `{{ signature }}`
+
+### Source Code:
+```cpp
+{{ code }}
+```
+{% if dep_summaries %}
+### Dependency Summaries:
+{% for dep in dep_summaries %}• {{ dep }}
+{% endfor %}
+{% endif %}
+
+{% if usages %}
+### Usage Examples (consumer_func(...): how the {{ kind }} is used):
+{% for context, description in usages.items() %}• {{ context }}: {{ description }}
+{% endfor %}
+{% endif %}
+
+{% if existing_doc %}
+### Existing Documentation:
+{% for k, v in existing_doc.items() if v %}- {{ k }}: {{ v | tojson }}
+{% endfor %}
+{% endif %}
+---
+
+Respond ONLY with a JSON object that improves upon the existing documentation.

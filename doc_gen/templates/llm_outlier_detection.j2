@@ -1,0 +1,35 @@
+You are analyzing a subsystem in a legacy codebase to determine if any entities (functions, classes, variables, etc.) should be moved to a different subsystem.
+
+### Current Subsystem: {{ subsystem_name }}
+
+Here's a description of the main purpose and functionality of this subsystem:
+{{ subsystem_description }}
+
+### Potential Outlier Entities
+I'll provide a list of entities that belong to this subsystem. For each entity, determine if it semantically belongs in this subsystem or if it seems out of place:
+
+{% for entity in entities %}
+Entity {{ loop.index }}: {{ entity.summary }}
+{% endfor %}
+
+For each entity, please analyze:
+1. How well does it align with the subsystem's core purpose? 
+2. Would it make more conceptual sense in a different subsystem?
+
+Return your analysis in the following JSON format:
+```json
+{
+  "entities": [
+    {
+      "entity_id": "entity_id_1", 
+      "is_outlier": true/false,
+      "confidence": 0.1-1.0 (higher = more confident),
+      "reasoning": "Brief explanation of your reasoning",
+      "suggested_subsystem": "Name of better subsystem (if outlier)"
+    },
+    ...
+  ]
+}
+```
+
+Only include the JSON response without any other text.

@@ -1,0 +1,41 @@
+You are refining the documentation for a C++ {{ kind }} using three sources of information:
+1. The {{ kind }}'s definition code
+2. Summaries of related entities
+3. Representative usage contexts from other parts of the codebase
+
+Your goal is to generate improved documentation with these fields:
+- brief: A one-sentence summary of what the {{ kind }} represents.
+- details: A longer paragraph describing its purpose, organization, and contained elements.
+- notes: A description of important organizational principles or patterns (optional).
+- rationale: Why this {{ kind }} exists and how it fits into the system architecture (optional).
+
+Respond with a JSON object using these keys.
+
+---
+
+{{ kind.capitalize() }}: `{{ signature }}`
+
+### Definition Code:
+```cpp
+{{ code }}
+```
+{% if dep_summaries %}
+### Related Entities:
+{% for dep in dep_summaries %}• {{ dep }}
+{% endfor %}
+{% endif %}
+
+{% if usages %}
+### Usage Examples (consumer_func(...): how the {{ kind }} is used):
+{% for sig, desc in usages.items() %}• {{ sig }}: {{ desc }}
+{% endfor %}
+{% endif %}
+
+{% if existing_doc %}
+### Existing Documentation:
+{% for k, v in existing_doc.items() if v %}- {{ k }}: {{ v | tojson }}
+{% endfor %}
+{% endif %}
+---
+
+Respond ONLY with a JSON object that improves upon the existing documentation.

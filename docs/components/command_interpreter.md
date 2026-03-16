@@ -1,9 +1,20 @@
-# Command Interpreter
+---
+id: command_interpreter
+name: Command Interpreter
+kind: system
+layer: infrastructure
+parent: null
+depends_on: [character_data, networking]
+depended_on_by: [combat, magic, social_communication, economy, quests, admin_tools, builder_tools, mobprog_npc_ai]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Command Interpreter subsystem parses player input and routes it to appropriate command handlers. It forms the core interface between players and the game world, translating text input into game actions. The system includes command registration, privilege checking, command abbreviation, state-aware command availability, and runtime command toggling. All player interactions with the game are processed through this central system, making it critical for the entire gameplay experience.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Processing and interpreting player commands
 - Managing command registration and lookup
 - Handling privilege and permission checks
@@ -14,6 +25,7 @@ The Command Interpreter subsystem parses player input and routes it to appropria
 - Throttling commands to prevent spam
 
 ## Core Components
+<!-- section: key_components | grounding: mixed -->
 
 ### Command System
 - `cmd_type`: Command structure with handler function
@@ -42,10 +54,8 @@ The Command Interpreter subsystem parses player input and routes it to appropria
   - Hundreds of commands with specialized handlers
 
 ### Connection System
-- `conn::State`: State machine for connection handling
-  - Various state implementations for login sequence
-  - PlayingState for active gameplay
-  - Other states for character creation and configuration
+
+> **Note:** The `conn::State` connection state machine and login sequence are documented in [networking.md](networking.md). Cross-reference only.
 
 ### Argument Parsing
 - **Sophisticated parsing functions**: Extract structured information from text input
@@ -55,7 +65,17 @@ The Command Interpreter subsystem parses player input and routes it to appropria
   - Complex entity references
   - Context-sensitive interpretation
 
+## Alias System
+<!-- section: key_components | grounding: grounded -->
+
+- **Alias Definition**: Players define custom command shortcuts mapping a keyword to a substitution string
+- **Parameter Substitution**: Aliases support `$1`..`$9` positional parameters and `$*` for all arguments
+- **Alias Expansion**: On input, the interpreter checks the player's alias list before command lookup; if matched, the alias body replaces the input with parameter substitution
+- **Persistence**: Alias lists are saved with character data
+- **Key File**: `/src/alias.cc` (190 LOC) — alias definition, deletion, listing, and expansion logic
+
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Command Implementation
 - **Command Lookup**: Partial name matching through prefix matching
@@ -85,6 +105,7 @@ The Command Interpreter subsystem parses player input and routes it to appropria
 - **Throttling**: Prevent command flooding and spam
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `/src/include/interp.hh` - Command system interface and definitions
@@ -108,6 +129,7 @@ The Command Interpreter subsystem parses player input and routes it to appropria
   - `/src/act_info.cc` - Information gathering commands
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Core Behaviors
 - **Command Processing**: Parse text and route to appropriate handlers
@@ -125,18 +147,19 @@ The Command Interpreter subsystem parses player input and routes it to appropria
 - **Command Logging**: Tracking of command usage for administrative purposes
 - **Command Aliasing**: Support for custom command shortcuts (via alias system)
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **Character System**: For actor state, permissions, and position requirements
-- **World System**: For movement between rooms and location context
-- **Object System**: For item manipulation and object targeting
-- **Affect System**: For ability to use commands under status effects
-- **Information Systems**: For gathering and displaying command results
+- **Character Data** (`character_data`): For actor state, permissions, and position requirements
+- **Networking** (`networking`): For connection state and input processing
 
 ### Depended On By
-- **All Gameplay Systems**: Most game interactions flow through commands
-- **Scripting**: NPC behaviors use the command mechanism
-- **Combat System**: Combat actions use command framework
-- **Quest System**: Quest interactions use commands
-- **Admin Tools**: Administrative functions leverage command structure
+- **Combat** (`combat`): Combat actions use command framework
+- **Magic** (`magic`): Casting commands
+- **Social & Communication** (`social_communication`): Communication commands
+- **Economy** (`economy`): Auction/shop commands
+- **Quests** (`quests`): Quest interactions use commands
+- **Admin Tools** (`admin_tools`): Administrative functions
+- **Builder Tools** (`builder_tools`): Building commands
+- **MobProg & NPC AI** (`mobprog_npc_ai`): NPC behaviors use command mechanism

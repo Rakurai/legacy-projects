@@ -1,9 +1,20 @@
-# Builder Commands
+---
+id: builder_tools
+name: Builder Tools
+kind: system
+layer: operations
+parent: null
+depends_on: [character_data, object_system, world_system, admin_tools, command_interpreter]
+depended_on_by: []
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Builder Commands subsystem provides comprehensive tools for content creators to build and modify game areas, rooms, objects, and NPCs from within the game. It includes commands for object spawning, area creation, and prototype editing, supporting dynamic world development without requiring server restarts or external file editing. This system serves as the foundation for all content creation in the MUD, enabling administrators to create rich, interactive environments directly through the game interface.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Creating and editing comprehensive game areas, rooms, objects, and NPCs
 - Spawning and modifying game entities with real-time updates
 - Managing complex world structures and interconnections
@@ -13,9 +24,9 @@ The Builder Commands subsystem provides comprehensive tools for content creators
 - Enabling content duplication and mass creation
 - Supporting area reset configuration and behavior definition
 
-## Core Components
+## World Building Tools
+<!-- section: key_components | grounding: mixed -->
 
-### World Building Tools
 - **Area Management**: Area creation and configuration
   - Area initialization and property setting
   - Reset behavior configuration
@@ -36,7 +47,9 @@ The Builder Commands subsystem provides comprehensive tools for content creators
   - Exit flag management
   - Direction and orientation control
 
-### Entity Creation Tools
+## Entity Creation Tools
+<!-- section: key_components | grounding: mixed -->
+
 - **Object Creation**: Item development
   - Object prototype creation and editing
   - Instance spawning with customization
@@ -52,7 +65,9 @@ The Builder Commands subsystem provides comprehensive tools for content creators
   - Combat properties and equipment
   - AI script attachment
 
-### Prototype Management
+## Prototype Management
+<!-- section: key_components | grounding: mixed -->
+
 - **Template Control**: Base entity management
   - Prototype creation and modification
   - Prototype listing and searching
@@ -79,6 +94,7 @@ The Builder Commands subsystem provides comprehensive tools for content creators
   - Cross-area copying
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Command Structure
 - **Command Hierarchy**: Organized by function
@@ -120,6 +136,7 @@ The Builder Commands subsystem provides comprehensive tools for content creators
   - Special reset instructions
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Implementation Files
 - `wiz_build.cc` (348 LOC) - Core world building tools
@@ -159,6 +176,7 @@ The Builder Commands subsystem provides comprehensive tools for content creators
   - Advanced editors for rooms, objects, and mobiles
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Creation Behaviors
 - **Template-Based Creation**: Entities created from prototypes
@@ -211,48 +229,12 @@ The Builder Commands subsystem provides comprehensive tools for content creators
   - Rollback capabilities
   - Change logging and tracking
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **World System**: For area and room structure
-  - Room connections and relationships
-  - Area organization and properties
-  - Geographic coordinates and mapping
-  - Environmental features
-
-- **Object System**: For item creation and management
-  - Object prototypes and instances
-  - Object property definitions
-  - Container relationships
-  - Special object behaviors
-
-- **Character System**: For NPC development
-  - Mobile prototypes and instances
-  - AI and behavior scripting
-  - Combat statistics and abilities
-  - Equipment and inventory
-
-- **Admin Controls**: For permissions and security
-  - Access level verification
-  - Command availability checking
-  - Audit logging of changes
-  - Builder privilege management
-
-### Depended On By
-- **Content Creators**: World builders and designers
-  - Area developers
-  - Quest designers
-  - Special event creators
-  - World maintainers
-
-- **Game Administrators**: For world management
-  - Content modification
-  - Bug fixing in the world
-  - Special event setup
-  - World state restoration
-
-- **Quest System**: For interactive content
-  - Quest-related object creation
-  - Special NPC setup
-  - Event trigger placement
-  - Dynamic content management
+- **World System** (`world_system`): For area and room structure
+- **Object System** (`object_system`): For item creation and management
+- **Character Data** (`character_data`): For NPC development and mobile prototypes
+- **Admin Tools** (`admin_tools`): For permissions and security
+- **Command Interpreter** (`command_interpreter`): For command routing

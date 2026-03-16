@@ -1,9 +1,20 @@
-# Persistence
+---
+id: persistence
+name: Persistence
+kind: system
+layer: operations
+parent: null
+depends_on: [character_data, object_system, world_system, utilities]
+depended_on_by: [game_engine, admin_tools]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Persistence system handles the saving and loading of all game data, ensuring that player progress, world state, and configuration settings persist across server restarts. It implements multiple storage mechanisms including SQLite database access, structured file I/O for character and world data, and JSON-based configuration management. This component is essential for maintaining game continuity, supporting player progression, and enabling administrative data management in the long-running MUD environment.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Storing and retrieving player character data
 - Managing object persistence across server sessions
 - Saving and loading world state information
@@ -15,9 +26,9 @@ The Persistence system handles the saving and loading of all game data, ensuring
 - Ensuring data integrity through validation and error handling
 - Managing note and message board persistence
 
-## Core Components
+## Database Management
+<!-- section: key_components | grounding: mixed | role: mechanism -->
 
-### Database Management
 - **SQL Interface**: SQLite integration layer
   - Connection pooling and management
   - Transaction handling with commit/rollback
@@ -37,7 +48,9 @@ The Persistence system handles the saving and loading of all game data, ensuring
   - Index optimization
   - Relation management
 
-### File-Based Persistence
+## File-Based Persistence
+<!-- section: key_components | grounding: mixed | role: mechanism -->
+
 - **Character Files**: Player data storage
   - Attribute persistence
   - Inventory management
@@ -64,7 +77,9 @@ The Persistence system handles the saving and loading of all game data, ensuring
   - Hierarchical configuration support
   - Environment-specific settings
 
-### Persistence Utilities
+## Configuration System
+<!-- section: key_components | grounding: mixed -->
+
 - **Serialization Tools**: Data conversion utilities
   - Entity serialization helpers
   - Binary data handling
@@ -82,6 +97,7 @@ The Persistence system handles the saving and loading of all game data, ensuring
   - Permissions and security handling
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Database Implementation
 - **SQLite Integration**: Core database functionality
@@ -138,6 +154,7 @@ The Persistence system handles the saving and loading of all game data, ensuring
   - Scope management
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 - **sql.hh/sqlite.cc**: Core SQLite database interface
   - 750 lines
   - Database connection management
@@ -193,6 +210,7 @@ The Persistence system handles the saving and loading of all game data, ensuring
   - Reset state management
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 1. **Player Data Lifecycle**:
    - Character creation stores initial state
    - Periodic automatic saving during gameplay
@@ -225,10 +243,12 @@ The Persistence system handles the saving and loading of all game data, ensuring
    - Error handling and recovery
    - Resource cleanup
 
-## Dependencies and Relationships
-- **Character System**: For player data structures
-- **Object System**: For item persistence
-- **World System**: For area and room data
-- **Game Engine**: For lifecycle management
-- **Memory & GC**: For efficient resource usage
-- **Utilities**: For support functions
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
+
+- **Character Data** (`character_data`): For player data structures
+- **Object System** (`object_system`): For item persistence
+- **World System** (`world_system`): For area and room data
+- **Game Engine** (`game_engine`): For lifecycle management
+- **Memory & GC** (`memory_gc`): For efficient resource usage
+- **Utilities** (`utilities`): For support functions

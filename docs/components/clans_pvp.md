@@ -1,9 +1,20 @@
-# Clan, War, and PvP Systems
+---
+id: clans_pvp
+name: Clans & PvP
+kind: system
+layer: player_feature
+parent: null
+depends_on: [character_data, world_system, combat, command_interpreter]
+depended_on_by: []
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Clan, War, and PvP Systems support structured competition between players through clans, wars, and duels. These systems include clan territory, scoring, structured PvP encounters, and organizational management, providing both social and competitive gameplay experiences. Together, they create long-term player engagement through group identity, competition, and cooperative gameplay structures that extend beyond individual character advancement.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Managing player organizations (clans, guilds)
 - Supporting structured PvP (wars, duels)
 - Tracking clan territory and resources
@@ -13,9 +24,9 @@ The Clan, War, and PvP Systems support structured competition between players th
 - Supporting organized player versus player combat
 - Enforcing fair play rules in competitive encounters
 
-## Core Components
+## Clan System
+<!-- section: key_components | grounding: mixed -->
 
-### Clan System
 - `Clan`: Hierarchical player organization with ranks and resources
   - Leadership roles and chain of command
   - Membership management
@@ -36,7 +47,9 @@ The Clan, War, and PvP Systems support structured competition between players th
   - Strategic area importance
   - Territorial disputes and negotiations
 
-### War System
+## War System
+<!-- section: key_components | grounding: mixed | role: mechanism -->
+
 - `War`: Structured clan warfare system (implemented in War.cc, 1478 LOC)
   - War declarations with formal procedures
   - Scoring mechanics for tracking engagements
@@ -46,7 +59,9 @@ The Clan, War, and PvP Systems support structured competition between players th
   - Resource allocation during wartime
   - War strategy and tactical elements
 
-### PvP Systems
+## PvP & Duels
+<!-- section: key_components | grounding: mixed -->
+
 - `Duel`: Formal combat between players
   - Challenge management and acceptance
   - Arena handling and spectators
@@ -61,7 +76,17 @@ The Clan, War, and PvP Systems support structured competition between players th
   - Anti-griefing protections
   - Rewards and penalties
 
+## Paintball
+<!-- section: key_components | grounding: grounded -->
+
+- **Paintball Minigame**: Team-based competitive game mode
+  - Team formation and management
+  - Paintball arena with special rules
+  - Score tracking and victory conditions
+  - Key File: `/src/paint.cc` (191 LOC)
+
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Clan Implementation
 - **Structure**: Hierarchical organization with leadership positions
@@ -86,6 +111,7 @@ The Clan, War, and PvP Systems support structured competition between players th
 - **Fair Play Rules**: Enforcing balanced and fair combat
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `/src/include/Clan.hh` - Clan organization interface (43 LOC)
@@ -100,6 +126,7 @@ The Clan, War, and PvP Systems support structured competition between players th
 - PvP rule enforcement code in combat resolution files
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Clan Behaviors
 - **Rank System**: Hierarchical structure with different permission levels
@@ -119,16 +146,11 @@ The Clan, War, and PvP Systems support structured competition between players th
 - **Reputation**: PvP performance tracking and recognition
 - **Arena Combat**: Specialized locations for structured PvP
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **Character System**: For player data, clan membership, and combat capabilities
-- **World System**: For territory control, areas, and spatial relationships
-- **Game Rules**: For combat mechanics, scoring systems, and rule enforcement
-- **Command System**: For clan, war, and duel-related commands
-
-### Depended On By
-- **Player Social Experience**: Clan system provides social structures
-- **Combat System**: PvP rules affect combat outcomes
-- **Economy System**: Wars and clan activities influence resource distribution
-- **Quest System**: Some quests may be clan-specific or war-related
+- **Character Data** (`character_data`): For player data, clan membership, and combat capabilities
+- **World System** (`world_system`): For territory control, areas, and spatial relationships
+- **Combat** (`combat`): For combat mechanics, scoring systems, and rule enforcement
+- **Command Interpreter** (`command_interpreter`): For clan, war, and duel-related commands

@@ -1,9 +1,20 @@
-# Event Dispatcher
+---
+id: event_dispatcher
+name: Event Dispatcher
+kind: support
+layer: infrastructure
+parent: null
+depends_on: []
+depended_on_by: []
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Event Dispatcher subsystem implements a global publish-subscribe event system for inter-system communication. It allows registration of event handlers and dispatch of typed events with contextual data, supporting safe iteration and system extensibility. This component enables loosely coupled interactions between game systems, allowing for modular development and flexible response to game state changes across the codebase.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Distributing events to all registered handlers based on event type
 - Managing comprehensive event types and priorities across the entire game
 - Passing contextual data with events for rich information exchange
@@ -14,6 +25,7 @@ The Event Dispatcher subsystem implements a global publish-subscribe event syste
 - Maintaining system extensibility through loose coupling
 
 ## Core Components
+<!-- section: key_components | grounding: mixed -->
 
 ### Dispatcher Architecture
 - **event::Dispatcher**: Core event distribution component
@@ -68,6 +80,7 @@ The Event Dispatcher subsystem implements a global publish-subscribe event syste
   - Immutable event data pattern
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Dispatcher Implementation
 - **Handler Storage**: Efficient lookup structures
@@ -115,6 +128,7 @@ The Event Dispatcher subsystem implements a global publish-subscribe event syste
   - Lazy evaluation for expensive data
 
 ## Key Files
+<!-- section: key_components | grounding: mixed -->
 
 ### Header Files
 - `event/Dispatcher.hh` - Core dispatcher interface
@@ -143,6 +157,7 @@ The Event Dispatcher subsystem implements a global publish-subscribe event syste
   - Safe iteration mechanisms
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Event Distribution Behaviors
 - **Type Filtering**: Events are routed only to relevant handlers
@@ -201,42 +216,9 @@ The Event Dispatcher subsystem implements a global publish-subscribe event syste
   - Copy semantics for persistence needs
   - Type safety for context access
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: mixed -->
 
 ### Dependencies On
 - **Game Rules**: For event type definitions
-  - Event categorization
-  - Priority classification
-  - System-specific event types
-  - Event semantics and contracts
-
 - **Character/Object/World Systems**: For event sources/targets
-  - Entity references in events
-  - State information for context
-  - Event origination points
-  - Feedback targets for results
-
-### Depended On By
-- **All Gameplay Systems**: For state change notification
-  - Combat system for hit/damage events
-  - Movement system for location changes
-  - Interaction system for command events
-  - State system for condition changes
-
-- **Scripting Systems**: For event-driven behaviors
-  - MobProg trigger integration
-  - Script event hooks
-  - Custom event handlers
-  - Event-based automation
-
-- **AI Systems**: For responsive behaviors
-  - NPC reaction to events
-  - Environmental awareness
-  - Behavioral triggers
-  - State machine transitions
-
-- **Quest/Achievement Systems**: For progress tracking
-  - Completion trigger events
-  - Progress milestone events
-  - Fail condition detection
-  - Reward distribution events

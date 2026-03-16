@@ -1,9 +1,20 @@
-# Object System
+---
+id: object_system
+name: Object System
+kind: system
+layer: data_model
+parent: null
+depends_on: [world_system, affect_system]
+depended_on_by: [combat, magic, economy, quests, character_data, persistence, admin_tools, builder_tools]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Object System manages all tangible items in the game world other than characters, including weapons, armor, containers, furniture, keys, and more. It employs a prototype pattern where object instances are created from templates, maintaining a separation between object definitions and their instances in the game world. This system is fundamental to gameplay as it provides the items that characters interact with, equip, trade, and use to affect the world.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Managing item creation, properties, and behaviors
 - Handling object relationships (containment, equipment)
 - Supporting object values and attributes
@@ -11,9 +22,9 @@ The Object System manages all tangible items in the game world other than charac
 - Providing object lifecycle management
 - Implementing specialized systems for loot, storage, and enhancement
 
-## Core Components
+## Object Entities
+<!-- section: key_components | grounding: grounded -->
 
-### Object Entities
 - `Object`: Represents a specific instance of an item in the game world
   - Contains core properties like weight, cost, condition
   - Manages location (carried, contained, equipped, in room)
@@ -53,6 +64,9 @@ The Object System manages all tangible items in the game world other than charac
   - Support for different socket types and qualities
   - Integration with gem enhancement system
 
+## Item Enhancement
+<!-- section: key_components | grounding: mixed -->
+
 ### Item Enhancement Systems
 - **Gem System**: Framework for equipment enhancement through gems
   - Socket creation and management on items
@@ -62,31 +76,23 @@ The Object System manages all tangible items in the game world other than charac
   - Crafting elements for creating and improving gems
 
 - **Loot System V2**: Enhanced treasure generation framework
-  - Advanced probability distribution for item drops
-  - Context-sensitive loot generation
-  - Tiered rarity system with special drops
-  - Custom drop tables for different scenarios
-  - Specialized item generation for unique drops
+  > **Note:** Loot generation is documented in [loot_generation.md](loot_generation.md). Cross-reference only.
 
 ### Shop System
-- **Shops**: NPC merchant system for buying and selling items
-  - Shop data assigned to MobilePrototypes (which NPCs are merchants)
-  - Buy/sell price calculations with profit margins
-  - Item type restrictions per shop
-  - Shop hours (open/close times)
-  - Haggling based on charisma
-  - Shop inventory populated via area resets
-  - Trade interactions via `buy`, `sell`, `list`, `value` commands
+> **Note:** Shop mechanics are documented in [economy.md](economy.md) as the canonical owner. Brief reference here.
 
-### Data Tables (Object-Related)
+## Data Tables
+<!-- section: key_components | grounding: grounded -->
+
 Static lookup tables in `const.cc`, `tables.cc`, and `merc.hh` that parameterize object mechanics.
 - **Attack Type Tables** (`attack_table`): Damage types (slash, bash, pierce, etc.), hit message nouns, and associated damage classes for melee attacks.
 - **Item Type Tables** (`type_table`): Names and properties for each object type — weapon, armor, container, food, drink, scroll, wand, staff, potion, pill, furniture, etc.
 - **Weapon Type Tables** (`weapon_table`): Weapon classes (sword, dagger, mace, axe, etc.) mapped to associated weapon skill, default damage type, and flag sets.
 - **Flag Definition Tables**: Named constants for every flag category (act flags, affect flags, room flags, object extra flags, wear location flags, etc.) used for serialization, display, and OLC editing.
-- **Loot Generation Tables**: Name prefixes/suffixes, base stat ranges, modifier pools, and rarity weights for the dynamic loot system in `loot_tables.cc`.
+- **Loot Generation Tables**: Name prefixes/suffixes, base stat ranges, modifier pools, and rarity weights for the dynamic loot system. See [loot_generation.md](loot_generation.md) for details.
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Object Implementation
 - **Creation and Initialization**: Objects are created from prototypes
@@ -121,6 +127,7 @@ Static lookup tables in `const.cc`, `tables.cc`, and `merc.hh` that parameterize
 - **Object-to-Character**: Objects can be carried or equipped
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `/src/include/Object.hh` - Core object class definition (89 LOC)
@@ -148,6 +155,7 @@ Static lookup tables in `const.cc`, `tables.cc`, and `merc.hh` that parameterize
 - `/src/include/merc.hh` - Item type and weapon type struct definitions
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Core Behaviors
 - **Object Types**: Different types behave differently (weapons, containers, etc.)
@@ -163,15 +171,19 @@ Static lookup tables in `const.cc`, `tables.cc`, and `merc.hh` that parameterize
 - **Object Programs**: Some objects can trigger events on certain actions
 - **Unique Items**: Special objects that only exist in one instance
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **World System**: For object placement in rooms and environmental context
-- **Affect System**: For magical effects and enchantments on objects
-- **Event System**: For object-related events and triggers
+- **World System** (`world_system`): For object placement in rooms and environmental context
+- **Affect System** (`affect_system`): For magical effects and enchantments on objects
 
 ### Depended On By
-- **Character System**: For equipment, inventory, and carried items
-- **Combat System**: For weapons, armor, and combat calculations
-- **Quest System**: For quest items, tokens, and objective tracking
-- **Shop System**: For buying, selling, and item transactions
+- **Combat** (`combat`): For weapons, armor, and combat calculations
+- **Magic** (`magic`): For spell-casting objects (wands, scrolls, etc.)
+- **Economy** (`economy`): For buying, selling, and item transactions
+- **Quests** (`quests`): For quest items, tokens, and objective tracking
+- **Character Data** (`character_data`): For equipment, inventory, and carried items
+- **Persistence** (`persistence`): For item state storage
+- **Admin Tools** (`admin_tools`): For item manipulation commands
+- **Builder Tools** (`builder_tools`): For item creation and editing

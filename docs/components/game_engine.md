@@ -1,9 +1,20 @@
-# Game Engine
+---
+id: game_engine
+name: Game Engine
+kind: system
+layer: infrastructure
+parent: null
+depends_on: [networking, utilities, memory_gc, persistence]
+depended_on_by: [combat, magic, affect_system, world_system, character_data, command_interpreter]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Game Engine coordinates the global game state and update cycle for the entire MUD system. It runs the main game loop, orchestrates subsystem updates, and implements pulse-based timing for game ticks and event handling, serving as the central coordinator for all gameplay and system activity. This component is the heartbeat of the game, ensuring that all subsystems operate in a synchronized and orderly fashion while maintaining game state consistency and appropriate timing for all game events.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Managing the core game loop with precise timing control
 - Coordinating ordered subsystem updates across all game components
 - Handling comprehensive time management for both real-world and in-game time
@@ -15,9 +26,9 @@ The Game Engine coordinates the global game state and update cycle for the entir
 - Facilitating controlled shutdown and restart procedures
 - Supporting game state persistence across server restarts
 
-## Core Components
+## State Management
+<!-- section: key_components | grounding: mixed -->
 
-### State Management
 - **Game**: Singleton manager for global game state
   - World instance and global state access point
   - Shutdown control and coordination
@@ -37,6 +48,9 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Time-sensitive event scheduling
   - Real-time to game-time conversion
 
+## Game Loop
+<!-- section: key_components | grounding: mixed | role: mechanism -->
+
 ### Game Loop System
 - **Update Cycle**: Core timing mechanism
   - Pulse-based tick system
@@ -55,7 +69,9 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Event queue management
   - System-wide synchronization
 
-### Entity Lifecycle
+## Entity Lifecycle
+<!-- section: key_components | grounding: grounded | role: mechanism -->
+
 - **Entity Factory**: Creation of live game objects from templates
   - Character instances created from MobilePrototype templates during area resets
   - Object instances created from ObjectPrototype templates
@@ -69,7 +85,9 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Object extraction handles nested contents, quest item protection, and reference cleanup
   - Deferred deletion via Garbage system ensures safe removal during iteration
 
-### Message Dispatch
+## Message Dispatch
+<!-- section: key_components | grounding: grounded | role: mechanism -->
+
 - **act() System**: Context-sensitive message formatting and delivery
   - Pronoun/name token substitution ($n, $N, $e, $m, $s, $p, etc.) based on source/target
   - Recipient classes: actor-only, victim-only, bystanders, whole room, global
@@ -77,7 +95,9 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Snoop forwarding (staff monitoring sees relayed messages)
   - Arena spectating support for forwarding combat messages to observers
 
-### Boot and Shutdown
+## Boot & Shutdown
+<!-- section: key_components | grounding: mixed -->
+
 - **Initialization**: Startup sequence
   - Orderly subsystem initialization
   - Configuration loading
@@ -95,6 +115,7 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Crash recovery support
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Game Loop Implementation
 - **Main Loop**: Core update cycle
@@ -171,6 +192,7 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Performance capability testing
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `GameTime.hh` - In-game time management
@@ -210,6 +232,7 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Global event registration
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Update Cycle Behaviors
 - **Pulse-Based Timing**: Controlled execution frequency
@@ -289,19 +312,22 @@ The Game Engine coordinates the global game state and update cycle for the entir
   - Fallback mechanisms for missing resources
   - Consistency checking and repair
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **All Core Systems**: For subsystem updates
-  - Character System for entity updates
-  - Object System for item behavior
-  - World System for environment changes
-  - Combat System for violence resolution
-  - Command System for input processing
-  - Network System for I/O handling
+- **Networking** (`networking`): For I/O handling and connection management
+- **Utilities** (`utilities`): For string formatting, logging, and support functions
+- **Memory & GC** (`memory_gc`): For resource allocation and garbage collection
+- **Persistence** (`persistence`): For save/load and database access
 
-- **Infrastructure**: For core operations
-  - Memory management for resource allocation
+### Depended On By
+- **Combat** (`combat`): Violence resolution in update cycle
+- **Magic** (`magic`): Spell effect processing
+- **Affect System** (`affect_system`): Affect duration ticking
+- **World System** (`world_system`): Area resets and environment updates
+- **Character Data** (`character_data`): Character updates and regeneration
+- **Command Interpreter** (`command_interpreter`): Input processing in main loop
   - Persistence for state saving/loading
   - Networking for client communication
   - Utilities for common operations

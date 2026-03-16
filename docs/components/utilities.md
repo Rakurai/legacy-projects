@@ -1,9 +1,20 @@
-# Utilities
+---
+id: utilities
+name: Utilities
+kind: support
+layer: infrastructure
+parent: null
+depends_on: []
+depended_on_by: []
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Utilities system provides a comprehensive collection of helper libraries and cross-cutting functionality used throughout the MUD codebase. These utilities include tools for logging, string manipulation, argument parsing, flag management, entity lookup, random number generation, type information, and ASCII image rendering. The component represents the shared infrastructure that enables consistent implementation patterns, improves code maintainability, and optimizes common operations used by all other systems in the game.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Providing robust logging and error reporting mechanisms
 - Implementing string manipulation and formatting utilities
 - Supporting argument parsing and command-line interpretation
@@ -18,9 +29,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
 - Maintaining cross-platform compatibility layers
 - Implementing debugging and diagnostic tools
 
-## Core Components
+## Custom String Class
+<!-- section: key_components | grounding: grounded -->
 
-### Custom String Class
 - **String**: Copy-on-write string type used throughout the codebase
   - Lightweight alternative to std::string
   - Copy-on-write semantics for efficient passing and storage
@@ -29,7 +40,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Implicit construction from C strings
   - Comparison, concatenation, and mutation operators
 
-### String Processing
+## String Processing
+<!-- section: key_components | grounding: mixed -->
+
 - **Format System**: Type-safe string formatting
   - Parameter substitution
   - Type-aware formatting
@@ -50,7 +63,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - String normalization
   - Character set handling
 
-### Argument Processing
+## Argument Processing
+<!-- section: key_components | grounding: mixed -->
+
 - **Command Argument Parsing**: Input interpretation
   - Tokenization with quote handling
   - Number-name format parsing
@@ -71,7 +86,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Default handling
   - Type-specific formatting
 
-### Flag Management
+## Flag Management
+<!-- section: key_components | grounding: grounded -->
+
 - **Flag System**: Bit field operations
   - Type-safe flag manipulation
   - Named flag constants
@@ -91,7 +108,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Permission checking
   - Conflict detection
 
-### Entity Lookup
+## Entity Lookup
+<!-- section: key_components | grounding: mixed -->
+
 - **Lookup System**: Entity reference resolution
   - Name-based searching
   - Fuzzy matching algorithms
@@ -111,7 +130,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Ambiguity handling
   - Priority-based matching
 
-### Randomization
+## Randomization
+<!-- section: key_components | grounding: mixed -->
+
 - **Random Number Generator**: Probability tools
   - Uniform distribution
   - Range-based selection
@@ -132,7 +153,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Result modification (drop highest/lowest)
   - Critical success/failure detection
 
-### Logging and Diagnostics
+## Logging & Diagnostics
+<!-- section: key_components | grounding: mixed -->
+
 - **Logging System**: Message recording
   - Multiple severity levels
   - Category-based filtering
@@ -153,7 +176,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Command timing
   - System health checks
 
-### Runtime Type Information
+## Runtime Type Information
+<!-- section: key_components | grounding: mixed -->
+
 - **Type System**: Type identification
   - Runtime type information
   - Type name resolution
@@ -173,7 +198,9 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Type conversion
   - Validation rules
 
-### Visualization Tools
+## Visualization Tools
+<!-- section: key_components | grounding: mixed -->
+
 - **ASCII Art**: Text-based visuals
   - Line drawing primitives
   - Box drawing
@@ -195,6 +222,7 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Highlighting
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### String Formatting Implementation
 - **Buffer Management**: Memory-safe formatting
@@ -281,6 +309,7 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Validation and bounds checking
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 - **format.hh/Format.cc**: String formatting utilities
   - 380 lines
   - Type-safe string formatting
@@ -355,7 +384,12 @@ The Utilities system provides a comprehensive collection of helper libraries and
   - Dynamic updates
   - Pattern matching
 
+### Resource Locations
+- `log/` directory — Primary storage for log files (system logs, error logs, admin action records)
+- `misc/` directory — Administrative resources (`bugs.txt`, `typos.txt`, `punishment.txt`, configuration files)
+
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 1. **String Formatting Workflow**:
    - Format string parsing and token identification
    - Type-aware parameter substitution
@@ -394,7 +428,8 @@ The Utilities system provides a comprehensive collection of helper libraries and
    - Special case handling (critical successes/failures)
    - Performance optimization for frequent calls
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
+
 - Used by all other components in the system
 - Minimal external dependencies (primarily standard libraries)
-- Some utilities depend on others within the component

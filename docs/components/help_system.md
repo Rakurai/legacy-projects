@@ -1,9 +1,20 @@
-# Help System
+---
+id: help_system
+name: Help System
+kind: system
+layer: content_system
+parent: null
+depends_on: [command_interpreter, persistence]
+depended_on_by: []
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Help System delivers structured documentation to players, including searchable help topics and categorized entries. It supports level-gated access and in-game editing tools for dynamic help updates, providing essential knowledge and guidance for players and administrators. This system forms a critical part of the game's information delivery infrastructure, helping both new and experienced players understand game mechanics, commands, and features.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Providing comprehensive in-game documentation and knowledge management
 - Organizing help topics by category and access level for intuitive navigation
 - Supporting keyword search with context-sensitive help delivery
@@ -12,6 +23,7 @@ The Help System delivers structured documentation to players, including searchab
 - Facilitating self-service learning and game mastery for players
 
 ## Core Components
+<!-- section: key_components | grounding: mixed -->
 
 ### Help Data Structures
 - `help_struct`: Core structure for help entries containing:
@@ -43,6 +55,7 @@ Organized topic collections providing logical grouping:
 - **Access Control**: Level-based restrictions for viewing specific content
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Database Structure
 - SQLite table for help entries with fields for:
@@ -77,6 +90,7 @@ Organized topic collections providing logical grouping:
 - Real-time updates to the help database
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `help.hh` (Help system interface) - Defines core help structures and interfaces
@@ -91,6 +105,7 @@ Organized topic collections providing logical grouping:
   - Database integration for persistence
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Topic Organization
 - Help entries are hierarchically arranged by category
@@ -122,16 +137,11 @@ Organized topic collections providing logical grouping:
 - Some specialized topics require specific character attributes
 - Progressive revelation of complex topics based on player experience
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **Command System**: For processing help commands and arguments
-- **Character System**: For level-based access control and context
-- **Database/Persistence**: For storing and retrieving help entries
-- **Editor System**: For modifying help content in-game
-
-### Depended On By
-- **Players**: For learning game mechanics and commands
-- **New Player Onboarding**: For structured learning progression
-- **Administrative Systems**: For staff documentation and policies
-- **Command System**: For providing command-specific assistance
+- **Command Interpreter** (`command_interpreter`): For processing help commands and arguments
+- **Character Data** (`character_data`): For level-based access control and context
+- **Persistence** (`persistence`): For storing and retrieving help entries
+- **Notes & Editor** (`notes_editor`): For modifying help content in-game

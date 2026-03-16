@@ -1,9 +1,20 @@
-# World System
+---
+id: world_system
+name: World System
+kind: system
+layer: data_model
+parent: null
+depends_on: [character_data, object_system, utilities]
+depended_on_by: [combat, magic, quests, mobprog_npc_ai, persistence, admin_tools, builder_tools, networking]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The World System forms the core spatial environment of the game, providing the physical structure where gameplay occurs. It's organized as a hierarchy of areas containing rooms, with navigation enabled through exits. The system employs a prototype pattern where areas load definitions for rooms, objects, and mobiles that are instantiated as needed during gameplay. It also manages environmental conditions, time, and world mapping to create an immersive and dynamic environment where player actions take place.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Creating and managing the physical game world structure
 - Handling room creation, properties, and interconnections
 - Managing environmental conditions, time, and weather
@@ -12,9 +23,9 @@ The World System forms the core spatial environment of the game, providing the p
 - Maintaining spatial organization through regions and coordinates
 - Simulating time progression and environmental changes
 
-## Core Components
+## Areas & Rooms
+<!-- section: key_components | grounding: grounded -->
 
-### Areas and Rooms
 - `Area`: Represents a distinct geographical region
   - Manages loading from area files
   - Handles regular updates and resets
@@ -47,7 +58,9 @@ The World System forms the core spatial environment of the game, providing the p
   - Tracks door states (open/closed/locked)
   - Supports one-way and bidirectional connections
 
-### Environmental Systems
+## Environmental Systems
+<!-- section: key_components | grounding: mixed -->
+
 - `Location`: Represents a specific position in the game world
   - Combines room reference with position within room
   - Supports character/object positioning
@@ -75,6 +88,9 @@ The World System forms the core spatial environment of the game, providing the p
   - World initialization and shutdown sequence
   - Instance management for rooms and areas
 
+## Resets & Vnums
+<!-- section: key_components | grounding: grounded -->
+
 ### World Organization
 - `Reset`: Defines area respawn instructions
   - Controls mobile and object placement
@@ -93,6 +109,9 @@ The World System forms the core spatial environment of the game, providing the p
   - Affects specific skills and abilities
   - Influences weather and environmental effects
   - Defines visual representation on maps
+
+## Mapping & Coordinates
+<!-- section: key_components | grounding: grounded -->
 
 ### Mapping Systems
 - `Worldmap`: Core world map interface
@@ -115,7 +134,17 @@ The World System forms the core spatial environment of the game, providing the p
   - Enables efficient area queries
   - Supports neighbor finding
 
-### Navigation and Awareness
+### Map Visualization
+- **MapColor**: Color management for terrain and feature representation
+- **Map Generation**: ASCII-based world representation using symbols and colors
+  - Character-based terrain and feature representation
+  - Color coding for different terrain types and features
+  - Dynamic generation based on game world state
+  - Terminal color and symbol-based terrain display
+  - Player position marking and view centering
+
+## Navigation & Awareness
+<!-- section: key_components | grounding: mixed -->
 - **Scan**: Multi-directional room scanning
   - Shows characters and features in adjacent rooms up to several rooms away
   - Distance-based detail degradation (closer rooms show more info)
@@ -132,7 +161,15 @@ The World System forms the core spatial environment of the game, providing the p
   - Movement-triggered events (greet progs, aggression checks)
   - Position requirements (must be standing)
 
+### Room Perception (Look/Examine)
+- `do_look()` — Primary room examination command: displays room name, description, exits, contents (characters and objects), with visibility filtering based on light, hidden status, and perception
+- `do_examine()` — Extended object/character inspection: combines look with additional detail (container contents, weapon stats, etc.)
+- **Direction Scouting** — Looking in a direction shows brief info about adjacent room
+- **Hidden Entity Handling** — Visibility mechanics determining what characters and objects are shown (affected by invis, hidden, detect, light levels)
+- **Key File**: `act_info.cc` (5493 LOC) — Primary home for look/examine; cross-ref `character_data.md` for do_score/do_inventory
+
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Area Implementation
 - **Construction and Loading**: Areas are built from text files (.are)
@@ -157,6 +194,7 @@ The World System forms the core spatial environment of the game, providing the p
 - **Coordinate Operations**: Distance calculations, translations, and coordinate validation
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `/src/include/Area.hh` - Area class definition
@@ -189,7 +227,13 @@ The World System forms the core spatial environment of the game, providing the p
 - `/src/worldmap/Coordinate.cc` - Coordinate system operations (18 LOC)
 - `/src/worldmap/Worldmap.cc` - Visual world map with terrain representation
 
+### Spatial Awareness Files
+- `/src/scan.cc` (223 LOC) — Multi-directional awareness implementation
+- `/src/hunt.cc` (358 LOC) — Hunting/tracking system with BFS pathfinding
+- `/src/worldmap/MapColor.hh` (48 LOC) — Map visualization colors
+
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Core Behaviors
 - **Room Identity**: Rooms have both a vnum (from prototype) and a unique location ID
@@ -206,17 +250,20 @@ The World System forms the core spatial environment of the game, providing the p
 - **Door States**: Exits can have doors with open/closed/locked states
 - **Room Affects**: Rooms can have temporary or permanent status effects
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **Character System**: For tracking character presence and movement between rooms
-- **Object System**: For managing items in rooms and areas
-- **Affect System**: For applying status effects to rooms
-- **Event System**: For firing events on room entry/exit
-- **Information Systems**: For world visualization and mapping
+- **Character Data** (`character_data`): For tracking character presence and movement
+- **Object System** (`object_system`): For managing items in rooms and areas
+- **Utilities** (`utilities`): For string formatting and support functions
 
 ### Depended On By
-- **Movement System**: For handling character navigation through the world
-- **Combat System**: For battlefield properties and terrain effects
-- **Quest System**: For location-based objectives and triggers
-- **Mobile System**: For NPC placement, behavior, and navigation
+- **Combat** (`combat`): For battlefield properties and terrain effects
+- **Magic** (`magic`): For spell targeting in rooms
+- **Quests** (`quests`): For location-based objectives and triggers
+- **MobProg & NPC AI** (`mobprog_npc_ai`): For NPC placement, behavior, and navigation
+- **Persistence** (`persistence`): For area and room data storage
+- **Admin Tools** (`admin_tools`): For environment manipulation
+- **Builder Tools** (`builder_tools`): For area and room creation
+- **Networking** (`networking`): For connection state during room display

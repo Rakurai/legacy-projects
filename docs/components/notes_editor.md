@@ -1,9 +1,20 @@
-# In-Game Editor
+---
+id: notes_editor
+name: Notes & Editor
+kind: system
+layer: content_system
+parent: null
+depends_on: [command_interpreter, character_data, persistence]
+depended_on_by: [help_system]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The In-Game Editor subsystem offers a line-based text editor for editing descriptions, notes, and help entries within the game environment. It supports formatting commands and persistence, enabling players and administrators to create and modify content dynamically. This system is essential for content creation and modification without requiring server restarts or external tools, supporting both administrative functions and player-generated content.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Providing comprehensive in-game text editing for descriptions, notes, help files, and other text content
 - Supporting line-based editing commands with syntax similar to basic Unix editors
 - Managing text buffers and temporary storage during editing sessions
@@ -12,7 +23,8 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
 - Supporting different editing contexts with appropriate behavior modifications
 - Providing user feedback and command assistance during editing
 
-## Core Components
+## Line Editor
+<!-- section: key_components | grounding: mixed | role: mechanism -->
 
 ### Editor Core
 - **Edit Class**: Primary in-game text editor implementation
@@ -40,6 +52,9 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Paragraph and line formatting
   - Special character handling
 
+## Note Boards
+<!-- section: key_components | grounding: mixed | role: mechanism -->
+
 ### Content Type Handlers
 - **Note Editor**: Bulletin board post editing
   - Subject line handling
@@ -61,16 +76,10 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Timestamp and sender/recipient display
 
 - **Description Editor**: Room, object, and character description editing
-  - Context-specific formatting rules
-  - Length limitations and validation
-  - Special tag handling for dynamic content
-  - Environmental description conventions
+  > **Note:** Description editing for rooms/objects uses the Line Editor but is owned by the respective systems (`world_system`, `object_system`, `builder_tools`). Cross-reference only.
 
 - **Help File Editor**: Help content management
-  - Keyword management
-  - Category assignment
-  - Cross-reference creation
-  - Level-restriction setting
+  > **Note:** Help editing is owned by `help_system`. Cross-reference only.
 
 - **Miscellaneous Content**: Other text content types
   - Player biographies and backgrounds
@@ -79,6 +88,7 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Custom content types
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Editor Implementation
 - **Command Processing**: Editor command execution flow
@@ -106,6 +116,7 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Permission checking for edit operations
 
 ## Key Files
+<!-- section: key_components | grounding: mixed -->
 
 ### Header Files
 - `Edit.hh` (28 LOC) - In-game text editor interface
@@ -135,6 +146,7 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Context information
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Command Mode Behaviors
 - **Line-Oriented Editing**: Text manipulation by line numbers
@@ -193,48 +205,13 @@ The In-Game Editor subsystem offers a line-based text editor for editing descrip
   - Backup creation before major changes
   - Atomic transaction handling for saves
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **Command System**: For processing editor commands
-  - Command parsing and routing
-  - Argument handling
-  - Access control and permissions
-  - Command loop integration
-
-- **Character System**: For editor user state and permissions
-  - User identification and privileges
-  - Editor state attachment to character
-  - User preference application
-  - Session tracking by character
-
-- **Persistence**: For saving edited content
-  - File system access for content storage
-  - Database integration for structured content
-  - Transaction handling for safe saves
-  - Backup management for critical content
+- **Command Interpreter** (`command_interpreter`): For processing editor commands
+- **Character Data** (`character_data`): For editor user state and permissions
+- **Persistence** (`persistence`): For saving edited content
 
 ### Depended On By
-- **Help System**: For help file creation and modification
-  - Help content editing interface
-  - Help file organization and categorization
-  - Keyword and metadata management
-  - Help system integration
-
-- **Note System**: For bulletin board post creation
-  - Post composition and editing
-  - Reply and forward functionality
-  - Board-specific formatting
-  - Post threading and organization
-
-- **World Building**: For environment creation
-  - Room description editing
-  - Object description creation
-  - NPC dialog and behavior scripting
-  - Area documentation and notes
-
-- **Player Expression**: For character personalization
-  - Biography and background editing
-  - Personal note creation
-  - Mail composition
-  - Custom content creation
+- **Help System** (`help_system`): For help file creation and modification

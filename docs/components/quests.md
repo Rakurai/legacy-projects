@@ -1,9 +1,20 @@
-# Quests and Objectives
+---
+id: quests
+name: Quests
+kind: system
+layer: player_feature
+parent: null
+depends_on: [character_data, world_system, object_system, command_interpreter, mobprog_npc_ai]
+depended_on_by: []
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Quests and Objectives subsystem provides systems for generating, tracking, and rewarding player objectives. It supports both fixed and dynamic quests, time-limited challenges, and reward systems, and is closely tied to character progression and world regions. This system creates structured goals for players to pursue, enhancing engagement and providing direction for gameplay beyond simple exploration and combat.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Generating and managing quests and missions
 - Tracking player progress on objectives
 - Rewarding players for quest completion
@@ -14,6 +25,7 @@ The Quests and Objectives subsystem provides systems for generating, tracking, a
 - Providing character advancement opportunities
 
 ## Core Components
+<!-- section: key_components | grounding: mixed -->
 
 ### Quest System
 - `quest.cc`: Comprehensive automated quest system (1897 LOC)
@@ -51,6 +63,7 @@ The Quests and Objectives subsystem provides systems for generating, tracking, a
 - Special handling during server restarts
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Quest Mechanics
 - **Quest Generation**: Both automated random quests and fixed predefined missions
@@ -78,6 +91,7 @@ The Quests and Objectives subsystem provides systems for generating, tracking, a
 - **NPC Integration**: Special behaviors for quest givers and targets
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `/src/include/QuestArea.hh` - Quest area management (27 LOC)
@@ -95,6 +109,7 @@ The Quests and Objectives subsystem provides systems for generating, tracking, a
 - Quest-related methods in player character implementation files
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Core Behaviors
 - **Quest Assignment**: Characters can seek out quests from specific NPCs
@@ -110,17 +125,12 @@ The Quests and Objectives subsystem provides systems for generating, tracking, a
 - **Quest Areas**: Regions designed specifically for quest activities
 - **Automated Messaging**: Quest progress and completion notifications
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **Character System**: For player progress tracking and quest status storage
-- **World System**: For quest locations, areas, and spatial objectives
-- **Object System**: For quest items, tokens, and objective validation
-- **Game Rules**: For quest objective logic and completion validation
-- **Command System**: For quest-related commands and interactions
-
-### Depended On By
-- **Player Progression**: Quests provide alternative advancement paths
-- **Economy System**: Quest points serve as alternate currency
-- **Event System**: Quests trigger various in-game events
-- **NPC AI**: Special behaviors for quest givers and targets
+- **Character Data** (`character_data`): For player progress tracking and quest status storage
+- **World System** (`world_system`): For quest locations, areas, and spatial objectives
+- **Object System** (`object_system`): For quest items, tokens, and objective validation
+- **Command Interpreter** (`command_interpreter`): For quest-related commands and interactions
+- **MobProg & NPC AI** (`mobprog_npc_ai`): For quest-giving NPC behaviors

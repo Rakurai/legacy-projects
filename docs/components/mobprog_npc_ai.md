@@ -1,9 +1,20 @@
-# MobProg System
+---
+id: mobprog_npc_ai
+name: MobProg & NPC AI
+kind: system
+layer: content_system
+parent: null
+depends_on: [character_data, world_system, command_interpreter]
+depended_on_by: [quests]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The MobProg System defines scripting mechanisms for NPC behavior using triggers such as speech, time, and combat. It supports conditional logic, event responses, and stateful behavior through a compact scripting language, enabling dynamic and complex NPC actions. This system provides the foundation for creating interactive, responsive NPCs that can react to player actions, time-based events, and environmental conditions, bringing the game world to life through automated behaviors.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Providing comprehensive script-based behavior for NPCs (mobiles)
 - Supporting diverse trigger conditions (speech, action, time, combat, room entry, etc.)
 - Enabling conditional logic and variable state tracking for complex decision trees
@@ -13,9 +24,9 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
 - Coordinating NPC response timing with delayed action capabilities
 - Maintaining script state across game sessions
 
-## Core Components
+## Script Engine
+<!-- section: key_components | grounding: mixed | role: mechanism -->
 
-### Script Engine
 - **MobProg**: Script-based behavior system for NPCs
   - Trigger definitions with varied activation conditions
   - Action sequences for NPC responses
@@ -29,7 +40,9 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Safe command processing specific to NPCs
   - Action sequencing and chaining
 
-### Special Functions
+## Special Functions
+<!-- section: key_components | grounding: grounded -->
+
 - **spec_fun**: Hardcoded C++ NPC behaviors predating the MobProg scripting system
   - Assigned to mobiles via function pointer in their prototype
   - Fire during the NPC update tick (every pulse)
@@ -37,7 +50,9 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Looked up by name via a function pointer table in `special.cc`
   - Simpler than MobProgs but more performant for common behaviors
 
-### Trigger System
+## Trigger System
+<!-- section: key_components | grounding: mixed | role: mechanism -->
+
 - **Time Triggers**: Schedule-based activation
   - Hour/minute specific triggers
   - Day/night cycle awareness
@@ -60,7 +75,9 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Random activation with probability
   - NPC state-dependent behaviors
 
-### Execution Engine
+## Execution Engine
+<!-- section: implementation | grounding: mixed | role: mechanism -->
+
 - **Command Processor**: Action execution system
   - Command validation and security
   - Parameter substitution
@@ -74,6 +91,7 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Persistence between triggers
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Script Structure and Processing
 - **Program Format**: Area file integration
@@ -121,6 +139,7 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Random selection capabilities
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `MobProg.hh` (71 LOC) - NPC scripting system
@@ -151,6 +170,7 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Special NPC action capabilities
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Script Activation Behaviors
 - **Trigger Evaluation**: Scripts activate based on specific conditions
@@ -204,48 +224,13 @@ The MobProg System defines scripting mechanisms for NPC behavior using triggers 
   - Cross-NPC communication
   - Environment-wide state tracking
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **Character System**: For NPC entity access and manipulation
-  - Mobile prototype integration
-  - Character state access
-  - Attribute checking and modification
-  - NPC instantiation hooks
-
-- **World System**: For environmental context and placement
-  - Room awareness and navigation
-  - Environmental condition checking
-  - Location-based triggers
-  - Area reset integration
-
-- **Event System**: For event-based trigger activation
-  - Combat event hooks
-  - Movement detection
-  - Speech and communication events
-  - Time and schedule events
-
-- **Command System**: For action execution
-  - Command validation and permissions
-  - Parameter processing
-  - Execution contexts
-  - Command result handling
+- **Character Data** (`character_data`): For NPC entity access and manipulation
+- **World System** (`world_system`): For environmental context and placement
+- **Command Interpreter** (`command_interpreter`): For action execution
 
 ### Depended On By
-- **NPC AI**: For behavior implementation
-  - Shopkeeper behaviors
-  - Guard and sentinel actions
-  - Quest-giving NPC interactions
-  - Environmental storytelling
-
-- **Quest System**: For interactive quest behaviors
-  - Quest-giving NPC scripts
-  - Progress tracking interactions
-  - Reward distribution
-  - Dynamic quest adjustments
-
-- **Dynamic World Features**: For responsive environment
-  - Weather-responsive behaviors
-  - Time-sensitive events
-  - Special holiday events
-  - World-changing event reactions
+- **Quests** (`quests`): For interactive quest behaviors

@@ -1,9 +1,20 @@
-# Admin Controls
+---
+id: admin_tools
+name: Admin Tools
+kind: system
+layer: operations
+parent: null
+depends_on: [character_data, object_system, world_system, persistence, command_interpreter]
+depended_on_by: [quests]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Admin Controls subsystem provides comprehensive command sets for server management, player moderation, permission handling, and debugging. It includes security controls, logging toggles, and player account tools, supporting daily operations and system integrity. These tools form the backbone of game administration, enabling privileged users to maintain, troubleshoot, and manage the game environment with minimal disruption to the player experience.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Managing server configuration, operation, and maintenance
 - Moderating player accounts, behavior, and conflict resolution
 - Handling security permissions, access control, and privilege management
@@ -13,7 +24,8 @@ The Admin Controls subsystem provides comprehensive command sets for server mana
 - Enabling emergency interventions and system recovery
 - Facilitating quest and event management by administrators
 
-## Core Components
+## Admin Command Architecture
+<!-- section: key_components | grounding: mixed -->
 
 ### Command Categories
 - **Admin Commands**: Highest level system operations
@@ -50,6 +62,9 @@ The Admin Controls subsystem provides comprehensive command sets for server mana
   - Ban and restriction implementation
   - Security audit and verification
 
+## WIZnet & Monitoring
+<!-- section: key_components | grounding: mixed -->
+
 ### Administrative Systems
 - **WIZnet System**: Admin communication and notification
   - Specialized admin-only communication channels
@@ -57,11 +72,17 @@ The Admin Controls subsystem provides comprehensive command sets for server mana
   - Permission-based message filtering
   - Administrative alerts and warnings
 
+## Disabled Commands
+<!-- section: key_components | grounding: mixed -->
+
 - **Disabled Commands**: Runtime command management
   - Command activation and deactivation
   - Conditional command disabling
   - Temporary and permanent restrictions
   - Command access auditing
+
+## Punishment & Moderation
+<!-- section: key_components | grounding: mixed -->
 
 - **Punishment System**: Player moderation tools
   - Warning and notification mechanisms
@@ -78,6 +99,7 @@ The Admin Controls subsystem provides comprehensive command sets for server mana
   - Permission verification systems
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Command Implementation
 - **Permission Levels**: Tiered access to administrative functions
@@ -137,6 +159,7 @@ The Admin Controls subsystem provides comprehensive command sets for server mana
   - Anomaly detection and alerting
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Implementation Files
 - `wiz_admin.cc` (17 LOC) - Administrative commands
@@ -196,6 +219,7 @@ The Admin Controls subsystem provides comprehensive command sets for server mana
   - Administrative tracking documents
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Command Access Behaviors
 - **Permission Hierarchy**: Tiered command access
@@ -263,49 +287,18 @@ The Admin Controls subsystem provides comprehensive command sets for server mana
   - Resolution and follow-up procedures
   - Appeal and review processes
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **World System**: For environment manipulation
-  - Area and room access
-  - World state management
-  - Spatial relationship understanding
-  - Environment parameter control
-  - Geographic navigation and modification
-
-- **Character System**: For player and NPC management
-  - Player account integration
-  - Character data access and modification
-  - NPC behavior control
-  - Character state manipulation
-  - Attribute and skill adjustment
-
-- **Object System**: For item manipulation
-  - Item creation and customization
-  - Object property modification
-  - Special item behavior control
-  - Equipment and inventory management
-  - Object relationship manipulation
-
-- **Infrastructure**: For core operations
-  - Logging and audit trail systems
-  - Server process management
-  - Database and file access
-  - Network connection handling
-  - System resource monitoring
-
-- **Information Systems**: For documentation access
-  - Help system integration
-  - Documentation management
-  - Information display formatting
-  - Communication channel control
-  - Message distribution systems
+- **Character Data** (`character_data`): For player and NPC management
+- **Object System** (`object_system`): For item manipulation
+- **World System** (`world_system`): For environment manipulation
+- **Persistence** (`persistence`): For database and file access
+- **Command Interpreter** (`command_interpreter`): For command routing and permissions
 
 ### Depended On By
-- **Game Administrators**: For daily operations
-  - Server maintenance personnel
-  - Player support staff
-  - Content managers
+- **Quests** (`quests`): Administrative quest management tools
   - Community moderators
   - Technical support teams
 

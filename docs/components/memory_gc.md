@@ -1,9 +1,20 @@
-# Memory & GC
+---
+id: memory_gc
+name: Memory & GC
+kind: support
+layer: infrastructure
+parent: null
+depends_on: []
+depended_on_by: []
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Memory & GC subsystem provides comprehensive memory management and garbage collection for the entire MUD codebase. It implements reference counting, object pooling, safe deletion mechanics, and specialized containers to ensure efficient and reliable resource usage throughout the system. This component is critical for maintaining system stability, preventing memory leaks, optimizing performance in memory-constrained environments, and providing proper object lifecycle management in a complex, long-running application.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Managing memory allocation and deallocation throughout the codebase
 - Providing robust garbage collection and reference counting for dynamic objects
 - Supporting optimized memory pooling for frequently allocated object types
@@ -16,6 +27,7 @@ The Memory & GC subsystem provides comprehensive memory management and garbage c
 - Handling complex object relationships and dependencies
 
 ## Core Components
+<!-- section: key_components | grounding: mixed -->
 
 ### Base Memory Management
 - **Garbage**: Foundation class for reference-counted objects
@@ -69,6 +81,7 @@ The Memory & GC subsystem provides comprehensive memory management and garbage c
   - Memory pressure handling
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Reference Counting Implementation
 - **Counter Management**: Object lifetime tracking
@@ -123,6 +136,7 @@ The Memory & GC subsystem provides comprehensive memory management and garbage c
   - Performance optimization metrics
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `Garbage.hh` - Base class for reference-counted objects
@@ -168,6 +182,7 @@ The Memory & GC subsystem provides comprehensive memory management and garbage c
   - Performance optimizations
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Object Lifecycle Behaviors
 - **Creation and Initialization**: Object birth
@@ -236,50 +251,9 @@ The Memory & GC subsystem provides comprehensive memory management and garbage c
   - Alignment for performance
   - Prefetch-friendly organization
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: mixed -->
 
 ### Dependencies On
 - **Standard Libraries**: C/C++ memory functions
-  - Standard allocation functions
-  - Memory manipulation utilities
-  - Standard containers for implementation
-  - Type traits and RTTI support
-  - Atomic operations for thread safety
-  - Standard smart pointer concepts
-
-- **Infrastructure**: Core system services
-  - Error handling and reporting
-  - Logging for memory events
-  - Thread synchronization primitives
-  - System configuration parameters
-  - Performance profiling hooks
-  - Diagnostic interfaces
-
-### Depended On By
-- **Character System**: For entity management
-  - Player and NPC allocation
-  - Character collection and cleanup
-  - Equipment and inventory management
-  - Character state memory optimization
-  - Safe character reference handling
-
-- **Object System**: For item instances
-  - Object creation and destruction
-  - Container relationship management
-  - World item tracking
-  - Object pooling for common items
-  - Safe reference passing
-
-- **World System**: For environment
-  - Room and area management
-  - Environmental element allocation
-  - Safe traversal of world structures
-  - World state references
-  - Reset and cleanup operations
-
-- **All Other Systems**: For memory operations
-  - Dynamic allocation needs
-  - Safe resource management
-  - Collection integration
-  - Reference handling
-  - Object lifetimes across systems
+- **Infrastructure**: Core system services (error handling, logging, thread synchronization)

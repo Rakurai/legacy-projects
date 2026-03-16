@@ -1,9 +1,20 @@
-# Auction & Trade
+---
+id: economy
+name: Economy
+kind: system
+layer: player_feature
+parent: null
+depends_on: [character_data, object_system, command_interpreter, social_communication]
+depended_on_by: [quests]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Auction & Trade subsystem facilitates item exchange between players via auction systems. It supports bidding, item tracking, timed sales, and transaction processing with notification and cancellation features, providing a robust player-driven economy. This system creates an interactive marketplace where players can buy and sell items without requiring direct interaction, expanding economic opportunities beyond standard NPC merchant shops.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Managing player-to-player item sales via auction
 - Handling bidding mechanics and timing
 - Processing transactions and item transfers
@@ -13,7 +24,8 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
 - Preventing auction abuse and scamming
 - Enabling player economic interaction
 
-## Core Components
+## Auction System
+<!-- section: key_components | grounding: mixed | role: mechanism -->
 
 ### Auction System
 - `Auction`: Player-to-player item sale mechanism
@@ -53,6 +65,9 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
 - **Bid Validation**: Verification that bidders have sufficient funds
 - **Cancel Logic**: Rules for when and how auctions can be cancelled
 
+## Banking System
+<!-- section: key_components | grounding: mixed -->
+
 ### Banking System
 - **Banking**: Persistent gold storage across sessions
   - Deposit, withdraw, and balance commands
@@ -60,11 +75,17 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
   - Clan banking for organizational funds
   - Available at designated banker NPCs
 
+## Currency System
+<!-- section: key_components | grounding: mixed -->
+
 ### Currency System
 - **Currency**: Dual gold and silver economy
   - Gold and silver as distinct currency types with exchange rates
   - Money-related commands: drop gold/silver, get gold/silver, split loot
   - Automatic gold/silver handling in shops and auctions
+
+## Shop System
+<!-- section: key_components | grounding: mixed -->
 
 ### Shop System
 - **Shops**: NPC merchant system for buying and selling items
@@ -75,6 +96,7 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
   - Shop inventory management (NPCs restock via area resets)
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Auction Process
 - **Starting an Auction**: Player puts item up for sale with minimum bid
@@ -92,6 +114,7 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
 - **Auction Fees**: Optional taxation of auction transactions
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 
 ### Header Files
 - `/src/include/Auction.hh` (31 LOC) - Auction system interface
@@ -113,6 +136,7 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
   - Auction cancellation commands
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 
 ### Core Behaviors
 - **Auction Listing**: Players can place items up for auction
@@ -129,17 +153,11 @@ The Auction & Trade subsystem facilitates item exchange between players via auct
 - **Minimum Increments**: Required minimum bid increases
 - **Reserve Prices**: Minimum threshold for successful auctions
 
-## Dependencies and Relationships
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
 
 ### Dependencies On
-- **Object System**: For items being auctioned, their properties and transfer
-- **Character System**: For player data, inventory, and gold management
-- **Command Interpreter**: For auction and bidding commands
-- **Communication System**: For auction announcements and notifications
-- **Economy System**: For gold transfers and economic balance
-
-### Depended On By
-- **Player Economy**: Creates a player-driven marketplace
-- **Item Distribution**: Provides alternative means of obtaining items
-- **Gold Sink**: Potentially removes currency from economy through fees
-- **Social Trading**: Enables economic interaction between players
+- **Object System** (`object_system`): For items being auctioned, their properties and transfer
+- **Character Data** (`character_data`): For player data, inventory, and gold management
+- **Command Interpreter** (`command_interpreter`): For auction and bidding commands
+- **Social & Communication** (`social_communication`): For auction announcements and notifications

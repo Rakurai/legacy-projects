@@ -1,9 +1,20 @@
-# Networking
+---
+id: networking
+name: Networking
+kind: system
+layer: infrastructure
+parent: null
+depends_on: [utilities, memory_gc]
+depended_on_by: [command_interpreter, game_engine]
+---
 
 ## Overview
+<!-- section: overview | grounding: mixed -->
 The Networking system manages all player connections to the MUD, implementing socket management, telnet protocol handling, connection state machines, and terminal control sequences. This component serves as the foundational communication layer between players and the game server, handling everything from initial connections through the entire player session lifecycle. It supports both traditional telnet clients and modern MUD clients with enhanced protocol features, ensuring reliable bi-directional communication with proper buffering, timeout handling, and terminal negotiations.
 
 ## Responsibilities
+<!-- section: responsibilities | grounding: mixed -->
+
 - Managing TCP/IP socket connections for player sessions
 - Implementing the telnet protocol with option negotiation
 - Providing VT100 terminal control for text formatting and display
@@ -17,9 +28,9 @@ The Networking system manages all player connections to the MUD, implementing so
 - Providing protocol extensions for modern MUD clients
 - Logging connection statistics and error conditions
 
-## Core Components
+## Connection Management
+<!-- section: key_components | grounding: mixed | role: mechanism -->
 
-### Connection Management
 - **Socket Handling**: Network communication foundation
   - Socket creation and binding
   - Connection acceptance and tracking
@@ -40,7 +51,9 @@ The Networking system manages all player connections to the MUD, implementing so
   - Connected time tracking
   - Command history management
 
-### Protocol Implementation
+## Protocol Implementation
+<!-- section: key_components | grounding: mixed | role: mechanism -->
+
 - **Telnet Protocol**: Core communication protocol
   - Command parsing and interpretation
   - Option negotiation (WILL/WONT/DO/DONT)
@@ -61,7 +74,9 @@ The Networking system manages all player connections to the MUD, implementing so
   - Color configuration and customization
   - Dynamic width adjustment
 
-### Connection State Machine
+## Connection State Machine
+<!-- section: key_components | grounding: mixed | role: mechanism -->
+
 - **State System**: Connection lifecycle management
   - State definition and transition rules
   - Abstract state interface
@@ -82,7 +97,9 @@ The Networking system manages all player connections to the MUD, implementing so
   - Login attempt limiting
   - Ban checking and enforcement
 
-### Server Continuity
+## Copyover
+<!-- section: key_components | grounding: grounded | role: mechanism -->
+
 - **Copyover**: Hot-restart capability preserving player connections
   - Serializes active connection state (file descriptors, character references)
   - Passes file descriptors to newly-exec'd server process
@@ -91,6 +108,7 @@ The Networking system manages all player connections to the MUD, implementing so
   - Triggered by admin `copyover` command
 
 ## Implementation Details
+<!-- section: implementation | grounding: mixed -->
 
 ### Socket Implementation
 - **Connection Processing**: Socket lifecycle
@@ -156,6 +174,7 @@ The Networking system manages all player connections to the MUD, implementing so
   - Reconnection matching
 
 ## Key Files
+<!-- section: key_components | grounding: grounded -->
 - **comm.hh/comm.cc**: Core network communication
   - 940 lines
   - Socket initialization and management
@@ -209,6 +228,7 @@ The Networking system manages all player connections to the MUD, implementing so
   - Race and class modifiers
 
 ## System Behaviors
+<!-- section: behaviors | grounding: mixed -->
 1. **Connection Lifecycle**:
    - Socket creation and binding at startup
    - Connection acceptance in main loop
@@ -250,9 +270,11 @@ The Networking system manages all player connections to the MUD, implementing so
    - Dynamic feature adaptation
    - Renegotiation on capability changes
 
-## Dependencies and Relationships
-- **Command Interpreter**: For processing player input
-- **Game Engine**: For integration with main loop
-- **Utilities**: For string processing and logging
-- **Character System**: For binding connections to players
-- **Memory & GC**: For resource management
+## Dependencies
+<!-- section: dependencies | grounding: grounded -->
+
+- **Command Interpreter** (`command_interpreter`): For processing player input
+- **Game Engine** (`game_engine`): For integration with main loop
+- **Utilities** (`utilities`): For string processing and logging
+- **Character Data** (`character_data`): For binding connections to players
+- **Memory & GC** (`memory_gc`): For resource management

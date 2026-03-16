@@ -7,9 +7,9 @@ Build helpers import from here to populate the database.
 
 import os
 
-from sqlmodel import SQLModel, Field, Column
-from sqlalchemy.dialects.postgresql import TSVECTOR, JSONB
 from pgvector.sqlalchemy import Vector
+from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
+from sqlmodel import Column, Field, SQLModel
 
 # Read embedding dimension from environment at import time.
 # Safe because the schema is dropped and recreated on every build.

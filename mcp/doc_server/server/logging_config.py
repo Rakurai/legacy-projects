@@ -6,8 +6,9 @@ Logs to stderr (separate from MCP protocol on stdout).
 """
 
 import sys
-from loguru import logger
 from typing import Literal
+
+from loguru import logger
 
 
 def configure_logging(level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO") -> None:

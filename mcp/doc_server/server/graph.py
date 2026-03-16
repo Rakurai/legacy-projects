@@ -12,7 +12,6 @@ from sqlmodel import select
 from server.db_models import Edge
 from server.logging_config import log
 
-
 # -- Edge type constants (canonical lowercase, matching build_mcp_db normalization) --
 CALLS = "calls"
 USES = "uses"
@@ -102,8 +101,7 @@ def compute_call_cone(
     while queue and len(transitive_cone) < max_size:
         node_id, depth = queue.pop(0)
 
-        if depth > max_depth_reached:
-            max_depth_reached = depth
+        max_depth_reached = max(max_depth_reached, depth)
 
         if depth >= max_depth:
             continue

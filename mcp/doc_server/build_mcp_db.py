@@ -15,47 +15,45 @@ Expected runtime: ~20-30 seconds for full rebuild.
 """
 
 import asyncio
-import sys
-from pathlib import Path
 from datetime import datetime
+
 from sqlalchemy import text
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-# Setup paths
-PROJECT_ROOT = Path(__file__).resolve().parent
-sys.path.insert(0, str(PROJECT_ROOT))
-
-from server.config import ServerConfig
-from server.db import DatabaseManager
-from server.db_models import Entity, Edge, Capability, CapabilityEdge, EntryPoint
-from server.logging_config import configure_logging, log
-
-from build_helpers.loaders import (
-    validate_artifacts,
-    load_entities,
-    load_documents,
-    load_capability_defs,
-    load_capability_graph,
+from build_helpers.embeddings_loader import (
+    attach_embeddings,
+    generate_embeddings,
+    load_embeddings,
 )
 from build_helpers.entity_processor import (
-    merge_entities,
-    extract_source_code,
+    MergedEntity,
+    assign_capabilities,
     compute_doc_quality,
     compute_is_entry_point,
-    assign_capabilities,
-    MergedEntity,
+    extract_source_code,
+    merge_entities,
 )
 from build_helpers.graph_loader import (
-    load_graph_edges,
-    compute_fan_metrics,
     compute_bridge_flags,
+    compute_fan_metrics,
     compute_side_effect_markers,
+    load_graph_edges,
 )
-from build_helpers.embeddings_loader import load_embeddings, generate_embeddings, attach_embeddings
+from build_helpers.loaders import (
+    load_capability_defs,
+    load_capability_graph,
+    load_documents,
+    load_entities,
+    validate_artifacts,
+)
+from server.config import ServerConfig
+from server.db import DatabaseManager
+from server.db_models import Capability, CapabilityEdge, Edge, Entity, EntryPoint
 from server.embedding import create_provider
+from server.logging_config import configure_logging, log
 
 
-async def drop_and_create_schema(engine) -> None:
+async def drop_and_create_schema(engine: AsyncEngine) -> None:
     """
     Drop existing tables and recreate schema with indexes.
 
@@ -65,8 +63,9 @@ async def drop_and_create_schema(engine) -> None:
     Args:
         engine: SQLAlchemy async engine from DatabaseManager
     """
-    from server import db_models  # noqa: F401 — registers models with SQLModel metadata
     from sqlmodel import SQLModel
+
+    from server import db_models  # noqa: F401 — registers models with SQLModel metadata
 
     log.info("Dropping existing tables")
 

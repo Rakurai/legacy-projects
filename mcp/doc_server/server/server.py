@@ -10,21 +10,16 @@ from urllib.parse import unquote
 
 from fastmcp import Context
 
-from server.app import mcp, get_ctx
-from server.logging_config import log
-
-
 # ---- Import tool modules (side-effect: registers @mcp.tool decorators) ----
-import server.tools.entity  # noqa: E402, F401
-import server.tools.graph  # noqa: E402, F401
-import server.tools.search  # noqa: E402, F401
-import server.tools.behavior  # noqa: E402, F401
-import server.tools.capability  # noqa: E402, F401
-
+import server.tools.behavior
+import server.tools.capability
+import server.tools.entity
+import server.tools.graph
+import server.tools.search  # noqa: F401
+from server.app import get_ctx, mcp
 
 # ---- Resources ----
-
-from server.resources import (  # noqa: E402
+from server.resources import (
     get_capabilities_resource,
     get_capability_detail_resource,
     get_entity_resource,
@@ -119,7 +114,7 @@ def explore_capability(capability_name: str) -> list[dict[str, str]]:
 
 # ---- Entry Point ----
 
-def main():
+def main() -> None:
     """Main entry point."""
     mcp.run(transport="stdio")
 

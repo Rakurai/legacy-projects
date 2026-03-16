@@ -8,10 +8,9 @@ from typing import Annotated
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from server.app import mcp, get_ctx
+from server.app import get_ctx, mcp
 from server.converters import entity_to_summary
 from server.db_models import Entity
 from server.enums import Relationship
@@ -23,8 +22,7 @@ from server.graph import (
 )
 from server.logging_config import log
 from server.models import EntitySummary, TruncationMetadata
-from server.util import fetch_entity_map, fetch_entity_summaries, resolve_entity_id
-
+from server.util import fetch_entity_map, resolve_entity_id
 
 # -- Response Models --
 

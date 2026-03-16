@@ -8,7 +8,6 @@ Generation iterates doc_db.json entries directly (keyed by mid), matching the
 original regen_embeddings.py pipeline. Every doc entry gets embedded.
 """
 
-import ast
 import json
 import pickle
 import tempfile
@@ -58,10 +57,7 @@ def load_embeddings(artifacts_dir: Path, config: "ServerConfig") -> dict[str, li
     # Convert keys to entity_id strings (handles both tuple and string keys)
     embeddings: dict[str, list[float]] = {}
     for key, embedding in raw_embeddings.items():
-        if isinstance(key, tuple):
-            entity_id = f"{key[0]}_{key[1]}"
-        else:
-            entity_id = str(key)
+        entity_id = f"{key[0]}_{key[1]}" if isinstance(key, tuple) else str(key)
         embeddings[entity_id] = embedding
 
     log.info("Embeddings loaded", embedding_count=len(embeddings))
@@ -120,7 +116,7 @@ def generate_embeddings(
     vectors = provider.embed_documents_sync(texts)
 
     embeddings: dict[str, list[float]] = {}
-    for mid, vec in zip(mids, vectors):
+    for mid, vec in zip(mids, vectors, strict=True):
         embeddings[mid] = vec
 
     log.info("Embeddings generated", count=len(embeddings))

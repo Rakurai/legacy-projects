@@ -12,7 +12,6 @@ directly with the enum type — Pydantic v2 accepts StrEnum natively.
 
 from enum import StrEnum
 
-
 # ---------------------------------------------------------------------------
 # Documentation pipeline
 # ---------------------------------------------------------------------------

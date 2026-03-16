@@ -5,10 +5,11 @@ Uses pydantic-settings for type-safe environment variable loading.
 Fails fast if required configuration is missing.
 """
 
+from pathlib import Path
+from typing import Literal
+
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from typing import Literal
-from pathlib import Path
 
 
 class ServerConfig(BaseSettings):

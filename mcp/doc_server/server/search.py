@@ -16,15 +16,22 @@ Degrades to keyword-only mode if embedding service unavailable.
 All queries use SQLAlchemy ORM — no raw SQL.
 """
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from sqlalchemy import func, literal, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import select
+from sqlmodel import Select, select
 
-from server.enums import DocQuality, DocState, Provenance, SearchMode
-from server.db_models import Entity
-from server.models import SearchResult
+if TYPE_CHECKING:
+    from server.embedding import EmbeddingProvider
+
 from server.converters import entity_to_summary
+from server.db_models import Entity
+from server.enums import DocQuality, DocState, Provenance, SearchMode
 from server.logging_config import log
+from server.models import SearchResult
 
 # Scoring weights (matching spec)
 _EXACT_WEIGHT = 10.0
@@ -32,18 +39,27 @@ _SEMANTIC_WEIGHT = 0.6
 _KEYWORD_WEIGHT = 0.4
 
 
-def _apply_filters(stmt, kind: str | None, capability: str | None, min_doc_quality: str | None):
+def _apply_filters(
+    stmt: Select[tuple[Entity]],
+    kind: str | None,
+    capability: str | None,
+    min_doc_quality: str | None,
+) -> Select[tuple[Entity]]:
     """Apply optional filters to a SELECT statement."""
     if kind:
         stmt = stmt.where(Entity.kind == kind)
     if capability:
         stmt = stmt.where(Entity.capability == capability)
     if min_doc_quality:
-        quality_order = {"high": 3, "medium": 2, "low": 1}
-        min_order = quality_order.get(min_doc_quality, 1)
-        if min_order == 3:
+        quality_order: dict[str, DocQuality] = {
+            "high": DocQuality.HIGH,
+            "medium": DocQuality.MEDIUM,
+            "low": DocQuality.LOW,
+        }
+        min_quality = quality_order.get(min_doc_quality, DocQuality.LOW)
+        if min_quality == DocQuality.HIGH:
             stmt = stmt.where(Entity.doc_quality == DocQuality.HIGH)
-        elif min_order == 2:
+        elif min_quality == DocQuality.MEDIUM:
             stmt = stmt.where(Entity.doc_quality.in_([DocQuality.HIGH, DocQuality.MEDIUM]))
     return stmt
 
@@ -145,7 +161,7 @@ def _merge_scores(
 async def hybrid_search(
     session: AsyncSession,
     query: str,
-    embedding_provider=None,
+    embedding_provider: EmbeddingProvider | None = None,
     kind: str | None = None,
     capability: str | None = None,
     min_doc_quality: str | None = None,

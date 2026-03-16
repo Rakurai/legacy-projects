@@ -9,12 +9,11 @@ from typing import Annotated
 from fastmcp import Context
 from pydantic import BaseModel, Field
 
-from server.app import mcp, get_ctx
+from server.app import get_ctx, mcp
 from server.enums import DocQuality, SearchMode
 from server.logging_config import log
 from server.models import SearchResult
 from server.search import hybrid_search
-
 
 # -- Response Model --
 

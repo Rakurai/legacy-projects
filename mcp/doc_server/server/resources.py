@@ -9,16 +9,17 @@ Resources:
 - legacy://stats                 — Server statistics
 """
 
-from importlib.metadata import version, PackageNotFoundError
 from functools import lru_cache
+from importlib.metadata import PackageNotFoundError, version
 
+import networkx as nx
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from server.converters import entity_to_summary
 from server.db_models import Capability, CapabilityEdge, Entity, EntryPoint
 from server.logging_config import log
-from server.converters import entity_to_summary
 
 
 @lru_cache(maxsize=1)
@@ -228,7 +229,7 @@ async def get_file_entities_resource(
 
 async def get_stats_resource(
     session: AsyncSession,
-    graph=None,
+    graph: nx.MultiDiGraph | None = None,
     embedding_available: bool = False,
 ) -> dict:
     """

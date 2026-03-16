@@ -8,18 +8,21 @@ from typing import Annotated
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from server.app import mcp, get_ctx
-from server.converters import entity_to_summary, capability_to_summary
+from server.app import get_ctx, mcp
+from server.converters import capability_to_summary, entity_to_summary
 from server.db_models import Capability, CapabilityEdge, Entity, EntryPoint
 from server.errors import CapabilityNotFoundError, EntityNotFoundError
-from server.graph import compute_call_cone, CALLS
+from server.graph import CALLS, compute_call_cone
 from server.logging_config import log
-from server.models import CapabilityDetail, CapabilitySummary, EntitySummary, TruncationMetadata
+from server.models import (
+    CapabilityDetail,
+    CapabilitySummary,
+    EntitySummary,
+    TruncationMetadata,
+)
 from server.util import resolve_entity_id
-
 
 # -- Response Models --
 
@@ -156,7 +159,7 @@ async def compare_capabilities(
 
     log.info("compare_capabilities", capabilities=capabilities)
 
-    if len(capabilities) < 2:
+    if len(capabilities) < 2:  # noqa: PLR2004  — minimum pair required
         raise ValueError("At least 2 capabilities required for comparison")
 
     async with lc["db_manager"].session() as session:
@@ -183,7 +186,7 @@ async def compare_capabilities(
         cap_set = set(capabilities)
         shared_ids = [
             eid for eid, caps in entity_callers_caps.items()
-            if len(caps & cap_set) >= 2
+            if len(caps & cap_set) >= 2  # noqa: PLR2004  — shared = used by ≥2
         ][:limit]
 
         unique_ids: dict[str, list[str]] = {cap: [] for cap in capabilities}

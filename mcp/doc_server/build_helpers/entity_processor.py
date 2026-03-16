@@ -11,19 +11,16 @@ ready for database insertion. Computes:
 - search vectors (weighted tsvector composition)
 """
 
-import re
 from pathlib import Path
-from typing import Any
 
 from build_helpers.artifact_models import (
-    DoxygenEntity,
-    EntityDatabase,
     Document,
     DocumentDB,
+    DoxygenEntity,
+    EntityDatabase,
 )
 from server.enums import DocQuality, DocState
 from server.logging_config import log
-
 
 # Side-effect function markers (categorized)
 SIDE_EFFECT_FUNCTIONS = {
@@ -226,10 +223,9 @@ def compute_doc_quality(merged_entities: list[MergedEntity]) -> None:
         doc_state = doc.state or DocState.EXTRACTED_SUMMARY
 
         # High quality
-        if doc_state in (DocState.REFINED_SUMMARY, DocState.REFINED_USAGE) and doc.details:
-            if merged.entity.kind != "function" or doc.params:
-                merged.doc_quality = DocQuality.HIGH
-                continue
+        if doc_state in (DocState.REFINED_SUMMARY, DocState.REFINED_USAGE) and doc.details and (merged.entity.kind != "function" or doc.params):
+            merged.doc_quality = DocQuality.HIGH
+            continue
 
         # Medium quality
         if doc_state == DocState.GENERATED_SUMMARY or (doc.brief and not doc.details):

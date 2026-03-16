@@ -10,13 +10,15 @@ Loads dependency graph from GML file and:
 Uses existing doxygen_graph.py parser to load GML.
 """
 
-from pathlib import Path
-from typing import Any
 from collections import defaultdict
+from pathlib import Path
 
 from build_helpers.artifact_models import load_gml_graph
-from build_helpers.entity_processor import MergedEntity, SIDE_EFFECT_FUNCTIONS
+from build_helpers.entity_processor import SIDE_EFFECT_FUNCTIONS, MergedEntity
 from server.logging_config import log
+
+# Maximum BFS depth when scanning for transitive side-effect calls
+_SIDE_EFFECT_BFS_DEPTH = 2
 
 
 def load_graph_edges(
@@ -218,14 +220,14 @@ def compute_side_effect_markers(
             "scheduling": []
         }
 
-        # BFS to depth 2 (direct + one level transitive)
+        # BFS to depth _SIDE_EFFECT_BFS_DEPTH (direct + one level transitive)
         visited: set[str] = {entity_id}
         queue: list[tuple[str, int]] = [(entity_id, 0)]
 
         while queue:
             current, depth = queue.pop(0)
 
-            if depth >= 2:
+            if depth >= _SIDE_EFFECT_BFS_DEPTH:
                 continue
 
             for callee in callees_map[current]:

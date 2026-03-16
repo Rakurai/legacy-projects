@@ -11,18 +11,22 @@ import networkx as nx
 from fastmcp import Context
 from pydantic import BaseModel, Field
 from sqlalchemy import func
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from server.app import mcp, get_ctx
-from server.converters import entity_to_summary, entity_to_detail
+from server.app import get_ctx, mcp
+from server.converters import entity_to_detail, entity_to_summary
 from server.db_models import Entity
 from server.enums import EntityKind, MatchType, ResolutionStatus
 from server.errors import EntityNotFoundError
 from server.logging_config import log
-from server.models import EntityDetail, EntityNeighbor, EntitySummary, TruncationMetadata
+from server.models import (
+    EntityDetail,
+    EntityNeighbor,
+    EntitySummary,
+    TruncationMetadata,
+)
 from server.resolver import resolve_entity as resolve_entity_fn
-from server.util import fetch_entity_map, doc_quality_sort_key
+from server.util import doc_quality_sort_key, fetch_entity_map
 
 # -- Response Models --
 

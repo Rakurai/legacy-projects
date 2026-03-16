@@ -5,6 +5,7 @@ Yields a dict that FastMCP makes available via ctx.lifespan_context
 in every tool/resource handler. No module-level singletons.
 """
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import TypedDict
 
@@ -27,7 +28,7 @@ class LifespanContext(TypedDict):
 
 
 @asynccontextmanager
-async def lifespan(app: FastMCP):
+async def lifespan(app: FastMCP) -> AsyncIterator[LifespanContext]:
     """
     Server lifespan manager.
 

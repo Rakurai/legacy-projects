@@ -4,8 +4,15 @@ Database Access Layer - SQLAlchemy async engine + session management.
 Uses asyncpg driver (transitive via SQLAlchemy[asyncio]).
 """
 
-from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession, AsyncEngine
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+
+from sqlalchemy.ext.asyncio import (
+    AsyncEngine,
+    AsyncSession,
+    async_sessionmaker,
+    create_async_engine,
+)
 
 from server.config import ServerConfig
 from server.logging_config import log
@@ -40,7 +47,7 @@ class DatabaseManager:
         self.session_factory = build_session_factory(self.engine)
 
     @asynccontextmanager
-    async def session(self):
+    async def session(self) -> AsyncIterator[AsyncSession]:
         """Context manager for async sessions (read-only server, no explicit rollback needed)."""
         async with self.session_factory() as session:
             yield session

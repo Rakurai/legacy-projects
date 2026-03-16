@@ -4,18 +4,17 @@ Shared Utilities - Common helpers used across server modules.
 Keeps utility code DRY and avoids duplication across tool/resource modules.
 """
 
-from sqlalchemy import case
+from sqlalchemy import Case, case
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
 from server.db_models import Entity
 from server.enums import DocQuality
 from server.errors import EntityNotFoundError
-from server.logging_config import log
 from server.models import EntitySummary
 
 
-def doc_quality_sort_key():
+def doc_quality_sort_key() -> Case:
     """CASE expression mapping doc_quality → int for best-first ordering."""
     return case(
         (Entity.doc_quality == DocQuality.HIGH, 1),

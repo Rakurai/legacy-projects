@@ -21,7 +21,6 @@ from openai import AsyncOpenAI, OpenAI
 from server.config import ServerConfig
 from server.logging_config import log
 
-
 # ---------------------------------------------------------------------------
 # Protocol
 # ---------------------------------------------------------------------------

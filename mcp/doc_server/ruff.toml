@@ -1,0 +1,54 @@
+# ruff.toml
+
+target-version = "py311"
+
+[lint]
+select = [
+    "E",  # pycodestyle errors
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # bugbear
+    "UP", # pyupgrade
+    "ANN", # type annotations
+    "ARG", # unused arguments
+    "PL",  # pylint
+    "N",   # pep8-naming
+    "T20", # flake8-print
+    "SIM", # flake8-simplify
+    "RUF", # Ruff-specific rules
+]
+ignore = [
+    "E501", # don't break long lines
+    "UP045", # prefer Optional[T] to T|None
+    "PLC0415", # imports in methods are ok
+    "ANN204", # no return type for __init__
+    "UP017", # timezone.utc is fine
+    "ARG001", # don't worry about unused arguments, this is PoC
+    "B008", # allow Depends() in default argument for fastapi
+    "PLR0915", # dumb
+    "UP006", "UP035", # I don't like lowercase type annotations
+    "F541", # it's fine for an f-string to not have parameters
+    "PLR0911", # too many return statements - multi-stage resolution pipeline
+    "PLR0912", # too many branches - tool handlers with legitimate branching
+    "PLR0913", # too many arguments - FastAPI/tool parameter injection
+]
+fixable = ["ALL"]
+unfixable = []
+
+
+exclude = [
+    ".venv/**",
+    "build/",
+    "dist/",
+    "__pycache__/",
+    "tests/",
+    "**/tests/**",
+    "test_*.py",
+    "*_test.py",
+    "_archive/**",
+    ".ai/**"
+]
+
+[lint.isort]
+known-first-party = ["src"]
+known-third-party = ["pydantic", "sqlmodel"]

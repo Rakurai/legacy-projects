@@ -15,11 +15,9 @@ from pathlib import Path
 from typing import Any
 
 from build_helpers.artifact_models import (
-    load_entity_db,
-    EntityDatabase,
-    DoxygenEntity,
     DocumentDB,
-    Document,
+    EntityDatabase,
+    load_entity_db,
 )
 from server.logging_config import log
 

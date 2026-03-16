@@ -11,19 +11,26 @@ Pipeline stages (fail-through):
 Returns ResolutionEnvelope with match metadata and candidates.
 """
 
+from __future__ import annotations
+
 from dataclasses import dataclass
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
+from server.converters import entity_to_summary
+from server.db_models import Entity
 from server.enums import MatchType, ResolutionStatus
+from server.logging_config import log
+from server.models import EntitySummary, ResolutionEnvelope
 from server.util import doc_quality_sort_key
 
-from server.db_models import Entity
-from server.models import ResolutionEnvelope, EntitySummary
-from server.converters import entity_to_summary
-from server.logging_config import log
+if TYPE_CHECKING:
+    from server.embedding import EmbeddingProvider
+
+_ENTITY_ID_MIN_LEN = 20
 
 
 @dataclass
@@ -52,14 +59,14 @@ async def resolve_entity(
     session: AsyncSession,
     query: str,
     kind: str | None = None,
-    embedding_provider=None,
+    embedding_provider: EmbeddingProvider | None = None,
     limit: int = 20,
 ) -> ResolutionResult:
     """Resolve entity name through multi-stage pipeline (fail-through stages 1-6)."""
     log.info("Resolving entity", query=query, kind=kind)
 
     # Stage 1: Exact entity_id match (if query looks like entity_id)
-    if "_" in query and len(query) > 20:
+    if "_" in query and len(query) > _ENTITY_ID_MIN_LEN:
         result = await _resolve_by_entity_id(session, query)
         if result:
             log.info("Resolved by entity_id", entity_id=query, match_type="entity_id")
@@ -251,7 +258,7 @@ async def _resolve_by_semantic(
     session: AsyncSession,
     query: str,
     kind: str | None,
-    embedding_provider,
+    embedding_provider: EmbeddingProvider,
     limit: int,
 ) -> ResolutionResult | None:
     """Stage 6: Semantic search (pgvector cosine similarity)."""

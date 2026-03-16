@@ -5,9 +5,9 @@ All ORM-to-API-model conversions live here. No defensive fallbacks — if the da
 is wrong, we fail loudly rather than silently coercing.
 """
 
+from server.db_models import Capability, Entity
 from server.enums import DocQuality, DocState, Provenance
-from server.db_models import Entity, Capability
-from server.models import EntitySummary, EntityDetail, CapabilitySummary
+from server.models import CapabilitySummary, EntityDetail, EntitySummary
 
 
 def entity_to_summary(entity: Entity) -> EntitySummary:

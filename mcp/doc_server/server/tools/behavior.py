@@ -8,15 +8,22 @@ from typing import Annotated
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-from server.app import mcp, get_ctx
+from server.app import get_ctx, mcp
 from server.converters import entity_to_summary
 from server.db_models import Entity
-from server.enums import AccessType, Confidence, DocQuality, HotspotMetric, Provenance, SideEffectCategory, TruncationReason
+from server.enums import (
+    AccessType,
+    Confidence,
+    DocQuality,
+    HotspotMetric,
+    Provenance,
+    SideEffectCategory,
+    TruncationReason,
+)
 from server.errors import EntityNotFoundError
-from server.graph import compute_call_cone, CALLS, USES
+from server.graph import CALLS, USES, compute_call_cone
 from server.logging_config import log
 from server.models import (
     BehaviorSlice,
@@ -28,6 +35,8 @@ from server.models import (
 )
 from server.util import fetch_entity_summaries, resolve_entity_id
 
+# Maximum number of example functions listed per capability touch
+_MAX_FUNCTIONS_PER_TOUCH = 10
 
 # -- Response Models --
 
@@ -120,11 +129,11 @@ async def get_behavior_slice(
         direct_summaries = await fetch_entity_summaries(session, direct_ids)
         transitive_summaries = await fetch_entity_summaries(session, transitive_ids)
 
-        all_entity_ids = [eid] + all_cone_ids
+        all_entity_ids = [eid, *all_cone_ids]
 
         # Also fetch uses-targets so globals_used can resolve them
         uses_target_ids: list[str] = []
-        for check_eid in [eid] + all_cone_ids:
+        for check_eid in [eid, *all_cone_ids]:
             if check_eid not in graph:
                 continue
             for _, target, data in graph.out_edges(check_eid, data=True):
@@ -154,7 +163,7 @@ async def get_behavior_slice(
             touch.direct_count += 1
         else:
             touch.transitive_count += 1
-        if len(touch.functions) < 10:
+        if len(touch.functions) < _MAX_FUNCTIONS_PER_TOUCH:
             touch.functions.append(entity_to_summary(entity))
 
     # Globals used

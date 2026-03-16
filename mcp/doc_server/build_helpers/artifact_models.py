@@ -15,10 +15,9 @@ import json
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Dict, Optional
 
 import networkx as nx
-
 
 # ---------------------------------------------------------------------------
 # Entity ID helpers

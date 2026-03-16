@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # Tag mapping: entity kind → Doxygen tag
 _KIND_TAG_MAP: dict[str, str] = {
     "function": "@fn",

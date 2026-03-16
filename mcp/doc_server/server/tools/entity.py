@@ -87,8 +87,7 @@ async def resolve_entity(
             session=session,
             query=query,
             kind=kind,
-            embedding_client=lc["embedding_client"],
-            embedding_model=lc["embedding_model"],
+            embedding_provider=lc["embedding_provider"],
             limit=20,
         )
 

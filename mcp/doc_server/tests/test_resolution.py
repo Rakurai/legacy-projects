@@ -22,7 +22,7 @@ async def test_resolve_by_entity_id(test_session: AsyncSession, sample_entities:
         session=test_session,
         query=entity_id,
         kind=None,
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 
@@ -41,7 +41,7 @@ async def test_resolve_by_signature(test_session: AsyncSession, sample_entities:
         session=test_session,
         query=signature,
         kind=None,
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 
@@ -58,7 +58,7 @@ async def test_resolve_by_name_exact(test_session: AsyncSession, sample_entities
         session=test_session,
         query="damage",
         kind=None,
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 
@@ -92,7 +92,7 @@ async def test_resolve_by_name_ambiguous(test_session: AsyncSession, sample_enti
         session=test_session,
         query="damage",
         kind=None,
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 
@@ -110,7 +110,7 @@ async def test_resolve_by_prefix(test_session: AsyncSession, sample_entities: li
         session=test_session,
         query="do_",
         kind=None,
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 
@@ -127,7 +127,7 @@ async def test_resolve_not_found(test_session: AsyncSession, sample_entities: li
         session=test_session,
         query="nonexistent_function_xyz",
         kind=None,
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 
@@ -142,7 +142,7 @@ async def test_resolve_with_kind_filter(test_session: AsyncSession, sample_entit
         session=test_session,
         query="Character",
         kind="class",
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 

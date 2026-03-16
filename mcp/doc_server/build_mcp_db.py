@@ -51,7 +51,8 @@ from build_helpers.graph_loader import (
     compute_bridge_flags,
     compute_side_effect_markers,
 )
-from build_helpers.embeddings_loader import load_embeddings, attach_embeddings
+from build_helpers.embeddings_loader import load_embeddings, generate_embeddings, attach_embeddings
+from server.embedding import create_provider
 
 
 async def drop_and_create_schema(engine) -> None:
@@ -342,8 +343,17 @@ async def main() -> None:
     compute_doc_quality(merged_entities)
     compute_is_entry_point(merged_entities)
 
-    # Stage 9: Load embeddings
-    embeddings = load_embeddings(config.artifacts_path)
+    # Stage 9: Load or generate embeddings
+    provider = create_provider(config)
+    embeddings = load_embeddings(config.artifacts_path, config)
+
+    if embeddings is None and provider is not None:
+        log.info("No cached artifact found; generating embeddings from doc_db via provider")
+        embeddings = generate_embeddings(config.artifacts_path, provider, config)
+    elif embeddings is None and provider is None:
+        log.warning("No embedding provider configured and no artifact found; entities will have null embeddings")
+        embeddings = {}
+
     attach_embeddings(merged_entities, embeddings)
 
     # Stage 10: Populate database

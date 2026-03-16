@@ -53,7 +53,6 @@ def validate_artifacts(artifacts_dir: Path) -> None:
         "code_graph.json",
         "code_graph.gml",
         "doc_db.json",
-        "embeddings_cache.pkl",
         "capability_defs.json",
         "capability_graph.json",
     ]

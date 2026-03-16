@@ -145,8 +145,7 @@ def _merge_scores(
 async def hybrid_search(
     session: AsyncSession,
     query: str,
-    embedding_client=None,
-    embedding_model: str = "",
+    embedding_provider=None,
     kind: str | None = None,
     capability: str | None = None,
     min_doc_quality: str | None = None,
@@ -158,14 +157,9 @@ async def hybrid_search(
     query_embedding: list[float] | None = None
     search_mode: SearchMode = SearchMode.HYBRID
 
-    if embedding_client:
+    if embedding_provider:
         try:
-            response = await embedding_client.embeddings.create(
-                model=embedding_model,
-                input=query,
-                encoding_format="float",
-            )
-            query_embedding = response.data[0].embedding
+            query_embedding = await embedding_provider.embed_query(query)
         except Exception as e:
             log.warning("Embedding generation failed; falling back to keyword-only", error=str(e))
             search_mode = SearchMode.KEYWORD_FALLBACK

@@ -78,7 +78,7 @@ async def stats_resource(ctx: Context) -> str:
         data = await get_stats_resource(
             session,
             graph=lc["graph"],
-            embedding_available=lc["embedding_client"] is not None,
+            embedding_available=lc["embedding_provider"] is not None,
         )
     return json.dumps(data, default=str)
 

@@ -66,8 +66,7 @@ async def search(
         results, search_mode = await hybrid_search(
             session=session,
             query=query,
-            embedding_client=lc["embedding_client"],
-            embedding_model=lc["embedding_model"],
+            embedding_provider=lc["embedding_provider"],
             kind=kind,
             capability=capability,
             min_doc_quality=min_doc_quality,

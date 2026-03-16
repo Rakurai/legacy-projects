@@ -10,10 +10,10 @@ from typing import TypedDict
 
 import networkx as nx
 from fastmcp import FastMCP
-from openai import AsyncOpenAI
 
 from server.config import ServerConfig
 from server.db import DatabaseManager
+from server.embedding import EmbeddingProvider, create_provider
 from server.graph import load_graph
 from server.logging_config import configure_logging, log
 
@@ -23,8 +23,7 @@ class LifespanContext(TypedDict):
     config: ServerConfig
     db_manager: DatabaseManager
     graph: nx.MultiDiGraph
-    embedding_client: AsyncOpenAI | None
-    embedding_model: str
+    embedding_provider: EmbeddingProvider | None
 
 
 @asynccontextmanager
@@ -64,25 +63,20 @@ async def lifespan(app: FastMCP):
         edges=graph.number_of_edges(),
     )
 
-    # Initialize embedding client (optional)
-    embedding_client: AsyncOpenAI | None = None
-    embedding_model = "text-embedding-3-large"
+    # Initialize embedding provider (optional)
+    embedding_provider: EmbeddingProvider | None = None
 
     if config.embedding_enabled:
         try:
-            embedding_client = AsyncOpenAI(
-                base_url=config.embedding_base_url,
-                api_key=config.embedding_api_key or "default",
-            )
-            if config.embedding_model:
-                embedding_model = config.embedding_model
-            log.info(
-                "Embedding client initialized",
-                base_url=config.embedding_base_url,
-                model=embedding_model,
-            )
+            embedding_provider = create_provider(config)
+            if embedding_provider is not None:
+                log.info(
+                    "Embedding provider initialized",
+                    provider=config.embedding_provider,
+                    dimension=embedding_provider.dimension,
+                )
         except Exception as e:
-            log.warning("Embedding client initialization failed", error=str(e))
+            log.warning("Embedding provider initialization failed", error=str(e))
     else:
         log.info("Embedding endpoint not configured; semantic search disabled")
 
@@ -92,8 +86,7 @@ async def lifespan(app: FastMCP):
         config=config,
         db_manager=db_manager,
         graph=graph,
-        embedding_client=embedding_client,
-        embedding_model=embedding_model,
+        embedding_provider=embedding_provider,
     )
 
     # Shutdown

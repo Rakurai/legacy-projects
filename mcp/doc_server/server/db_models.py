@@ -5,9 +5,15 @@ These models define the database schema and serve as the ORM layer.
 Build helpers import from here to populate the database.
 """
 
+import os
+
 from sqlmodel import SQLModel, Field, Column
 from sqlalchemy.dialects.postgresql import TSVECTOR, JSONB
 from pgvector.sqlalchemy import Vector
+
+# Read embedding dimension from environment at import time.
+# Safe because the schema is dropped and recreated on every build.
+_EMBEDDING_DIM = int(os.environ.get("EMBEDDING_DIMENSION", "768"))
 
 
 class Entity(SQLModel, table=True):
@@ -69,8 +75,8 @@ class Entity(SQLModel, table=True):
     # Embedding
     embedding: list[float] | None = Field(
         default=None,
-        sa_column=Column(Vector(4096)),
-        description="4096-dim pgvector embedding"
+        sa_column=Column(Vector(_EMBEDDING_DIM)),
+        description=f"{_EMBEDDING_DIM}-dim pgvector embedding",
     )
 
     # Full-text search

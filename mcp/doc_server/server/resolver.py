@@ -52,8 +52,7 @@ async def resolve_entity(
     session: AsyncSession,
     query: str,
     kind: str | None = None,
-    embedding_client=None,
-    embedding_model: str = "",
+    embedding_provider=None,
     limit: int = 20,
 ) -> ResolutionResult:
     """Resolve entity name through multi-stage pipeline (fail-through stages 1-6)."""
@@ -90,9 +89,9 @@ async def resolve_entity(
         log.info("Resolved by keyword search", query=query, candidates=len(result.candidates))
         return result
 
-    # Stage 6: Semantic search (if embedding client available)
-    if embedding_client:
-        result = await _resolve_by_semantic(session, query, kind, embedding_client, embedding_model, limit)
+    # Stage 6: Semantic search (if embedding provider available)
+    if embedding_provider:
+        result = await _resolve_by_semantic(session, query, kind, embedding_provider, limit)
         if result:
             log.info("Resolved by semantic search", query=query, candidates=len(result.candidates))
             return result
@@ -252,18 +251,12 @@ async def _resolve_by_semantic(
     session: AsyncSession,
     query: str,
     kind: str | None,
-    embedding_client,
-    embedding_model: str,
+    embedding_provider,
     limit: int,
 ) -> ResolutionResult | None:
     """Stage 6: Semantic search (pgvector cosine similarity)."""
     try:
-        response = await embedding_client.embeddings.create(
-            model=embedding_model,
-            input=query,
-            encoding_format="float",
-        )
-        query_embedding = response.data[0].embedding
+        query_embedding = await embedding_provider.embed_query(query)
 
         cosine_dist = Entity.embedding.cosine_distance(query_embedding)
         score_expr = (literal(1) - cosine_dist).label("score")

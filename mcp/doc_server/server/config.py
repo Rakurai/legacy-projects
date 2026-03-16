@@ -38,10 +38,27 @@ class ServerConfig(BaseSettings):
     # Logging
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
 
-    # Optional: Embedding endpoint (OpenAI-compatible API)
+    # Embedding provider selection
+    embedding_provider: Literal["local", "hosted"] | None = Field(
+        default=None,
+        description="Embedding provider: 'local' (bundled ONNX), 'hosted' (OpenAI-compatible), or None (keyword-only)",
+    )
+
+    # Local provider config
+    embedding_local_model: str = Field(
+        default="BAAI/bge-base-en-v1.5",
+        description="FastEmbed model name for local provider",
+    )
+    embedding_dimension: int = Field(
+        default=768,
+        ge=1,
+        description="Vector dimension (must match provider output)",
+    )
+
+    # Hosted provider config (only when embedding_provider='hosted')
     embedding_base_url: str | None = Field(default=None, description="OpenAI-compatible endpoint URL")
     embedding_api_key: str | None = Field(default=None, description="API key (or 'lm-studio' for local)")
-    embedding_model: str | None = Field(default=None, description="Model name")
+    embedding_model: str | None = Field(default=None, description="Hosted model name")
 
     @property
     def db_url(self) -> str:
@@ -55,5 +72,20 @@ class ServerConfig(BaseSettings):
 
     @property
     def embedding_enabled(self) -> bool:
-        """Whether embedding endpoint is configured."""
-        return self.embedding_base_url is not None
+        """Whether an embedding provider is configured."""
+        return self.embedding_provider is not None
+
+    @property
+    def embed_cache_filename(self) -> str:
+        """Artifact filename keyed by model name and dimension.
+
+        Uses the active model name (local or hosted) with '/' replaced by '-'.
+        Example: embed_cache_BAAI-bge-base-en-v1.5_768.pkl
+        """
+        if self.embedding_provider == "local":
+            model_slug = self.embedding_local_model.replace("/", "-")
+        elif self.embedding_provider == "hosted" and self.embedding_model:
+            model_slug = self.embedding_model.replace("/", "-")
+        else:
+            model_slug = "unknown"
+        return f"embed_cache_{model_slug}_{self.embedding_dimension}.pkl"

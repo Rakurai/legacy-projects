@@ -431,8 +431,7 @@ def mock_ctx(test_session: AsyncSession, sample_graph: nx.MultiDiGraph, test_con
         "config": test_config,
         "db_manager": mock_db_manager,
         "graph": sample_graph,
-        "embedding_client": None,
-        "embedding_model": "text-embedding-3-small",
+        "embedding_provider": None,
     }
 
     ctx = MagicMock()
@@ -456,8 +455,7 @@ def mock_ctx_no_graph(test_session: AsyncSession, test_config: ServerConfig):
         "config": test_config,
         "db_manager": mock_db_manager,
         "graph": nx.MultiDiGraph(),
-        "embedding_client": None,
-        "embedding_model": "text-embedding-3-small",
+        "embedding_provider": None,
     }
 
     ctx = MagicMock()

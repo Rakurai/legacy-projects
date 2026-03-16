@@ -25,7 +25,7 @@ async def test_resolve_by_keyword_stage(test_session: AsyncSession, sample_entit
         session=test_session,
         query="Apply damage character",  # Matches tsvector content, not name/sig
         kind=None,
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 
@@ -41,7 +41,7 @@ async def test_resolve_by_keyword_with_kind_filter(test_session: AsyncSession, s
         session=test_session,
         query="Apply damage character",
         kind="variable",  # No variable has "Apply damage" in its tsvector
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 
@@ -51,24 +51,21 @@ async def test_resolve_by_keyword_with_kind_filter(test_session: AsyncSession, s
 
 @pytest.mark.asyncio
 async def test_resolve_semantic_stage_with_mock_client(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Stage 6 semantic search triggers when stages 1-5 miss and embedding client is available.
+    """Stage 6 semantic search triggers when stages 1-5 miss and embedding provider is available.
 
-    Uses a mock embedding client that returns a fake vector. Since test entities
+    Uses a mock embedding provider that returns a fake vector. Since test entities
     have no embeddings, the semantic stage should return not_found gracefully.
     """
-    # Build a mock embedding client
-    mock_embedding = MagicMock()
-    mock_response = MagicMock()
-    mock_response.data = [MagicMock(embedding=[0.1] * 4096)]
-    mock_embedding.embeddings = MagicMock()
-    mock_embedding.embeddings.create = AsyncMock(return_value=mock_response)
+    # Build a mock embedding provider conforming to EmbeddingProvider protocol
+    mock_provider = MagicMock()
+    mock_provider.dimension = 768
+    mock_provider.embed_query = AsyncMock(return_value=[0.1] * 768)
 
     result = await resolve_entity(
         session=test_session,
         query="zzz_completely_unmatchable_xyz_42",  # Won't match any stage 1-5
         kind=None,
-        embedding_client=mock_embedding,
-        embedding_model="test-model",
+        embedding_provider=mock_provider,
         limit=20,
     )
 
@@ -80,17 +77,16 @@ async def test_resolve_semantic_stage_with_mock_client(test_session: AsyncSessio
 
 @pytest.mark.asyncio
 async def test_resolve_semantic_stage_handles_client_error(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Stage 6 gracefully handles embedding client errors."""
-    mock_embedding = MagicMock()
-    mock_embedding.embeddings = MagicMock()
-    mock_embedding.embeddings.create = AsyncMock(side_effect=RuntimeError("API down"))
+    """Stage 6 gracefully handles embedding provider errors."""
+    mock_provider = MagicMock()
+    mock_provider.dimension = 768
+    mock_provider.embed_query = AsyncMock(side_effect=RuntimeError("API down"))
 
     result = await resolve_entity(
         session=test_session,
         query="zzz_completely_unmatchable_xyz_42",
         kind=None,
-        embedding_client=mock_embedding,
-        embedding_model="test-model",
+        embedding_provider=mock_provider,
         limit=20,
     )
 

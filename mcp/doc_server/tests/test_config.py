@@ -35,12 +35,33 @@ def test_artifacts_path():
 
 
 def test_embedding_enabled_true():
-    """embedding_enabled is True when embedding_base_url is set."""
-    cfg = _make_config(embedding_base_url="http://localhost:1234")
+    """embedding_enabled is True when embedding_provider is set."""
+    cfg = _make_config(embedding_provider="local")
     assert cfg.embedding_enabled is True
 
 
 def test_embedding_enabled_false():
-    """embedding_enabled is False when embedding_base_url is None."""
-    cfg = _make_config(embedding_base_url=None)
+    """embedding_enabled is False when embedding_provider is None."""
+    cfg = _make_config(embedding_provider=None)
     assert cfg.embedding_enabled is False
+
+
+def test_embed_cache_filename_local():
+    """embed_cache_filename uses local model slug and dimension."""
+    cfg = _make_config(
+        embedding_provider="local",
+        embedding_local_model="BAAI/bge-base-en-v1.5",
+        embedding_dimension=768,
+    )
+    assert cfg.embed_cache_filename == "embed_cache_BAAI-bge-base-en-v1.5_768.pkl"
+
+
+def test_embed_cache_filename_hosted():
+    """embed_cache_filename uses hosted model slug and dimension."""
+    cfg = _make_config(
+        embedding_provider="hosted",
+        embedding_model="text-embedding-3-large",
+        embedding_dimension=4096,
+        embedding_base_url="http://localhost:4000/v1",
+    )
+    assert cfg.embed_cache_filename == "embed_cache_text-embedding-3-large_4096.pkl"

@@ -17,7 +17,7 @@ async def test_search_exact_match_boost(test_session: AsyncSession, sample_entit
     results, mode = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_client=None,  # Keyword-only mode
+        embedding_provider=None,  # Keyword-only mode
         limit=20,
     )
 
@@ -35,7 +35,7 @@ async def test_search_with_kind_filter(test_session: AsyncSession, sample_entiti
     results, mode = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_client=None,
+        embedding_provider=None,
         kind="function",
         limit=20,
     )
@@ -49,7 +49,7 @@ async def test_search_with_capability_filter(test_session: AsyncSession, sample_
     results, mode = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_client=None,
+        embedding_provider=None,
         capability="combat",
         limit=20,
     )
@@ -63,7 +63,7 @@ async def test_search_with_min_doc_quality(test_session: AsyncSession, sample_en
     results, mode = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_client=None,
+        embedding_provider=None,
         min_doc_quality="high",
         limit=20,
     )
@@ -77,7 +77,7 @@ async def test_search_provenance_tagging(test_session: AsyncSession, sample_enti
     results, mode = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_client=None,
+        embedding_provider=None,
         limit=20,
     )
 

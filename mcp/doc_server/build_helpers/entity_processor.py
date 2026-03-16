@@ -19,6 +19,7 @@ from build_helpers.artifact_models import (
     DoxygenEntity,
     EntityDatabase,
 )
+from build_helpers.entity_ids import SignatureMap
 from server.enums import DocQuality, DocState
 from server.logging_config import log
 
@@ -93,15 +94,20 @@ class MergedEntity:
         return self.doc.system if self.doc else None
 
 
-def merge_entities(entity_db: EntityDatabase, doc_db: DocumentDB) -> list[MergedEntity]:
+def merge_entities(
+    entity_db: EntityDatabase,
+    doc_db: DocumentDB,
+    sig_map: SignatureMap,
+) -> list[MergedEntity]:
     """
-    Merge entity database and documentation database via 1:1 join.
+    Merge entity database and documentation database via signature_map lookup.
 
-    Join key: (compound_id, signature)
+    Uses signature_map.json as source of truth for entity_id → doc_db key.
 
     Args:
         entity_db: Entity database from code_graph.json
         doc_db: Documentation database from doc_db.json
+        sig_map: Canonical entity_id ↔ doc_db key mapping
 
     Returns:
         List of merged entity records
@@ -112,17 +118,13 @@ def merge_entities(entity_db: EntityDatabase, doc_db: DocumentDB) -> list[Merged
     unmatched_entities = 0
 
     for entity in entity_db.entities.values():
-        compound_id = entity.id.compound
+        entity_id = str(entity.id)
 
-        # Try to find matching doc by signature
-        # Doc keys are (compound_id, signature)
         doc = None
-        if compound_id in doc_db.docs:
-            # Try exact signature match first
-            for sig, candidate in doc_db.docs[compound_id].items():
-                if sig == entity.name or sig.startswith(entity.name):
-                    doc = candidate
-                    break
+        doc_key = sig_map.doc_key_for(entity_id)
+        if doc_key is not None:
+            compound_id, signature = doc_key
+            doc = doc_db.get_doc(compound_id, signature)
 
         if doc is None:
             unmatched_entities += 1
@@ -280,6 +282,11 @@ def assign_capabilities(
     """
     log.info("Assigning capabilities from capability graph")
 
+    # TODO: capability_graph.json members use bare names ("act_bug") and scoped
+    #   names ("Logging::bug"), neither of which is an entity_id.  Name-based
+    #   matching is lossy when names collide (e.g., 38 entities named "name").
+    #   Fix requires adding entity_ids to capability_graph.json members in the
+    #   gen_docs pipeline.
     name_to_cap: dict[str, str] = {}
     capabilities = cap_graph.get("capabilities", {})
     for cap_name, cap_data in capabilities.items():

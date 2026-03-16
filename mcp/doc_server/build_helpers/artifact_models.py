@@ -12,18 +12,17 @@ from __future__ import annotations
 
 import ast
 import json
-import re
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Dict, Optional
 
 import networkx as nx
 
+from build_helpers.entity_ids import split_entity_id
+
 # ---------------------------------------------------------------------------
 # Entity ID helpers
 # ---------------------------------------------------------------------------
-
-_MEMBER_RE = re.compile(r"^(.*)_([0-9a-z]{2}[0-9a-f]{30,})$")
 
 
 @dataclass
@@ -47,10 +46,8 @@ class EntityID:
 
     @staticmethod
     def from_str(entity_id: str) -> EntityID:
-        m = _MEMBER_RE.match(entity_id.strip())
-        if m:
-            return EntityID(compound=m.group(1), member=m.group(2))
-        return EntityID(compound=entity_id)
+        compound, member = split_entity_id(entity_id)
+        return EntityID(compound=compound, member=member)
 
 
 # ---------------------------------------------------------------------------

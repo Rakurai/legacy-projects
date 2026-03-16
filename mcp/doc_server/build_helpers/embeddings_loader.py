@@ -4,8 +4,8 @@ Embeddings Loader - Load, generate, and attach embedding vectors.
 Supports config-aware artifact naming (embed_cache_{model}_{dim}.pkl).
 Can generate embeddings on demand via an EmbeddingProvider when no artifact exists.
 
-Generation iterates doc_db.json entries directly (keyed by mid), matching the
-original regen_embeddings.py pipeline. Every doc entry gets embedded.
+Generation iterates doc_db.json entries directly, using signature_map to convert
+doc_db keys to entity_ids. Every doc entry with a signature_map mapping gets embedded.
 """
 
 import json
@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from build_helpers.embed_text import build_embed_text
+from build_helpers.entity_ids import SignatureMap
 from build_helpers.entity_processor import MergedEntity
 from server.logging_config import log
 
@@ -28,14 +29,21 @@ def get_embed_cache_path(artifacts_dir: Path, config: "ServerConfig") -> Path:
     return artifacts_dir / config.embed_cache_filename
 
 
-def load_embeddings(artifacts_dir: Path, config: "ServerConfig") -> dict[str, list[float]] | None:
+def load_embeddings(
+    artifacts_dir: Path,
+    config: "ServerConfig",
+    sig_map: SignatureMap,
+) -> dict[str, list[float]] | None:
     """Load embeddings from a config-derived artifact file.
+
+    Normalises keys to entity_id strings via signature_map when the cached
+    artifact was produced with an older key format.
 
     Returns:
         Dict mapping entity_id → embedding vector, or None if the file doesn't exist.
 
     Raises:
-        RuntimeError: If the artifact exists but is corrupt (unpickling fails).
+        RuntimeError: If the artifact exists but is corrupt.
     """
     embeddings_path = get_embed_cache_path(artifacts_dir, config)
 
@@ -54,11 +62,15 @@ def load_embeddings(artifacts_dir: Path, config: "ServerConfig") -> dict[str, li
             f"Delete the file and re-run the build to regenerate. Error: {e}"
         ) from e
 
-    # Convert keys to entity_id strings (handles both tuple and string keys)
     embeddings: dict[str, list[float]] = {}
     for key, embedding in raw_embeddings.items():
-        entity_id = f"{key[0]}_{key[1]}" if isinstance(key, tuple) else str(key)
-        embeddings[entity_id] = embedding
+        entity_id = str(key)
+        if sig_map.has_entity(entity_id):
+            embeddings[entity_id] = embedding
+        else:
+            # Key may be a doc_db key string or compound_id from older artifact.
+            # Skip unrecognised keys; a rebuild will regenerate with correct keys.
+            pass
 
     log.info("Embeddings loaded", embedding_count=len(embeddings))
     return embeddings
@@ -68,23 +80,21 @@ def generate_embeddings(
     artifacts_dir: Path,
     provider: "EmbeddingProvider",
     config: "ServerConfig",
+    sig_map: SignatureMap,
 ) -> dict[str, list[float]]:
     """Generate embeddings for every doc_db.json entry, save artifact.
 
-    Iterates the raw doc_db.json, builds Doxygen-formatted text for each
-    entry (matching the original regen_embeddings.py pipeline), batch-embeds
-    via the provider, and saves to a pickle artifact using atomic rename.
-
-    Embeddings are keyed by the doc's ``mid`` field, which corresponds to
-    entity_id in the entities table.
+    Uses signature_map to convert each doc_db key to an entity_id.
+    Entries without a signature_map mapping are skipped.
 
     Args:
         artifacts_dir: Directory containing doc_db.json and for the artifact file.
         provider: An active EmbeddingProvider instance.
         config: Server config (for filename derivation).
+        sig_map: Canonical entity_id ↔ doc_db key mapping.
 
     Returns:
-        Dict mapping entity_id (mid) → embedding vector.
+        Dict mapping entity_id → embedding vector.
     """
     doc_db_path = config.artifacts_path / "doc_db.json"
     log.info("Loading doc_db.json for embedding generation", path=str(doc_db_path))
@@ -94,16 +104,16 @@ def generate_embeddings(
 
     log.info("Generating embeddings from doc_db", doc_count=len(raw_docs))
 
-    # Build texts keyed by mid (entity_id)
-    mids: list[str] = []
+    # Build texts keyed by entity_id via signature_map
+    entity_ids: list[str] = []
     texts: list[str] = []
 
-    for _key_str, doc in raw_docs.items():
-        mid = doc.get("mid", "")
-        if not mid:
+    for key_str, doc in raw_docs.items():
+        eid = sig_map.entity_id_for_doc_key(key_str)
+        if eid is None:
             continue
         text = build_embed_text(doc)
-        mids.append(str(mid))
+        entity_ids.append(eid)
         texts.append(text)
 
     log.info("Docs to embed", count=len(texts))
@@ -116,8 +126,8 @@ def generate_embeddings(
     vectors = provider.embed_documents_sync(texts)
 
     embeddings: dict[str, list[float]] = {}
-    for mid, vec in zip(mids, vectors, strict=True):
-        embeddings[mid] = vec
+    for eid, vec in zip(entity_ids, vectors, strict=True):
+        embeddings[eid] = vec
 
     log.info("Embeddings generated", count=len(embeddings))
 

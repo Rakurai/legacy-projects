@@ -43,16 +43,15 @@ def load_graph_edges(
 
     g = load_gml_graph(gml_path)
 
-    # Build mapping from graph node ID to entity ID
-    # Graph uses: member hash for members, compound ID for compounds
-    # Entity uses: "compound_member" for members, "compound" for compounds
+    # Build mapping from graph node ID to entity ID.
+    # GML uses: bare member hash for members, compound_id string for compounds.
+    # Members and compounds are mapped separately to avoid compound overwrite.
     node_to_entity: dict[str, str] = {}
     for entity in merged_entities:
-        # For members: map member hash -> full entity_id
         if entity.member_id:
             node_to_entity[entity.member_id] = entity.entity_id
-        # For compounds: map compound -> entity_id (same)
-        node_to_entity[entity.compound_id] = entity.entity_id
+        else:
+            node_to_entity[entity.compound_id] = entity.entity_id
 
     edges_set: set[tuple[str, str, str]] = set()
     skipped = 0

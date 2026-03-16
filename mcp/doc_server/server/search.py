@@ -20,9 +20,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
-from sqlalchemy import func, literal, or_
+from sqlalchemy import Select, func, literal, or_
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlmodel import Select, select
+from sqlmodel import select
 
 if TYPE_CHECKING:
     from server.embedding import EmbeddingProvider

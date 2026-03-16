@@ -4,6 +4,7 @@ Artifact Loaders - Validation and parsing of pre-computed artifacts.
 Reuses existing parsers from .ai/gen_docs/clustering/ to load:
 - code_graph.json (entity database via doxygen_parse)
 - doc_db.json (documentation database via doc_db)
+- signature_map.json (entity_id ↔ doc_db key mapping — loaded via entity_ids.SignatureMap)
 - capability_defs.json (capability group definitions)
 - capability_graph.json (capability dependencies)
 
@@ -51,6 +52,7 @@ def validate_artifacts(artifacts_dir: Path) -> None:
         "code_graph.json",
         "code_graph.gml",
         "doc_db.json",
+        "signature_map.json",
         "capability_defs.json",
         "capability_graph.json",
     ]

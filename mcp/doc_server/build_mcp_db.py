@@ -25,6 +25,7 @@ from build_helpers.embeddings_loader import (
     generate_embeddings,
     load_embeddings,
 )
+from build_helpers.entity_ids import SignatureMap
 from build_helpers.entity_processor import (
     MergedEntity,
     assign_capabilities,
@@ -315,47 +316,56 @@ async def main() -> None:
     # Stage 1: Validate artifacts
     validate_artifacts(config.artifacts_path)
 
-    # Stage 2: Load entities and docs
+    # Stage 2: Load signature map (source of truth for entity_id <-> doc_db key)
+    sig_map = SignatureMap.load(config.artifacts_path)
+
+    # Stage 3: Load entities and docs
     entity_db = load_entities(config.artifacts_path)
     doc_db = load_documents(config.artifacts_path)
 
-    # Stage 3: Merge
-    merged_entities = merge_entities(entity_db, doc_db)
+    # Stage 4: Merge
+    merged_entities = merge_entities(entity_db, doc_db, sig_map)
 
-    # Stage 4: Extract source code
+    # Stage 5: Extract source code
     extract_source_code(merged_entities, config.project_root)
 
-    # Stage 5: Load capabilities (before graph metrics so bridge detection has capability data)
+    # Stage 6: Load capabilities (before graph metrics so bridge detection has capability data)
     cap_defs = load_capability_defs(config.artifacts_path)
     cap_graph = load_capability_graph(config.artifacts_path)
 
-    # Stage 6: Assign capabilities to entities from cap_graph members
+    # Stage 7: Assign capabilities to entities from cap_graph members
     assign_capabilities(merged_entities, cap_graph)
 
-    # Stage 7: Load graph and compute metrics (bridge detection needs capabilities)
+    # Stage 8: Load graph and compute metrics (bridge detection needs capabilities)
+    # TODO: 785 entity_ids exist in signature_map + doc_db but not code_graph.json
+    #   (e.g., Vnum::operator< / member 1a29987e54e75885b7cd1d114ddf0f04f3).
+    #   These are real entities with docs but were excluded from the GML graph
+    #   for unknown reasons. Currently we drop them; revisit after investigating
+    #   the graph generation pipeline in .ai/gen_docs/clustering/doxygen_graph.py.
+    #   See .ai/artifacts/unmapped.json for full list.
     edges = load_graph_edges(config.artifacts_path, merged_entities)
     compute_fan_metrics(merged_entities, edges)
     compute_bridge_flags(merged_entities, edges)
     compute_side_effect_markers(merged_entities, edges)
 
-    # Stage 8: Compute other derived fields
+    # Stage 9: Compute other derived fields
     compute_doc_quality(merged_entities)
     compute_is_entry_point(merged_entities)
 
-    # Stage 9: Load or generate embeddings
+    # Stage 10: Load or generate embeddings
     provider = create_provider(config)
-    embeddings = load_embeddings(config.artifacts_path, config)
+    embeddings = load_embeddings(config.artifacts_path, config, sig_map)
 
     if embeddings is None and provider is not None:
         log.info("No cached artifact found; generating embeddings from doc_db via provider")
-        embeddings = generate_embeddings(config.artifacts_path, provider, config)
+        embeddings = generate_embeddings(config.artifacts_path, provider, config, sig_map)
     elif embeddings is None and provider is None:
         log.warning("No embedding provider configured and no artifact found; entities will have null embeddings")
         embeddings = {}
 
     attach_embeddings(merged_entities, embeddings)
 
-    # Stage 10: Populate database
+    # Stage 11: Populate database
     db_manager = DatabaseManager(config)
 
     # DDL (tables + indexes) uses engine directly, outside session

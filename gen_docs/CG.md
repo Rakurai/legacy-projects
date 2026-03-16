@@ -296,6 +296,24 @@ A chunk should satisfy most of these:
 * suitable for implementation under Evennia conventions
 * testable for both semantics and presentation
 
+### 7.4 Implementation modes
+
+Not all chunks represent the same kind of work. The chunk registry classifies each chunk into one of five implementation modes:
+
+* **native** — real target-side game logic that must be built. Evennia does not provide this; it is the actual migration work. Examples: combat, movement, affects, objects, state_rules.
+* **adaptation** — a thin compatibility or integration layer over Evennia/Python behavior. The underlying capability exists in the target but needs a game-specific policy or presentation layer. Examples: output (over Evennia msg), entity_lookup (over DefaultObject.search), display (over return_appearance hooks).
+* **reference** — preserves understanding and supports edge-case mapping, but is not implemented as a target-side system. The legacy behavior is replaced by Python stdlib or Evennia built-ins. Examples: flags (Evennia tags/locks), string_ops (Python str), memory (Python GC).
+* **replacement** — replaced by an existing Evennia contrib or standard tool. Examples: text_editing (EvEditor), imaging (web-based map or deferred).
+* **substrate** — Evennia already provides this infrastructure. The game-specific integration is an attachment to other chunks, not a standalone deliverable. Example: runtime (Evennia's game loop, tickers, Scripts).
+
+This classification prevents reference and substrate concerns from consuming implementation energy that should go to native and adaptation chunks.
+
+### 7.5 Umbrella chunks
+
+Some chunks are internally coherent at the planning level but will likely need multiple spec dossiers during implementation. These are marked as **umbrella chunks** in the registry. They are not split during chunk formation — splitting happens during spec writing when the dossier reveals clearly separate implementation surfaces.
+
+Current umbrella chunks: world_structure, affects, persistence, objects.
+
 ---
 
 ## 8. Recommended Semantic Model
@@ -482,38 +500,48 @@ The v2 pipeline (`build_capability_graph.py`) now produces a complete View A (§
 
 The 30-group taxonomy types every group as domain, policy, projection, infrastructure, or utility. Dependency edges are typed via a (src_type, tgt_type) → edge_kind matrix. Wave computation excludes utility edges to prevent helpers from dominating ordering. This means the evidence graph already carries the **semantic typing** anticipated by View B (§6.2) at the group level.
 
-### 12.3 Phase 3: add use-case and chunk modeling — NEXT
+### 12.3 Phase 3: chunk formation — ✅ DONE
 
-The evidence graph (View A) and semantic typing (View B at group level) are now stable. The next step is to bridge from what the code *does* to what should be *implemented* — that is, to produce View C (§6.3): the implementation chunk plan.
+The evidence graph (View A) and semantic typing (View B at group level) are now stable. Phase 3 produced View C (§6.3): the implementation chunk plan.
 
-This requires two new layers that do not yet exist:
+The primary unit of chunk formation is the **capability group**, not the entry point. The 30 capability groups and their ~200 typed dependency edges form a tractable graph that can be reasoned about directly. Entry points are not implementation units, but they remain important validation inputs because they reveal which combinations of capabilities deliver user-visible behavior.
 
-**Use-case layer.** §9 defines use cases as the bridge between commands and chunks. The evidence graph currently connects entry points directly to capabilities. A use-case layer would cluster entry points by shared intent (e.g. "initiate hostile action," "inspect local context") so that chunk formation can reason about user-visible behavior rather than individual command handlers.
+Use-case identification (§9) is deferred to Phase 5, where it informs spec writing and behavioral contracts. Chunk formation does not require it.
 
-**Chunk formation.** §7.2 defines formation rules. Chunks are not 1:1 with capabilities — they may merge tightly-coupled groups, split oversized ones, or bundle a domain group with its required policy/projection layer. The formation step needs the typed dependency edges and the use-case clusters as inputs.
+#### Chunk formation logic
+
+Chunks are formed by bundling capability groups according to dependency coupling, type alignment, and implementation pragmatics:
+
+1. **Service chunks from fan-in.** Groups with high fan-in are universal services: nearly every domain chunk will depend on them, so they must be implemented first as foundational infrastructure. The evidence graph already provides fan-in data. Candidates include state_rules, output, string_ops, flags, attributes, world_structure, admin, numerics.
+
+2. **Domain chunks.** Each domain capability (combat, magic, movement, objects, affects, etc.) forms a natural candidate chunk. Where a domain group has a tight dependency on a specific policy or projection group that serves primarily that domain, bundle them together.
+
+3. **Merge or split by size and coupling.** Small groups that exist only to serve one domain group are absorbed into it. Oversized groups that serve multiple unrelated consumers may warrant splitting, but the default is to keep them whole.
+
+4. **Leaf capabilities.** Groups with zero fan-in (economy, imaging, notes, npc_behavior, pvp, quests, runtime, social, text_editing) depend on services and other domain groups but nothing depends on them. They can be scheduled freely once their dependencies are satisfied.
+
+#### Chunk sequencing
+
+Ordering follows from the dependency DAG:
+
+- **Foundation tier**: universal-fan-in service chunks (implement first)
+- **Shared tier**: moderate-fan-in capabilities used by multiple domain chunks
+- **Domain tier**: domain chunks in wave order, subject to dependency constraints
+- **Leaf tier**: zero-fan-in domain chunks, schedulable in any order once dependencies exist
+
+Waves from the evidence graph provide initial ordering within each tier.
+
+#### Entry points as consequences
+
+Each chunk enables a set of entry points. When a chunk and all its transitive dependencies are implemented, the entry points that depend exclusively on those capabilities become available. This is tracked as a chunk annotation — a consequence of chunk completion, not a formation input.
 
 #### Division of labor
 
 Mechanics should propose; humans should ratify semantics.
 
-**Automated** — service-chunk identification from fan-in and dependency shape; entry-point clustering from capability profiles; suggested merges/splits from similarity and dependency overlap; outlier and suspicious-cluster warnings.
+**Automated** — fan-in tier assignment; default bundling via dependency shape; chunk-to-chunk dependency edges; entry-point enablement annotation; sequencing from wave structure and topological order; warnings for over-large chunks, cycles, and orphans.
 
-**Curated** — use-case names; final chunk boundaries; whether a capability is standalone or bundled; target-side packaging assumptions; readiness targets and sequencing exceptions.
-
-#### Similarity model
-
-Raw capability-set Jaccard is dominated by ubiquitous support groups (state_rules, output, entity_lookup appear almost everywhere). Domain-only Jaccard corrects for that but discards meaningful policy/projection distinctions.
-
-Use a typed weighted similarity with inverse-frequency downweighting:
-
-1. Build per-entry-point capability vectors partitioned by type (domain, policy, projection, infrastructure, utility).
-2. Apply IDF-style weighting: capabilities that appear in nearly every entry point contribute less.
-3. Compute similarity with domain-heavy weights (e.g. domain 0.60, policy 0.20, projection 0.10, infrastructure 0.10).
-4. Cluster primarily on domain-heavy similarity; refine within each family using policy/projection cues and entry-point description embeddings.
-
-#### Drafting window
-
-Start with the earliest entry points that expose meaningful domain behavior, not merely the lowest wave numbers. Use waves 0–6 as the initial search window, but filter out preference-only and configuration-only commands. The cohort should include at least movement, room inspection, object manipulation, combat, magic, skills/progression, notes/social, and entity lookup.
+**Curated** — final chunk boundaries; whether a capability is standalone or bundled; target-side packaging assumptions; readiness targets and sequencing exceptions.
 
 #### Concrete steps
 
@@ -521,58 +549,88 @@ Phase 3 is structured as two passes.
 
 **Pass 1 — automated draft:**
 
-1. Compute typed weighted similarity across all entry points.
-2. Cluster entry points into candidate use-case families.
-3. Identify high-fan-in capability groups as service-chunk candidates.
-4. Emit suggested chunk candidates with supporting evidence, merge/split warnings, and cluster explanations.
+1. Read the capability dependency DAG from `capability_graph.json`.
+2. Compute fan-in tiers (universal, shared, leaf) for each capability group.
+3. Propose default chunk boundaries: one chunk per domain group (bundled with tightly-coupled policy/projection groups where appropriate); one service chunk per high-fan-in group.
+4. Compute chunk-to-chunk dependency edges from the underlying capability edges.
+5. Sequence chunks into implementation tiers using topological ordering of the chunk DAG.
+6. Annotate each chunk with the entry points it enables.
+7. Emit warnings for over-large chunks, dependency cycles, and orphan capabilities.
 
-Output artifacts: `candidate_use_cases.json`, `candidate_chunks.json`
+Output artifact: `candidate_chunks.json`
 
 **Pass 2 — curated review:**
 
-5. Assign human-readable use-case names.
-6. Accept, reject, split, or merge chunk candidates.
-7. Annotate chunk rationale and readiness targets.
-8. Freeze first-draft `chunk_registry.json`.
+8. Accept, reject, split, or merge chunk candidates.
+9. Assign implementation mode to each chunk (§7.4): native, adaptation, reference, replacement, or substrate.
+10. Assign planning phase: B (foundational semantics), C (vertical slices), or D (heavier systemic features).
+11. Mark umbrella chunks (§7.5) that will need multiple spec dossiers.
+12. Annotate chunk rationale and readiness targets.
+13. Freeze `chunk_registry.json`.
 
-Input artifacts: `capability_graph.json`, `capability_defs.json`
+Input artifacts: `candidate_chunks.json`, `capability_graph.json`, `capability_defs.json`
 Output artifact: `chunk_registry.json`
 
-### 12.4 Phase 4: refine dependency semantics
+#### Results
 
-Once the chunk registry exists, its dependency edges inherit from the capability-level typed edges. Some of those edges will be wrong or incomplete at the chunk level because call-count-based evidence does not capture all dependency kinds.
+The chunk registry contains 30 chunks classified as:
 
-This phase refines chunk-to-chunk dependencies using the chunk registry as the unit of analysis.
+* **19 native** — the real implementation work (world_structure, state_rules, attributes, visibility_rules, skills_progression, movement, affects, objects, combat, quests, clans, pvp, social, notes, economy, npc_behavior, magic, numerics, persistence)
+* **5 adaptation** — thin layers over Evennia surfaces (entity_lookup, output, display, arg_parsing, admin)
+* **3 reference** — legacy behavior mapping only (flags, string_ops, memory)
+* **2 replacement** — handled by Evennia contribs/tools (text_editing, imaging)
+* **1 substrate** — Evennia-provided infrastructure (runtime)
 
-#### What the evidence graph cannot tell us
+Planning phases reflect target-side leverage rather than raw graph wave order:
+
+* **Phase B** (foundational semantics): world_structure, state_rules, attributes, visibility_rules, output, entity_lookup, skills_progression, admin
+* **Phase C** (first vertical slices): movement + display (inspect/navigate), objects (manipulate), social + notes (communication)
+* **Phase D** (heavier systemic features): affects, combat, magic, quests, clans, pvp, npc_behavior, economy, persistence
+
+Four chunks are marked as umbrellas: world_structure, affects, persistence, objects.
+
+### 12.4 Phase 4: target-surface mapping and dependency refinement — NEXT
+
+The chunk registry is now stable. The remaining phases require direct knowledge of the target framework (Evennia conventions, typeclass strategy, handler patterns, contrib availability). They are designed to be executed in the target implementation repository by an agent with access to both the chunk registry and the Evennia codebase.
+
+#### Phase 4a: target substrate decisions
+
+Before any chunk implementation, the target repository must commit to architectural surfaces:
+
+* room/exit/object/character typeclass strategy
+* handler strategy (traits, buffs, skills, clans, etc.)
+* search/lookup policy approach
+* messaging/display/appearance approach
+* persistence strategy (AttributeHandler, SaverDict, etc.)
+* Scripts/ticker/runtime strategy
+
+Without these decisions, early chunks risk being implemented in incompatible shapes. This is architectural commitment, not chunk implementation.
+
+#### Phase 4b: dependency refinement
+
+The chunk registry's dependency edges inherit from capability-level typed edges. Some will be wrong or incomplete at the chunk level because call-count-based evidence does not capture all dependency kinds.
 
 The current typed edges (requires_core, requires_policy, etc.) are derived from static call relationships. They miss:
 
-* **State dependencies.** A chunk may read or write shared state (e.g. character attributes, room contents) that another chunk also touches, without any direct function call between them.
-* **Runtime coupling.** Tick-driven systems (combat rounds, affect decay, weather) create implicit dependencies that are invisible in the call graph.
-* **Ordering constraints from user expectations.** A player expects `look` to reflect the results of `get` immediately, but there may be no call edge between them.
-* **Evennia-side architectural coupling.** Two chunks may need to share a typeclass, handler, or database table in the target system even though they are independent in the legacy code.
+* **State dependencies.** A chunk may read or write shared state that another chunk also touches, without any direct call.
+* **Runtime coupling.** Tick-driven systems create implicit dependencies invisible in the call graph.
+* **Ordering constraints from user expectations.** A player expects `look` to reflect `get` immediately, but there may be no call edge.
+* **Evennia-side architectural coupling.** Two chunks may share a typeclass, handler, or database table in the target system.
 
-#### Concrete steps
+Refinement steps:
 
-1. **Audit chunk-to-chunk edges.** For each dependency edge in the chunk registry, verify whether it represents a true blocking dependency, a soft co-occurrence, or an artifact of shared utility code. Tag edges as `blocking`, `supportive`, or `informational`.
-
-2. **Add state-based dependencies.** Using the entity database and generated documentation, identify shared data structures (Character fields, Object fields, Room state) and add `reads_state_from` / `writes_state_for` edges where chunks touch the same state.
-
-3. **Add runtime dependencies.** Identify tick-driven and event-driven entry points (update functions, event handlers) and connect them to the chunks whose behavior they drive. These become `updated_by_runtime` edges.
-
-4. **Add target-side coupling notes.** Where two chunks will share an Evennia-side surface (typeclass, handler, contrib), annotate the dependency even if legacy code shows no link.
-
-5. **Re-sequence waves.** Recompute the wave ordering using the refined edge set. Compare against the evidence-only ordering and flag meaningful changes.
+1. Audit chunk-to-chunk edges: tag as `blocking`, `supportive`, or `informational`.
+2. Add state-based dependencies from entity field usage analysis.
+3. Add runtime dependencies from tick/event entry points.
+4. Add target-side coupling notes where chunks share Evennia surfaces.
+5. Re-sequence if the refined edges change the ordering.
 
 Input artifact: `chunk_registry.json`
 Output artifact: `chunk_registry.json` (refined edges)
 
-This phase may be partially automated (state-dependency detection from entity field usage) and partially curated (runtime coupling, target-side notes).
+### 12.5 Phase 5: chunk dossiers and spec generation
 
-### 12.5 Phase 5: connect chunk planning to spec generation
-
-Once the chunk registry is stable — boundaries curated, dependencies refined — each chunk becomes a handoff unit for the coding agent. This phase generates the structured records that make that handoff repeatable.
+Each chunk becomes a handoff unit for the coding agent. This phase generates the structured records that make that handoff repeatable.
 
 #### Chunk dossiers
 
@@ -583,7 +641,7 @@ For each chunk in the registry, generate a dossier following the §11 template:
 * **Behavioral contract** (§11.3) — derived from generated documentation and command-level analysis. This is the section that requires the most new work: it must describe what the chunk *does* in user-visible terms, not just what functions it contains.
 * **Target-system design constraints** (§11.4) — curated per chunk, informed by Evennia conventions and prior target-architecture decisions.
 * **Spec requirements** (§11.5) — open questions, acceptance scenarios, comparison points against legacy behavior.
-* **Implementation planning** (§11.6) — predecessor chunks, blocking dependencies, follow-on chunks. Derived from the refined dependency graph.
+* **Implementation planning** (§11.6) — predecessor chunks, blocking dependencies, follow-on chunks.
 
 #### Spec templates
 
@@ -602,15 +660,20 @@ Establish a lightweight linking convention so that:
 * every implementation module points to its spec
 * every validation case points to its behavioral contract
 
-This does not need to be a sophisticated tool — stable identifiers and cross-reference fields in the JSON artifacts are sufficient.
+Stable identifiers and cross-reference fields in the JSON artifacts are sufficient.
 
-#### Concrete steps
+#### Implementation progression
 
-1. **Scaffold dossiers.** Auto-generate the evidence-derivable sections (identity, legacy evidence, implementation planning) from the chunk registry and evidence graph.
-2. **Draft behavioral contracts.** For each chunk, synthesize a behavioral description from the generated documentation of its member functions. Flag sections that need human review.
-3. **Define readiness criteria.** For each chunk, specify what constitutes structural, interactive, behavioral, system, and UX-faithful readiness.
-4. **Produce spec templates.** Create a standard template and populate it for the first batch of chunks (starting with service chunks and early-wave domain chunks).
-5. **Establish traceability IDs.** Assign stable identifiers to chunks and define the cross-reference convention.
+Specs should be written in planning-phase order, not strict graph-wave order:
+
+1. **Phase B specs first** — foundational semantics: world_structure, state_rules, attributes, visibility_rules, output (adapter), entity_lookup (adapter), skills_progression, admin (adapter).
+2. **Phase C specs next** — first vertical playable slices:
+   * Slice 1 (inspect/navigate): movement + display + supporting foundations
+   * Slice 2 (manipulate objects): objects + entity_lookup + supporting policy
+   * Slice 3 (communication): social + notes
+3. **Phase D specs last** — heavier systemic features: affects, combat, magic, quests, clans, pvp, npc_behavior, economy, persistence.
+
+The first playable milestone is a thin vertical slice: room exists, can move, can look, can resolve targets, can pick up/drop basic objects, messaging roughly works.
 
 Input artifact: `chunk_registry.json` (refined)
 Output artifacts: `chunk_dossiers/` (per-chunk structured records), spec template, traceability index
@@ -669,32 +732,17 @@ This reinforces the point that graph extraction is an input to implementation qu
 
 The next rework of the prototype should aim to produce the following artifacts.
 
-### 15.1 Revised evidence export
+### 15.1 Revised evidence export — DONE
 
-A structured export that preserves:
+Produced by `build_capability_graph.py` as `capability_graph.json`. Contains all entry-point families (do_\*, spell_\*, spec_\*), transitive callees, locked-list classification with embedding fallback, typed dependency edges, wave ordering, and provenance metadata.
 
-* commands
-* direct callees
-* classified functions
-* matching provenance
-* uncategorized residual classes
-* raw capability dependencies
-* confidence metadata
+### 15.2 Semantic interpretation layer — DONE
 
-### 15.2 Semantic interpretation layer
+The 30-group taxonomy in `capability_defs.json` types every group as domain, policy, projection, infrastructure, or utility. Dependency edges are typed via a (src_type, tgt_type) → edge_kind matrix. This layer is already embedded in the evidence graph rather than maintained as a separate artifact.
 
-A curated mapping from raw capability buckets into typed semantic nodes.
+### 15.3 Initial chunk registry — DONE
 
-### 15.3 Initial chunk registry
-
-A first-pass registry of implementation chunks with:
-
-* chunk ID
-* purpose
-* dependencies
-* related commands/use cases
-* readiness targets
-* target-side notes
+Produced by `build_chunks.py` (automated draft) and `build_registry.py` (curated decisions) as `chunk_registry.json`. Contains 30 chunks with implementation mode classification, planning phase assignment, dependency edges, entry-point enablement annotations, umbrella markers, and reviewer decision notes.
 
 ### 15.4 Chunk spec template
 
@@ -715,18 +763,16 @@ A simple, stable way to connect:
 
 ## 16. Decision Summary
 
-The capability graph should remain part of the migration process, but with a narrower and more precise role.
+The capability graph serves as a multi-view analysis pipeline:
 
-It should be treated as a multi-view analysis pipeline:
+1. **evidence graph** — code-derived structure and classification — ✅ `capability_graph.json`
+2. **semantic model** — interpreted migration-relevant responsibilities and dependencies — ✅ `capability_defs.json` (30 typed groups)
+3. **implementation chunk plan** — prioritized work packages classified by implementation mode — ✅ `chunk_registry.json`
+4. **traceability layer** — links between evidence, understanding, specs, code, and validation — deferred to Phase 5
 
-1. **evidence graph** — code-derived structure and classification
-2. **semantic model** — interpreted migration-relevant responsibilities and dependencies
-3. **implementation chunk plan** — prioritized work packages for analysis, spec writing, and coding-agent implementation
-4. **traceability layer** — links between evidence, understanding, specs, code, and validation
+Views A, B, and C are complete. The pipeline's strongest feature is intact: planning decisions are grounded in auditable evidence from the legacy codebase rather than intuition alone.
 
-The current prototype is therefore not a dead end. It is the first stage of a larger migration factory.
-
-The rework should focus on evolving it from “call-graph-based capability ordering” into “code-backed chunk discovery and planning,” while preserving its strongest feature: grounding planning decisions in auditable evidence from the legacy codebase rather than relying only on intuition.
+The remaining work (Phases 4–5: target-surface mapping, dependency refinement, dossier/spec generation) requires direct access to the target framework and belongs in the implementation repository. The chunk registry is the handoff artifact.
 
 ---
 

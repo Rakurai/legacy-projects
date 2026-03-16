@@ -1,0 +1,3316 @@
+{
+  "metadata": {
+    "description": "Phase 3 Pass 1 \u2014 candidate implementation chunks",
+    "source": "capability_graph.json",
+    "total_chunks": 30,
+    "total_chunk_edges": 114,
+    "implementation_waves": 13,
+    "cycles": [],
+    "fan_in_thresholds": {
+      "universal": 10,
+      "shared": 3
+    }
+  },
+  "chunks": {
+    "admin": {
+      "chunk_id": "admin",
+      "capabilities": [
+        "admin"
+      ],
+      "capability_type": "infrastructure",
+      "tier_num": 1,
+      "tier_name": "foundation",
+      "wave": 5,
+      "member_count": 10,
+      "fan_in_dag": 10,
+      "fan_in_all": 13,
+      "fan_out_dag": 2,
+      "fan_out_all": 5,
+      "description": "Administrative and immortal utilities: bug and diagnostic logging (formatted and timestamped), broadcasting notifications to immortals, immortal notification configuration, character restoration to full health/mana/stamina, login/logout message management, immortal staff rank derivation and comparison, immortal-specific configuration (prefix, display name), command disable checking.",
+      "migration_role": "support",
+      "target_surfaces": "admin CmdSet + logging utilities",
+      "impl_wave": 5,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "affects": {
+      "chunk_id": "affects",
+      "capabilities": [
+        "affects"
+      ],
+      "capability_type": "domain",
+      "tier_num": 2,
+      "tier_name": "shared",
+      "wave": 7,
+      "member_count": 88,
+      "fan_in_dag": 5,
+      "fan_in_all": 11,
+      "fan_out_dag": 6,
+      "fan_out_all": 10,
+      "description": "Affect lifecycle management: applying, joining, and copying affects to characters, objects, and rooms; removing affects by type, pattern, mark, or permanence; querying affect existence and finding specific instances; affect list iteration, sorting, deduplication, and checksum computation; attribute modification from affects; affect cache lookup and display; elemental effect propagation (cold, fire, acid, poison, shock); dispel checks on characters and objects; spell fading and undoing; remort-affect rolling, application, removal, and lookup; blank remort affect repair; gem effect compilation; blade enhancement; plague spreading; protection aura checks; room-level affect ticking; affect flag parsing, type lookup, and bit-to-type conversion; affect comparators for sorting by type, duration, mark, and permanence.",
+      "migration_role": "core",
+      "target_surfaces": "buffs handler or contrib + rules integration",
+      "impl_wave": 7,
+      "enables_entry_points": 4,
+      "enabled_commands": [
+        "do_dump",
+        "do_mark",
+        "do_visible"
+      ],
+      "enabled_spells": [
+        "spell_darkness"
+      ],
+      "enabled_specials": []
+    },
+    "arg_parsing": {
+      "chunk_id": "arg_parsing",
+      "capabilities": [
+        "arg_parsing"
+      ],
+      "capability_type": "utility",
+      "tier_num": 0,
+      "tier_name": "utility_foundation",
+      "wave": 10,
+      "member_count": 14,
+      "fan_in_dag": 0,
+      "fan_in_all": 7,
+      "fan_out_dag": 2,
+      "fan_out_all": 3,
+      "description": "Command-line argument tokenisation: splitting player input into tokens with quote-delimited and dot-notation handling, extracting numbered targets and quantity prefixes, type-tagged argument parsing, keyword matching and word-list checks, character name validation.",
+      "migration_role": "support",
+      "target_surfaces": "utility module + Evennia utils.search / arg parsing",
+      "impl_wave": 10,
+      "enables_entry_points": 284,
+      "enabled_commands": [
+        "do_accept",
+        "do_addapply",
+        "do_advance",
+        "do_affects",
+        "do_afk",
+        "do_alias",
+        "do_allow",
+        "do_allsave",
+        "do_alternate",
+        "do_areas",
+        "do_aura",
+        "do_autoboot",
+        "do_autograph",
+        "do_backup",
+        "do_bamfin",
+        "do_bamfout",
+        "do_ban",
+        "do_bonus",
+        "do_breakup",
+        "do_canmakebag",
+        "do_changes",
+        "do_chown",
+        "do_close",
+        "do_compare",
+        "do_config",
+        "do_consider",
+        "do_create",
+        "do_credits",
+        "do_departedlist",
+        "do_deposit",
+        "do_despell",
+        "do_disable",
+        "do_divorce",
+        "do_drink",
+        "do_echo",
+        "do_email",
+        "do_engrave",
+        "do_equipment",
+        "do_eremort",
+        "do_evolve",
+        "do_evoset",
+        "do_examine",
+        "do_extraset",
+        "do_file",
+        "do_fill",
+        "do_flag",
+        "do_fly",
+        "do_follow",
+        "do_followerlist",
+        "do_freeze",
+        "do_fry",
+        "do_fyi",
+        "do_gain",
+        "do_gamein",
+        "do_gameout",
+        "do_group",
+        "do_hedit",
+        "do_heed",
+        "do_help",
+        "do_hone",
+        "do_iclantalk",
+        "do_idea",
+        "do_identify",
+        "do_immquest",
+        "do_imotd",
+        "do_inset",
+        "do_inventory",
+        "do_invis",
+        "do_invite",
+        "do_junk",
+        "do_land",
+        "do_leader",
+        "do_levels",
+        "do_list",
+        "do_load",
+        "do_loadhelps",
+        "do_lock",
+        "do_log",
+        "do_lower",
+        "do_lurk",
+        "do_marry",
+        "do_master",
+        "do_mfind",
+        "do_mlevel",
+        "do_mpasound",
+        "do_mpecho",
+        "do_mpechoaround",
+        "do_mpechoat",
+        "do_mpjunk",
+        "do_mpoload",
+        "do_mpstat",
+        "do_mset",
+        "do_mwhere",
+        "do_newbiekit",
+        "do_newlock",
+        "do_newpasswd",
+        "do_next",
+        "do_nofollow",
+        "do_note",
+        "do_oclone",
+        "do_ofind",
+        "do_old_next",
+        "do_olevel",
+        "do_oload",
+        "do_ooc",
+        "do_open",
+        "do_oset",
+        "do_outfit",
+        "do_owner",
+        "do_page",
+        "do_paintbow",
+        "do_pardon",
+        "do_password",
+        "do_pecho",
+        "do_permit",
+        "do_personal",
+        "do_pk",
+        "do_play",
+        "do_pmote",
+        "do_pocket",
+        "do_pose",
+        "do_pour",
+        "do_practice",
+        "do_printhelps",
+        "do_propose",
+        "do_protect",
+        "do_pstat",
+        "do_put",
+        "do_qpconv",
+        "do_query",
+        "do_raffset",
+        "do_rank",
+        "do_reject",
+        "do_reload",
+        "do_remort",
+        "do_remove",
+        "do_reply",
+        "do_report",
+        "do_rest",
+        "do_revoke",
+        "do_roleplay",
+        "do_roomlist",
+        "do_rppaward",
+        "do_rset",
+        "do_rules",
+        "do_rwhere",
+        "do_sacrifice",
+        "do_save",
+        "do_scatter",
+        "do_scon",
+        "do_scroll",
+        "do_secure",
+        "do_set",
+        "do_setgamein",
+        "do_setgameout",
+        "do_showflags",
+        "do_sit",
+        "do_skillpoint",
+        "do_skills",
+        "do_sleep",
+        "do_slookup",
+        "do_snoop",
+        "do_sockets",
+        "do_spells",
+        "do_split",
+        "do_sset",
+        "do_stand",
+        "do_storage",
+        "do_story",
+        "do_string",
+        "do_switch",
+        "do_tail",
+        "do_tell",
+        "do_testpose",
+        "do_title",
+        "do_touch",
+        "do_trade",
+        "do_train",
+        "do_unalias",
+        "do_undeny",
+        "do_unlock",
+        "do_unread",
+        "do_value",
+        "do_vlist",
+        "do_vnum",
+        "do_wake",
+        "do_warp",
+        "do_where",
+        "do_whisper",
+        "do_who",
+        "do_whois",
+        "do_wimpy",
+        "do_wizgroup",
+        "do_wizlist",
+        "do_wizlock",
+        "do_yell"
+      ],
+      "enabled_spells": [
+        "spell_age",
+        "spell_armor",
+        "spell_barrier",
+        "spell_bless",
+        "spell_blindness",
+        "spell_blood_blade",
+        "spell_blood_moon",
+        "spell_bone_wall",
+        "spell_cancellation",
+        "spell_change_sex",
+        "spell_channel",
+        "spell_continual_light",
+        "spell_create_food",
+        "spell_create_sign",
+        "spell_create_spring",
+        "spell_create_water",
+        "spell_cure_blindness",
+        "spell_cure_disease",
+        "spell_cure_poison",
+        "spell_curse",
+        "spell_dazzling_light",
+        "spell_detect_evil",
+        "spell_detect_good",
+        "spell_detect_hidden",
+        "spell_detect_invis",
+        "spell_detect_magic",
+        "spell_dispel_magic",
+        "spell_divine_regeneration",
+        "spell_encampment",
+        "spell_enchant_armor",
+        "spell_enchant_weapon",
+        "spell_faerie_fire",
+        "spell_faerie_fog",
+        "spell_fear",
+        "spell_fireproof",
+        "spell_flame_blade",
+        "spell_flameshield",
+        "spell_fly",
+        "spell_focus",
+        "spell_force",
+        "spell_frenzy",
+        "spell_frost_blade",
+        "spell_full_heal",
+        "spell_giant_strength",
+        "spell_haste",
+        "spell_hex",
+        "spell_infravision",
+        "spell_invis",
+        "spell_ironskin",
+        "spell_know_alignment",
+        "spell_light_of_truth",
+        "spell_locate_life",
+        "spell_locate_object",
+        "spell_mass_invis",
+        "spell_midnight",
+        "spell_paralyze",
+        "spell_pass_door",
+        "spell_plague",
+        "spell_poison",
+        "spell_protection_evil",
+        "spell_protection_good",
+        "spell_rayban",
+        "spell_recharge",
+        "spell_regeneration",
+        "spell_remove_curse",
+        "spell_remove_invis",
+        "spell_sanctuary",
+        "spell_scry",
+        "spell_sheen",
+        "spell_shield",
+        "spell_shock_blade",
+        "spell_shrink",
+        "spell_sleep",
+        "spell_slow",
+        "spell_starve",
+        "spell_steel_mist",
+        "spell_stone_skin",
+        "spell_summon",
+        "spell_talon",
+        "spell_teleport_object",
+        "spell_ventriloquate",
+        "spell_weaken"
+      ],
+      "enabled_specials": [
+        "spec_cast_adept",
+        "spec_fido",
+        "spec_janitor",
+        "spec_nasty",
+        "spec_poison",
+        "spec_thief"
+      ]
+    },
+    "attributes": {
+      "chunk_id": "attributes",
+      "capabilities": [
+        "attributes"
+      ],
+      "capability_type": "policy",
+      "tier_num": 1,
+      "tier_name": "foundation",
+      "wave": 2,
+      "member_count": 45,
+      "fan_in_dag": 12,
+      "fan_in_all": 14,
+      "fan_out_dag": 2,
+      "fan_out_all": 9,
+      "description": "Character stat access and derived computation: armor class calculation (base, modified, unspelled), hitroll and damroll computation, maximum hit points, mana, and stamina derivation, per-stat accessors and modifiers (strength, dexterity, constitution, intelligence, wisdom, charisma), age computation, carrying weight and count capacity, regeneration rates (HP, mana, stamina), defense modifier display, stat-to-attribute mapping, level-based saving throws, stamina deduction, title and play-time tracking, sex and rank accessors, object stat flag checks.",
+      "migration_role": "support",
+      "target_surfaces": "traits handler/contrib + derived-stat rules",
+      "impl_wave": 2,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "clans": {
+      "chunk_id": "clans",
+      "capabilities": [
+        "clans"
+      ],
+      "capability_type": "domain",
+      "tier_num": 3,
+      "tier_name": "domain",
+      "wave": 10,
+      "member_count": 30,
+      "fan_in_dag": 1,
+      "fan_in_all": 3,
+      "fan_out_dag": 2,
+      "fan_out_all": 3,
+      "description": "Clan organisation system: membership checks, clan power and score computation, inter-clan war initiation, joining, resolution, war kill scoring, war victory handling, war capacity checks, war data compaction, war event recording, war power adjustments, defeat handling, clan roster counting, clan lookup by name or vnum, war lookup, clan list management (append, remove, compare for sorting), clan table persistence.",
+      "migration_role": "core",
+      "target_surfaces": "tags/locks + clan handler + global Script or model-backed state",
+      "impl_wave": 10,
+      "enables_entry_points": 2,
+      "enabled_commands": [
+        "do_channels",
+        "do_exits"
+      ],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "combat": {
+      "chunk_id": "combat",
+      "capabilities": [
+        "combat"
+      ],
+      "capability_type": "domain",
+      "tier_num": 3,
+      "tier_name": "domain",
+      "wave": 11,
+      "member_count": 25,
+      "fan_in_dag": 1,
+      "fan_in_all": 1,
+      "fan_out_dag": 13,
+      "fan_out_all": 17,
+      "description": "Combat round execution: single and multi-attack resolution per round, damage calculation and application, defense checks (dodge, parry, dual parry, shield block, shield evasion), defensive healing on successful block, hit/miss adjudication, fighting state transitions, death handling (corpse creation, death notification, post-death cleanup), experience distribution after kills, NPC attack behaviour, position updates during combat, special attacks (trip, fireball bash, dragon breath), war score adjustment, duel preparation, attack and weapon type lookups, wielded weapon skill resolution.",
+      "migration_role": "core",
+      "target_surfaces": "rules module + combat Script/handler + combat CmdSet",
+      "impl_wave": 11,
+      "enables_entry_points": 67,
+      "enabled_commands": [
+        "do_adjust",
+        "do_align",
+        "do_battle",
+        "do_berserk",
+        "do_brew",
+        "do_clan_recall",
+        "do_deny",
+        "do_duel",
+        "do_enter",
+        "do_envenom",
+        "do_familiar",
+        "do_firebuilding",
+        "do_fod",
+        "do_forge",
+        "do_goto",
+        "do_hammerstrike",
+        "do_heal",
+        "do_hide",
+        "do_hunt",
+        "do_join",
+        "do_lay_on_hands",
+        "do_look",
+        "do_lore",
+        "do_mpcast",
+        "do_mpgoto",
+        "do_mppurge",
+        "do_mptransfer",
+        "do_peace",
+        "do_peek",
+        "do_pick",
+        "do_recall",
+        "do_relocate",
+        "do_repair",
+        "do_rescue",
+        "do_restore",
+        "do_return",
+        "do_rotate",
+        "do_scribe",
+        "do_sell",
+        "do_sing",
+        "do_smite",
+        "do_sneak",
+        "do_spell",
+        "do_transfer",
+        "do_unjoin",
+        "do_violate",
+        "do_wear",
+        "do_wizify"
+      ],
+      "enabled_spells": [
+        "spell_calm",
+        "spell_cure_critical",
+        "spell_cure_light",
+        "spell_cure_serious",
+        "spell_dazzle",
+        "spell_divine_healing",
+        "spell_floating_disc",
+        "spell_heal",
+        "spell_holy_sword",
+        "spell_imprint",
+        "spell_remove_alignment",
+        "spell_word_of_recall"
+      ],
+      "enabled_specials": [
+        "spec_breath_acid",
+        "spec_breath_any",
+        "spec_breath_fire",
+        "spec_breath_frost",
+        "spec_breath_gas",
+        "spec_breath_lightning",
+        "spec_charm"
+      ]
+    },
+    "display": {
+      "chunk_id": "display",
+      "capabilities": [
+        "display"
+      ],
+      "capability_type": "projection",
+      "tier_num": 4,
+      "tier_name": "leaf",
+      "wave": 9,
+      "member_count": 27,
+      "fan_in_dag": 0,
+      "fan_in_all": 2,
+      "fan_out_dag": 9,
+      "fan_out_all": 11,
+      "description": "Information rendering and display assembly: room description and contents display, character appearance in room (short and detailed views), object description formatting, exit listing, score and stat sheet rendering, detailed object/room/mob inspection formatting, minimap generation, affect and evolution display, war event and roster lists, weather descriptions, location and coordinate string rendering, player count for the WHO list, condition description lookup.",
+      "migration_role": "support",
+      "target_surfaces": "return_appearance + get_display_* hooks + display helpers",
+      "impl_wave": 9,
+      "enables_entry_points": 5,
+      "enabled_commands": [
+        "do_count",
+        "do_exlist",
+        "do_roomexits",
+        "do_time",
+        "do_weather"
+      ],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "economy": {
+      "chunk_id": "economy",
+      "capabilities": [
+        "economy"
+      ],
+      "capability_type": "domain",
+      "tier_num": 4,
+      "tier_name": "leaf",
+      "wave": 0,
+      "member_count": 9,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 0,
+      "fan_out_all": 0,
+      "description": "Economy and currency system: gold and silver handling, currency deduction and weight computation, money object creation, shop pricing, shopkeeper location, quest-shop identification, auction participation checks, currency lookup.",
+      "migration_role": "core",
+      "target_surfaces": "economy handler + auction Script + shop rules",
+      "impl_wave": 0,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "entity_lookup": {
+      "chunk_id": "entity_lookup",
+      "capabilities": [
+        "entity_lookup"
+      ],
+      "capability_type": "policy",
+      "tier_num": 2,
+      "tier_name": "shared",
+      "wave": 6,
+      "member_count": 34,
+      "fan_in_dag": 3,
+      "fan_in_all": 5,
+      "fan_out_dag": 5,
+      "fan_out_all": 9,
+      "description": "In-game entity resolution: finding characters, NPCs, objects, and players by name within various scopes (room, area, world, inventory, equipment, shopkeeper stock), numbered-target resolution, extra description lookup, flag-based search across characters, objects, rooms, and players, location resolution from names, key possession checks, name expansion for disambiguation, object prototype retrieval, warp-crystal search, help entry lookup, race lookup, random prototype selection.",
+      "migration_role": "cross_cutting",
+      "target_surfaces": "search functions + DefaultObject.search overrides",
+      "impl_wave": 6,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "flags": {
+      "chunk_id": "flags",
+      "capabilities": [
+        "flags"
+      ],
+      "capability_type": "utility",
+      "tier_num": 0,
+      "tier_name": "utility_foundation",
+      "wave": 0,
+      "member_count": 34,
+      "fan_in_dag": 0,
+      "fan_in_all": 17,
+      "fan_out_dag": 0,
+      "fan_out_all": 0,
+      "description": "Bit-flag utility operations: testing, setting, and clearing individual bits, testing any/all/none-of predicates, flag-to-string conversion and name resolution for all flag domains (room, player, act, communication, wear, container, form, extra, offensive, wiz, part, censor, revoke, cgroup), flag index lookup by name, flag retrieval from database columns and JSON, object-value flag access, character cgroup flag addition and removal, flag emptiness checks.",
+      "migration_role": "support",
+      "target_surfaces": "replaced by Evennia tags/locks system",
+      "impl_wave": 0,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "imaging": {
+      "chunk_id": "imaging",
+      "capabilities": [
+        "imaging"
+      ],
+      "capability_type": "utility",
+      "tier_num": 0,
+      "tier_name": "utility_foundation",
+      "wave": 0,
+      "member_count": 4,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 0,
+      "fan_out_all": 0,
+      "description": "Bitmap image creation and I/O: loading and writing PNG files, querying image dimensions and per-pixel color channel values, used for worldmap tile rendering.",
+      "migration_role": "replacement_candidate",
+      "target_surfaces": "replaced by web-based map or contrib",
+      "impl_wave": 0,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "magic": {
+      "chunk_id": "magic",
+      "capabilities": [
+        "magic"
+      ],
+      "capability_type": "domain",
+      "tier_num": 3,
+      "tier_name": "domain",
+      "wave": 6,
+      "member_count": 6,
+      "fan_in_dag": 1,
+      "fan_in_all": 1,
+      "fan_out_dag": 3,
+      "fan_out_all": 5,
+      "description": "Spell casting mechanics: object-triggered spell dispatch (scrolls, wands, staves, potions), saving throws against spells, spell dispelling from characters, chain-spell execution across multiple targets, spell comparison for sorting, incantation text generation.",
+      "migration_role": "core",
+      "target_surfaces": "rules module + spell handler + magic CmdSet",
+      "impl_wave": 6,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "memory": {
+      "chunk_id": "memory",
+      "capabilities": [
+        "memory"
+      ],
+      "capability_type": "utility",
+      "tier_num": 0,
+      "tier_name": "utility_foundation",
+      "wave": 10,
+      "member_count": 17,
+      "fan_in_dag": 0,
+      "fan_in_all": 5,
+      "fan_out_dag": 1,
+      "fan_out_all": 1,
+      "description": "Memory lifecycle management: pooled object allocation and deallocation tracking, garbage-collection marking and deferred deletion, allocation counters, buffer capacity management, cJSON structure creation and teardown, affect cache infrastructure.",
+      "migration_role": "replacement_candidate",
+      "target_surfaces": "not needed (Python GC)",
+      "impl_wave": 10,
+      "enables_entry_points": 67,
+      "enabled_commands": [
+        "do_auction",
+        "do_bug",
+        "do_cedit",
+        "do_check",
+        "do_clandeposit",
+        "do_clanlist",
+        "do_clanpower",
+        "do_clanqp",
+        "do_clantalk",
+        "do_clanwithdraw",
+        "do_deputize",
+        "do_donate",
+        "do_drop",
+        "do_edit",
+        "do_finger",
+        "do_flagsearch",
+        "do_flame",
+        "do_get",
+        "do_globalsocial",
+        "do_gossip",
+        "do_grats",
+        "do_guild",
+        "do_hbb",
+        "do_hbi",
+        "do_ic",
+        "do_ignore",
+        "do_immapp",
+        "do_immtalk",
+        "do_locker",
+        "do_music",
+        "do_oldscan",
+        "do_owhere",
+        "do_pit",
+        "do_pray",
+        "do_punish",
+        "do_question",
+        "do_qwest",
+        "do_ridea",
+        "do_scan",
+        "do_score",
+        "do_second",
+        "do_sedit",
+        "do_splat",
+        "do_spousegate",
+        "do_stat",
+        "do_strongbox",
+        "do_typo",
+        "do_war",
+        "do_wbb",
+        "do_wbi",
+        "do_weddingring",
+        "do_withdraw",
+        "do_work"
+      ],
+      "enabled_spells": [
+        "spell_charm_person",
+        "spell_create_parchment",
+        "spell_create_rose",
+        "spell_create_vial",
+        "spell_farsight",
+        "spell_gate",
+        "spell_identify",
+        "spell_nexus",
+        "spell_portal",
+        "spell_protect_container",
+        "spell_smokescreen",
+        "spell_summon_object",
+        "spell_teleport",
+        "spell_vision"
+      ],
+      "enabled_specials": []
+    },
+    "movement": {
+      "chunk_id": "movement",
+      "capabilities": [
+        "movement"
+      ],
+      "capability_type": "domain",
+      "tier_num": 2,
+      "tier_name": "shared",
+      "wave": 6,
+      "member_count": 34,
+      "fan_in_dag": 8,
+      "fan_in_all": 10,
+      "fan_out_dag": 6,
+      "fan_out_all": 12,
+      "description": "Character and object movement between rooms: entering and leaving rooms, door and exit resolution, room access via exits, pathfinding, flee from combat, sector-based movement costs, portal and recall traversal, warp crystal destination reading, random and scatter room selection, character extraction from the game world, pet removal, room-level character addition and removal, exit inspection, object placement in rooms, duel and arena room checks, pet creation and follow establishment, tailing, flying and outdoor checks.",
+      "migration_role": "core",
+      "target_surfaces": "movement rules + exit/room typeclass hooks",
+      "impl_wave": 6,
+      "enables_entry_points": 4,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": [
+        "spec_cast_cleric",
+        "spec_cast_judge",
+        "spec_cast_mage",
+        "spec_cast_undead"
+      ]
+    },
+    "notes": {
+      "chunk_id": "notes",
+      "capabilities": [
+        "notes"
+      ],
+      "capability_type": "domain",
+      "tier_num": 4,
+      "tier_name": "leaf",
+      "wave": 5,
+      "member_count": 10,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 2,
+      "fan_out_all": 5,
+      "description": "Asynchronous note and board system: composing, addressing, and attaching notes to characters, appending notes to board lists, writing note files to disk, delivery notification, recipient checking, note removal, spool counting, note visibility filtering, last-read timestamp tracking.",
+      "migration_role": "core",
+      "target_surfaces": "Msg system or board contrib + note handler",
+      "impl_wave": 5,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "npc_behavior": {
+      "chunk_id": "npc_behavior",
+      "capabilities": [
+        "npc_behavior"
+      ],
+      "capability_type": "domain",
+      "tier_num": 4,
+      "tier_name": "leaf",
+      "wave": 7,
+      "member_count": 21,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 7,
+      "fan_out_all": 12,
+      "description": "NPC behavioural logic: MobProg program execution (driver, command processing, conditional evaluation, variable translation, keyword matching, percentage checks, string evaluation, line extraction), mob program triggers (speech, fight, death, greet, entry, give, bribe, buy, tick, act), special-function dispatch, NPC hunting AI, mob animation and summoning.",
+      "migration_role": "core",
+      "target_surfaces": "AI Script/handler + Character/Object typeclass choice + trigger hooks",
+      "impl_wave": 7,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "numerics": {
+      "chunk_id": "numerics",
+      "capabilities": [
+        "numerics"
+      ],
+      "capability_type": "utility",
+      "tier_num": 0,
+      "tier_name": "utility_foundation",
+      "wave": 0,
+      "member_count": 13,
+      "fan_in_dag": 0,
+      "fan_in_all": 12,
+      "fan_out_dag": 0,
+      "fan_out_all": 0,
+      "description": "Numeric utilities: pseudo-random number generation (flat range, percentage, door index, fuzzy, bit-width), dice rolling, pseudo-random distribution with failure memory, linear interpolation between level-indexed values, value clamping, power-of-two rounding, time-value scanning.",
+      "migration_role": "support",
+      "target_surfaces": "utility module",
+      "impl_wave": 0,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "objects": {
+      "chunk_id": "objects",
+      "capabilities": [
+        "objects"
+      ],
+      "capability_type": "domain",
+      "tier_num": 2,
+      "tier_name": "shared",
+      "wave": 8,
+      "member_count": 43,
+      "fan_in_dag": 5,
+      "fan_in_all": 8,
+      "fan_out_dag": 9,
+      "fan_out_all": 12,
+      "description": "Object lifecycle and manipulation: creating objects from prototypes, cloning, extracting and destroying objects, transferring objects between characters, rooms, containers, lockers, and strongboxes, equipping and removing worn items, equipment generation and base stat assignment, loot name generation, gem inset, object repair, forging weapon flags, loot eligibility checks, container capacity checks, content spilling on destruction, object weight computation, object user counting, item type and liquid type lookups, anvil ownership, clan equipment disposal.",
+      "migration_role": "core",
+      "target_surfaces": "object handlers + object rules + prototypes + shop menu/cmd layer",
+      "impl_wave": 8,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "output": {
+      "chunk_id": "output",
+      "capabilities": [
+        "output"
+      ],
+      "capability_type": "projection",
+      "tier_num": 1,
+      "tier_name": "foundation",
+      "wave": 4,
+      "member_count": 56,
+      "fan_in_dag": 18,
+      "fan_in_all": 19,
+      "fan_out_dag": 4,
+      "fan_out_all": 10,
+      "description": "Message transport to player connections: dispatching formatted messages to rooms and specific targets, sending text to character output buffers, descriptor output buffering and flushing, pager display, color code expansion and ANSI escape sequence handling, custom color configuration, prompt generation, terminal control (cursor positioning, screen clearing, reset), text formatting and paragraph wrapping, damage and combat message rendering, video configuration, duel and auction broadcast dispatch.",
+      "migration_role": "support",
+      "target_surfaces": "msg() + appearance hooks + display helpers",
+      "impl_wave": 4,
+      "enables_entry_points": 74,
+      "enabled_commands": [
+        "do_addexit",
+        "do_alia",
+        "do_announce",
+        "do_autoassist",
+        "do_autoexit",
+        "do_autogold",
+        "do_autolist",
+        "do_autoloot",
+        "do_autorecall",
+        "do_autosac",
+        "do_autosplit",
+        "do_autotick",
+        "do_balance",
+        "do_brief",
+        "do_chatmode",
+        "do_claninfo",
+        "do_clear",
+        "do_color",
+        "do_combine",
+        "do_commands",
+        "do_compact",
+        "do_convert",
+        "do_copyove",
+        "do_ctest",
+        "do_deaf",
+        "do_defensive",
+        "do_delet",
+        "do_departed",
+        "do_description",
+        "do_fingerinfo",
+        "do_flaglist",
+        "do_grouplist",
+        "do_gtell",
+        "do_huh",
+        "do_motd",
+        "do_mpclearmoney",
+        "do_noloot",
+        "do_noreply",
+        "do_nosummon",
+        "do_notify",
+        "do_pet",
+        "do_prefi",
+        "do_prefix",
+        "do_private",
+        "do_prompt",
+        "do_qtell",
+        "do_qui",
+        "do_quiet",
+        "do_reboo",
+        "do_recho",
+        "do_relevel",
+        "do_remexit",
+        "do_rename",
+        "do_replay",
+        "do_send_announce",
+        "do_show",
+        "do_showlast",
+        "do_showlost",
+        "do_showraff",
+        "do_shutdow",
+        "do_sla",
+        "do_smote",
+        "do_socials",
+        "do_spousetalk",
+        "do_superwiz",
+        "do_typelist",
+        "do_video",
+        "do_wizhelp",
+        "do_wiznet",
+        "do_zecho"
+      ],
+      "enabled_spells": [
+        "spell_control_weather",
+        "spell_detect_poison",
+        "spell_null",
+        "spell_refresh"
+      ],
+      "enabled_specials": []
+    },
+    "persistence": {
+      "chunk_id": "persistence",
+      "capabilities": [
+        "persistence"
+      ],
+      "capability_type": "infrastructure",
+      "tier_num": 2,
+      "tier_name": "shared",
+      "wave": 9,
+      "member_count": 94,
+      "fan_in_dag": 6,
+      "fan_in_all": 7,
+      "fan_out_dag": 9,
+      "fan_out_all": 13,
+      "description": "Data serialisation, storage, and retrieval: character save/load to JSON files, pet serialisation, object state persistence, area-file reading (word, string, integer tokens, key-value macros), cJSON structure creation, printing, and value extraction, SQL database queries, commands, error handling, and row iteration, war table and event logging, social table persistence, note file writing, storage locker and departed-player list management, player-index updates, file append utilities, help entry insertion.",
+      "migration_role": "support",
+      "target_surfaces": "AttributeHandler + SaverDict; area loading via prototypes/batch-code",
+      "impl_wave": 9,
+      "enables_entry_points": 1,
+      "enabled_commands": [
+        "do_pipe"
+      ],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "pvp": {
+      "chunk_id": "pvp",
+      "capabilities": [
+        "pvp"
+      ],
+      "capability_type": "domain",
+      "tier_num": 4,
+      "tier_name": "leaf",
+      "wave": 7,
+      "member_count": 6,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 3,
+      "fan_out_all": 3,
+      "description": "Duel and arena mechanics: duel initiation, tracking, and kill resolution, arena setup and clearing, duel list management, arena selection.",
+      "migration_role": "core",
+      "target_surfaces": "PvP rules overlay + arena Script + PvP CmdSet",
+      "impl_wave": 7,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "quests": {
+      "chunk_id": "quests",
+      "capabilities": [
+        "quests"
+      ],
+      "capability_type": "domain",
+      "tier_num": 4,
+      "tier_name": "leaf",
+      "wave": 9,
+      "member_count": 16,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 7,
+      "fan_out_all": 8,
+      "description": "Quest system: random quest generation and target assignment, skill-quest creation (mob and object variants), quest completion handling and cleanup, quest-point checks, quest information display and usage instructions, questmaster and skill-questmaster location, quest level-range evaluation, quest-object delivery processing.",
+      "migration_role": "core",
+      "target_surfaces": "quest handler + quest Script + quest rules",
+      "impl_wave": 9,
+      "enables_entry_points": 1,
+      "enabled_commands": [
+        "do_swho"
+      ],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "runtime": {
+      "chunk_id": "runtime",
+      "capabilities": [
+        "runtime"
+      ],
+      "capability_type": "infrastructure",
+      "tier_num": 4,
+      "tier_name": "leaf",
+      "wave": 12,
+      "member_count": 9,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 9,
+      "fan_out_all": 13,
+      "description": "Core game loop and connection lifecycle: command interpreter dispatch, main tick loop (character updates, object decay, area refresh), network connection teardown, game-time and weather tick advancement, world entity list management.",
+      "migration_role": "replacement_candidate",
+      "target_surfaces": "replaced by Evennia server core (Portal/Server, SessionHandler)",
+      "impl_wave": 12,
+      "enables_entry_points": 110,
+      "enabled_commands": [
+        "do_at",
+        "do_backstab",
+        "do_bash",
+        "do_brandish",
+        "do_buy",
+        "do_cast",
+        "do_circle",
+        "do_clone",
+        "do_copyover",
+        "do_critical_blow",
+        "do_crush",
+        "do_debug",
+        "do_delete",
+        "do_dirt",
+        "do_disarm",
+        "do_disconnect",
+        "do_doas",
+        "do_down",
+        "do_drag",
+        "do_east",
+        "do_eat",
+        "do_emote",
+        "do_flee",
+        "do_for",
+        "do_force",
+        "do_fuckoff",
+        "do_give",
+        "do_kick",
+        "do_kill",
+        "do_linkload",
+        "do_mload",
+        "do_morph",
+        "do_mpat",
+        "do_mpforce",
+        "do_mpkill",
+        "do_mpmload",
+        "do_north",
+        "do_order",
+        "do_purge",
+        "do_push",
+        "do_quaff",
+        "do_quest",
+        "do_quit",
+        "do_rage",
+        "do_reboot",
+        "do_recite",
+        "do_riposte",
+        "do_say",
+        "do_shadow",
+        "do_shoot",
+        "do_shutdown",
+        "do_slay",
+        "do_south",
+        "do_steal",
+        "do_trip",
+        "do_up",
+        "do_west",
+        "do_zap"
+      ],
+      "enabled_spells": [
+        "spell_acid_blast",
+        "spell_acid_breath",
+        "spell_acid_rain",
+        "spell_animate_gargoyle",
+        "spell_animate_skeleton",
+        "spell_animate_wraith",
+        "spell_animate_zombie",
+        "spell_blizzard",
+        "spell_burning_hands",
+        "spell_call_lightning",
+        "spell_cause_critical",
+        "spell_cause_light",
+        "spell_cause_serious",
+        "spell_chain_lightning",
+        "spell_chill_touch",
+        "spell_colour_spray",
+        "spell_demonfire",
+        "spell_dispel_evil",
+        "spell_dispel_good",
+        "spell_earthquake",
+        "spell_energy_drain",
+        "spell_fire_breath",
+        "spell_fireball",
+        "spell_firestorm",
+        "spell_flamestrike",
+        "spell_frost_breath",
+        "spell_gas_breath",
+        "spell_general_purpose",
+        "spell_harm",
+        "spell_heat_metal",
+        "spell_high_explosive",
+        "spell_holy_word",
+        "spell_lightning_bolt",
+        "spell_lightning_breath",
+        "spell_magic_missile",
+        "spell_pain",
+        "spell_polymorph",
+        "spell_power_word",
+        "spell_quick",
+        "spell_ray_of_truth",
+        "spell_resurrect",
+        "spell_sap",
+        "spell_shocking_grasp",
+        "spell_sunray",
+        "spell_wrath"
+      ],
+      "enabled_specials": [
+        "spec_clanguard",
+        "spec_executioner",
+        "spec_guard",
+        "spec_mayor",
+        "spec_ogre_member",
+        "spec_patrolman",
+        "spec_troll_member"
+      ]
+    },
+    "skills_progression": {
+      "chunk_id": "skills_progression",
+      "capabilities": [
+        "skills_progression"
+      ],
+      "capability_type": "domain",
+      "tier_num": 2,
+      "tier_name": "shared",
+      "wave": 5,
+      "member_count": 32,
+      "fan_in_dag": 6,
+      "fan_in_all": 8,
+      "fan_out_dag": 3,
+      "fan_out_all": 6,
+      "description": "Skill and level progression: skill lookup by name and index, proficiency queries and updates, weapon skill levels, evolution tracking and eligibility, experience gain and level advancement/demotion, experience-per-level calculation, NPC level advancement, skill cost computation, practice and training session display (by group, by key), skill group completion checks, group and guild lookup, spell lookup for casting, holdable and usable level computation, random skill selection, class pose selection, remort skill list display.",
+      "migration_role": "core",
+      "target_surfaces": "traits handler + game/skills.py rules + progression handler",
+      "impl_wave": 5,
+      "enables_entry_points": 4,
+      "enabled_commands": [
+        "do_autopeek",
+        "do_groups",
+        "do_worth"
+      ],
+      "enabled_spells": [
+        "spell_mass_healing"
+      ],
+      "enabled_specials": []
+    },
+    "social": {
+      "chunk_id": "social",
+      "capabilities": [
+        "social"
+      ],
+      "capability_type": "domain",
+      "tier_num": 4,
+      "tier_name": "leaf",
+      "wave": 10,
+      "member_count": 10,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 3,
+      "fan_out_all": 6,
+      "description": "Synchronous communication and social interaction: chat channel messaging and channel membership queries, tells and reply, say and emote, social action execution and lookup (bow, wave, etc.), social table management (insertion, removal, counting), clan channel message dispatch, offline-player ignore management, communication censorship configuration.",
+      "migration_role": "core",
+      "target_surfaces": "social CmdSet + channel contrib/handler",
+      "impl_wave": 10,
+      "enables_entry_points": 1,
+      "enabled_commands": [
+        "do_memory"
+      ],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "state_rules": {
+      "chunk_id": "state_rules",
+      "capabilities": [
+        "state_rules"
+      ],
+      "capability_type": "policy",
+      "tier_num": 1,
+      "tier_name": "foundation",
+      "wave": 1,
+      "member_count": 54,
+      "fan_in_dag": 18,
+      "fan_in_all": 19,
+      "fan_out_dag": 1,
+      "fan_out_all": 12,
+      "description": "Character state predicates and permission guards: NPC-vs-player checks, immortal and hero tier tests, position checks (awake, sleeping, standing), level and trust requirement enforcement, combat safety checks (safe rooms, PvP legality, attack-ok validation), duel and arena participation state, killer and thief flag checks, clan and war opponent status, equipment permission (clan-owned, personalised, wear slots), object sacrifice eligibility, condition monitoring (hunger, thirst, drunk), alignment and class predicates, remort tier checks, follower attachment and detachment, command group membership, wait and daze state assignment, group membership checks, character-type matching.",
+      "migration_role": "support",
+      "target_surfaces": "lock functions + permission checks in rules modules",
+      "impl_wave": 1,
+      "enables_entry_points": 1,
+      "enabled_commands": [
+        "do_immname"
+      ],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "string_ops": {
+      "chunk_id": "string_ops",
+      "capabilities": [
+        "string_ops"
+      ],
+      "capability_type": "utility",
+      "tier_num": 0,
+      "tier_name": "utility_foundation",
+      "wave": 0,
+      "member_count": 42,
+      "fan_in_dag": 0,
+      "fan_in_all": 18,
+      "fan_out_dag": 0,
+      "fan_out_all": 0,
+      "description": "String manipulation utilities: case conversion, trimming and stripping, substring extraction and search, prefix/infix/suffix matching, string comparison (case-sensitive and insensitive), string replacement, concatenation, insertion, and erasure, centering and number-to-string conversion, ordinal formatting, time formatting, drunk-speech transformation, hex parsing, color code removal, string duplication, length computation.",
+      "migration_role": "support",
+      "target_surfaces": "utility module (mostly replaced by Python stdlib)",
+      "impl_wave": 0,
+      "enables_entry_points": 2,
+      "enabled_commands": [
+        "do_censor"
+      ],
+      "enabled_spells": [],
+      "enabled_specials": [
+        "spec_lookup"
+      ]
+    },
+    "text_editing": {
+      "chunk_id": "text_editing",
+      "capabilities": [
+        "text_editing"
+      ],
+      "capability_type": "utility",
+      "tier_num": 0,
+      "tier_name": "utility_foundation",
+      "wave": 10,
+      "member_count": 23,
+      "fan_in_dag": 0,
+      "fan_in_all": 0,
+      "fan_out_dag": 3,
+      "fan_out_all": 5,
+      "description": "In-game line editor: editing session initialisation (descriptions, notes, help entries), line navigation and cursor positioning, line insertion, deletion, and splitting, text replacement within lines, word wrapping, undo, cancel, context-window display, line counting, range validation, blank-line detection, edit status display, buffer backup.",
+      "migration_role": "support",
+      "target_surfaces": "EvEditor contrib or custom editor handler",
+      "impl_wave": 10,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "visibility_rules": {
+      "chunk_id": "visibility_rules",
+      "capabilities": [
+        "visibility_rules"
+      ],
+      "capability_type": "policy",
+      "tier_num": 2,
+      "tier_name": "shared",
+      "wave": 3,
+      "member_count": 10,
+      "fan_in_dag": 6,
+      "fan_in_all": 6,
+      "fan_out_dag": 3,
+      "fan_out_all": 5,
+      "description": "Visibility and perception checks: determining whether one character can see another (including in room, in WHO list), object visibility, room visibility, darkness and very-dark room detection, blindness checks, room privacy, location and coordinate validity, light-level effects on perception.",
+      "migration_role": "support",
+      "target_surfaces": "return_appearance filtering + lock functions",
+      "impl_wave": 3,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    },
+    "world_structure": {
+      "chunk_id": "world_structure",
+      "capabilities": [
+        "world_structure"
+      ],
+      "capability_type": "domain",
+      "tier_num": 1,
+      "tier_name": "foundation",
+      "wave": 0,
+      "member_count": 37,
+      "fan_in_dag": 14,
+      "fan_in_all": 14,
+      "fan_out_dag": 0,
+      "fan_out_all": 5,
+      "description": "World structure and spatial data: area metadata and retrieval, area player and immortal counting, room properties (sector type, healing/mana rate, guild, ownership, name), exit topology (direction names, reverse direction, keywords, keys), room and location identity encoding, worldmap coordinate system and quadtree-based spatial lookups, calendar and time-of-day data, sector type lookup, vnum identity, mobile prototype retrieval, mobile creation and cloning, skill-quest room selection.",
+      "migration_role": "core",
+      "target_surfaces": "room/exit typeclasses + prototypes + world Scripts (weather, time, resets)",
+      "impl_wave": 0,
+      "enables_entry_points": 0,
+      "enabled_commands": [],
+      "enabled_spells": [],
+      "enabled_specials": []
+    }
+  },
+  "chunk_dependencies": {
+    "admin->attributes": {
+      "source": "admin",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "admin",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 5
+        }
+      ]
+    },
+    "admin->output": {
+      "source": "admin",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 13,
+      "capability_edges": [
+        {
+          "from_cap": "admin",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 13
+        }
+      ]
+    },
+    "affects->admin": {
+      "source": "affects",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 9,
+      "capability_edges": [
+        {
+          "from_cap": "affects",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 9
+        }
+      ]
+    },
+    "affects->attributes": {
+      "source": "affects",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 11,
+      "capability_edges": [
+        {
+          "from_cap": "affects",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 11
+        }
+      ]
+    },
+    "affects->magic": {
+      "source": "affects",
+      "target": "magic",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 6,
+      "capability_edges": [
+        {
+          "from_cap": "affects",
+          "to_cap": "magic",
+          "edge_type": "requires_core",
+          "call_count": 6
+        }
+      ]
+    },
+    "affects->movement": {
+      "source": "affects",
+      "target": "movement",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 9,
+      "capability_edges": [
+        {
+          "from_cap": "affects",
+          "to_cap": "movement",
+          "edge_type": "requires_core",
+          "call_count": 9
+        }
+      ]
+    },
+    "affects->output": {
+      "source": "affects",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 18,
+      "capability_edges": [
+        {
+          "from_cap": "affects",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 18
+        }
+      ]
+    },
+    "affects->state_rules": {
+      "source": "affects",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 21,
+      "capability_edges": [
+        {
+          "from_cap": "affects",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 21
+        }
+      ]
+    },
+    "arg_parsing->output": {
+      "source": "arg_parsing",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "arg_parsing",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 7
+        }
+      ]
+    },
+    "arg_parsing->persistence": {
+      "source": "arg_parsing",
+      "target": "persistence",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 4,
+      "capability_edges": [
+        {
+          "from_cap": "arg_parsing",
+          "to_cap": "persistence",
+          "edge_type": "requires_infrastructure",
+          "call_count": 4
+        }
+      ]
+    },
+    "attributes->state_rules": {
+      "source": "attributes",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 19,
+      "capability_edges": [
+        {
+          "from_cap": "attributes",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 19
+        }
+      ]
+    },
+    "attributes->world_structure": {
+      "source": "attributes",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "attributes",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 3
+        }
+      ]
+    },
+    "clans->output": {
+      "source": "clans",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "clans",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 3
+        }
+      ]
+    },
+    "clans->persistence": {
+      "source": "clans",
+      "target": "persistence",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "clans",
+          "to_cap": "persistence",
+          "edge_type": "requires_infrastructure",
+          "call_count": 7
+        }
+      ]
+    },
+    "combat->admin": {
+      "source": "combat",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 14,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 14
+        }
+      ]
+    },
+    "combat->affects": {
+      "source": "combat",
+      "target": "affects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 37,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "affects",
+          "edge_type": "requires_core",
+          "call_count": 37
+        }
+      ]
+    },
+    "combat->attributes": {
+      "source": "combat",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 33,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 33
+        }
+      ]
+    },
+    "combat->clans": {
+      "source": "combat",
+      "target": "clans",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 6,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "clans",
+          "edge_type": "requires_core",
+          "call_count": 6
+        }
+      ]
+    },
+    "combat->entity_lookup": {
+      "source": "combat",
+      "target": "entity_lookup",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 10,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "entity_lookup",
+          "edge_type": "requires_policy",
+          "call_count": 10
+        }
+      ]
+    },
+    "combat->movement": {
+      "source": "combat",
+      "target": "movement",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 17,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "movement",
+          "edge_type": "requires_core",
+          "call_count": 17
+        }
+      ]
+    },
+    "combat->objects": {
+      "source": "combat",
+      "target": "objects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 13,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "objects",
+          "edge_type": "requires_core",
+          "call_count": 13
+        }
+      ]
+    },
+    "combat->output": {
+      "source": "combat",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 35,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 35
+        }
+      ]
+    },
+    "combat->persistence": {
+      "source": "combat",
+      "target": "persistence",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "persistence",
+          "edge_type": "requires_infrastructure",
+          "call_count": 3
+        }
+      ]
+    },
+    "combat->skills_progression": {
+      "source": "combat",
+      "target": "skills_progression",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 34,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "skills_progression",
+          "edge_type": "requires_core",
+          "call_count": 34
+        }
+      ]
+    },
+    "combat->state_rules": {
+      "source": "combat",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 42,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 42
+        }
+      ]
+    },
+    "combat->visibility_rules": {
+      "source": "combat",
+      "target": "visibility_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 8,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "visibility_rules",
+          "edge_type": "requires_policy",
+          "call_count": 8
+        }
+      ]
+    },
+    "combat->world_structure": {
+      "source": "combat",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 24,
+      "capability_edges": [
+        {
+          "from_cap": "combat",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 24
+        }
+      ]
+    },
+    "display->affects": {
+      "source": "display",
+      "target": "affects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 19,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "affects",
+          "edge_type": "requires_core",
+          "call_count": 19
+        }
+      ]
+    },
+    "display->attributes": {
+      "source": "display",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 26,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 26
+        }
+      ]
+    },
+    "display->movement": {
+      "source": "display",
+      "target": "movement",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "movement",
+          "edge_type": "requires_core",
+          "call_count": 5
+        }
+      ]
+    },
+    "display->objects": {
+      "source": "display",
+      "target": "objects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "objects",
+          "edge_type": "requires_core",
+          "call_count": 5
+        }
+      ]
+    },
+    "display->output": {
+      "source": "display",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 39,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 39
+        }
+      ]
+    },
+    "display->skills_progression": {
+      "source": "display",
+      "target": "skills_progression",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 6,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "skills_progression",
+          "edge_type": "requires_core",
+          "call_count": 6
+        }
+      ]
+    },
+    "display->state_rules": {
+      "source": "display",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 14,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 14
+        }
+      ]
+    },
+    "display->visibility_rules": {
+      "source": "display",
+      "target": "visibility_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 13,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "visibility_rules",
+          "edge_type": "requires_policy",
+          "call_count": 13
+        }
+      ]
+    },
+    "display->world_structure": {
+      "source": "display",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 15,
+      "capability_edges": [
+        {
+          "from_cap": "display",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 15
+        }
+      ]
+    },
+    "entity_lookup->admin": {
+      "source": "entity_lookup",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "entity_lookup",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 3
+        }
+      ]
+    },
+    "entity_lookup->output": {
+      "source": "entity_lookup",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 14,
+      "capability_edges": [
+        {
+          "from_cap": "entity_lookup",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 14
+        }
+      ]
+    },
+    "entity_lookup->state_rules": {
+      "source": "entity_lookup",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 12,
+      "capability_edges": [
+        {
+          "from_cap": "entity_lookup",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 12
+        }
+      ]
+    },
+    "entity_lookup->visibility_rules": {
+      "source": "entity_lookup",
+      "target": "visibility_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 26,
+      "capability_edges": [
+        {
+          "from_cap": "entity_lookup",
+          "to_cap": "visibility_rules",
+          "edge_type": "requires_policy",
+          "call_count": 26
+        }
+      ]
+    },
+    "entity_lookup->world_structure": {
+      "source": "entity_lookup",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 23,
+      "capability_edges": [
+        {
+          "from_cap": "entity_lookup",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 23
+        }
+      ]
+    },
+    "magic->output": {
+      "source": "magic",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "magic",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 3
+        }
+      ]
+    },
+    "magic->skills_progression": {
+      "source": "magic",
+      "target": "skills_progression",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "magic",
+          "to_cap": "skills_progression",
+          "edge_type": "requires_core",
+          "call_count": 5
+        }
+      ]
+    },
+    "magic->state_rules": {
+      "source": "magic",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "magic",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 7
+        }
+      ]
+    },
+    "memory->persistence": {
+      "source": "memory",
+      "target": "persistence",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "memory",
+          "to_cap": "persistence",
+          "edge_type": "requires_infrastructure",
+          "call_count": 7
+        }
+      ]
+    },
+    "movement->admin": {
+      "source": "movement",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "movement",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 7
+        }
+      ]
+    },
+    "movement->output": {
+      "source": "movement",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 16,
+      "capability_edges": [
+        {
+          "from_cap": "movement",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 16
+        }
+      ]
+    },
+    "movement->skills_progression": {
+      "source": "movement",
+      "target": "skills_progression",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 4,
+      "capability_edges": [
+        {
+          "from_cap": "movement",
+          "to_cap": "skills_progression",
+          "edge_type": "requires_core",
+          "call_count": 4
+        }
+      ]
+    },
+    "movement->state_rules": {
+      "source": "movement",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 16,
+      "capability_edges": [
+        {
+          "from_cap": "movement",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 16
+        }
+      ]
+    },
+    "movement->visibility_rules": {
+      "source": "movement",
+      "target": "visibility_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "movement",
+          "to_cap": "visibility_rules",
+          "edge_type": "requires_policy",
+          "call_count": 7
+        }
+      ]
+    },
+    "movement->world_structure": {
+      "source": "movement",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 35,
+      "capability_edges": [
+        {
+          "from_cap": "movement",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 35
+        }
+      ]
+    },
+    "notes->output": {
+      "source": "notes",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "notes",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 7
+        }
+      ]
+    },
+    "notes->state_rules": {
+      "source": "notes",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 9,
+      "capability_edges": [
+        {
+          "from_cap": "notes",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 9
+        }
+      ]
+    },
+    "npc_behavior->admin": {
+      "source": "npc_behavior",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "npc_behavior",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 7
+        }
+      ]
+    },
+    "npc_behavior->attributes": {
+      "source": "npc_behavior",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "npc_behavior",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 3
+        }
+      ]
+    },
+    "npc_behavior->movement": {
+      "source": "npc_behavior",
+      "target": "movement",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 4,
+      "capability_edges": [
+        {
+          "from_cap": "npc_behavior",
+          "to_cap": "movement",
+          "edge_type": "requires_core",
+          "call_count": 4
+        }
+      ]
+    },
+    "npc_behavior->output": {
+      "source": "npc_behavior",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "npc_behavior",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 5
+        }
+      ]
+    },
+    "npc_behavior->state_rules": {
+      "source": "npc_behavior",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 22,
+      "capability_edges": [
+        {
+          "from_cap": "npc_behavior",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 22
+        }
+      ]
+    },
+    "npc_behavior->visibility_rules": {
+      "source": "npc_behavior",
+      "target": "visibility_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "npc_behavior",
+          "to_cap": "visibility_rules",
+          "edge_type": "requires_policy",
+          "call_count": 5
+        }
+      ]
+    },
+    "npc_behavior->world_structure": {
+      "source": "npc_behavior",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 6,
+      "capability_edges": [
+        {
+          "from_cap": "npc_behavior",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 6
+        }
+      ]
+    },
+    "objects->admin": {
+      "source": "objects",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 17,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 17
+        }
+      ]
+    },
+    "objects->affects": {
+      "source": "objects",
+      "target": "affects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 17,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "affects",
+          "edge_type": "requires_core",
+          "call_count": 17
+        }
+      ]
+    },
+    "objects->attributes": {
+      "source": "objects",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 13,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 13
+        }
+      ]
+    },
+    "objects->entity_lookup": {
+      "source": "objects",
+      "target": "entity_lookup",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "entity_lookup",
+          "edge_type": "requires_policy",
+          "call_count": 5
+        }
+      ]
+    },
+    "objects->movement": {
+      "source": "objects",
+      "target": "movement",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "movement",
+          "edge_type": "requires_core",
+          "call_count": 5
+        }
+      ]
+    },
+    "objects->output": {
+      "source": "objects",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 13,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 13
+        }
+      ]
+    },
+    "objects->skills_progression": {
+      "source": "objects",
+      "target": "skills_progression",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 8,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "skills_progression",
+          "edge_type": "requires_core",
+          "call_count": 8
+        }
+      ]
+    },
+    "objects->state_rules": {
+      "source": "objects",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 24,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 24
+        }
+      ]
+    },
+    "objects->world_structure": {
+      "source": "objects",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 7,
+      "capability_edges": [
+        {
+          "from_cap": "objects",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 7
+        }
+      ]
+    },
+    "output->attributes": {
+      "source": "output",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 25,
+      "capability_edges": [
+        {
+          "from_cap": "output",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 25
+        }
+      ]
+    },
+    "output->state_rules": {
+      "source": "output",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 26,
+      "capability_edges": [
+        {
+          "from_cap": "output",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 26
+        }
+      ]
+    },
+    "output->visibility_rules": {
+      "source": "output",
+      "target": "visibility_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 8,
+      "capability_edges": [
+        {
+          "from_cap": "output",
+          "to_cap": "visibility_rules",
+          "edge_type": "requires_policy",
+          "call_count": 8
+        }
+      ]
+    },
+    "output->world_structure": {
+      "source": "output",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 11,
+      "capability_edges": [
+        {
+          "from_cap": "output",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 11
+        }
+      ]
+    },
+    "persistence->admin": {
+      "source": "persistence",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 23,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 23
+        }
+      ]
+    },
+    "persistence->affects": {
+      "source": "persistence",
+      "target": "affects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 20,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "affects",
+          "edge_type": "requires_core",
+          "call_count": 20
+        }
+      ]
+    },
+    "persistence->attributes": {
+      "source": "persistence",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 15,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 15
+        }
+      ]
+    },
+    "persistence->entity_lookup": {
+      "source": "persistence",
+      "target": "entity_lookup",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 4,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "entity_lookup",
+          "edge_type": "requires_policy",
+          "call_count": 4
+        }
+      ]
+    },
+    "persistence->objects": {
+      "source": "persistence",
+      "target": "objects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 10,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "objects",
+          "edge_type": "requires_core",
+          "call_count": 10
+        }
+      ]
+    },
+    "persistence->output": {
+      "source": "persistence",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 20,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 20
+        }
+      ]
+    },
+    "persistence->skills_progression": {
+      "source": "persistence",
+      "target": "skills_progression",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 9,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "skills_progression",
+          "edge_type": "requires_core",
+          "call_count": 9
+        }
+      ]
+    },
+    "persistence->state_rules": {
+      "source": "persistence",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 5
+        }
+      ]
+    },
+    "persistence->world_structure": {
+      "source": "persistence",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 16,
+      "capability_edges": [
+        {
+          "from_cap": "persistence",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 16
+        }
+      ]
+    },
+    "pvp->movement": {
+      "source": "pvp",
+      "target": "movement",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "pvp",
+          "to_cap": "movement",
+          "edge_type": "requires_core",
+          "call_count": 3
+        }
+      ]
+    },
+    "pvp->state_rules": {
+      "source": "pvp",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 4,
+      "capability_edges": [
+        {
+          "from_cap": "pvp",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 4
+        }
+      ]
+    },
+    "pvp->world_structure": {
+      "source": "pvp",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "pvp",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 5
+        }
+      ]
+    },
+    "quests->admin": {
+      "source": "quests",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 11,
+      "capability_edges": [
+        {
+          "from_cap": "quests",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 11
+        }
+      ]
+    },
+    "quests->attributes": {
+      "source": "quests",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "quests",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 3
+        }
+      ]
+    },
+    "quests->movement": {
+      "source": "quests",
+      "target": "movement",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 6,
+      "capability_edges": [
+        {
+          "from_cap": "quests",
+          "to_cap": "movement",
+          "edge_type": "requires_core",
+          "call_count": 6
+        }
+      ]
+    },
+    "quests->objects": {
+      "source": "quests",
+      "target": "objects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 4,
+      "capability_edges": [
+        {
+          "from_cap": "quests",
+          "to_cap": "objects",
+          "edge_type": "requires_core",
+          "call_count": 4
+        }
+      ]
+    },
+    "quests->output": {
+      "source": "quests",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 15,
+      "capability_edges": [
+        {
+          "from_cap": "quests",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 15
+        }
+      ]
+    },
+    "quests->state_rules": {
+      "source": "quests",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 8,
+      "capability_edges": [
+        {
+          "from_cap": "quests",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 8
+        }
+      ]
+    },
+    "quests->world_structure": {
+      "source": "quests",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 19,
+      "capability_edges": [
+        {
+          "from_cap": "quests",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 19
+        }
+      ]
+    },
+    "runtime->admin": {
+      "source": "runtime",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 6,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 6
+        }
+      ]
+    },
+    "runtime->affects": {
+      "source": "runtime",
+      "target": "affects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 20,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "affects",
+          "edge_type": "requires_core",
+          "call_count": 20
+        }
+      ]
+    },
+    "runtime->attributes": {
+      "source": "runtime",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 8,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 8
+        }
+      ]
+    },
+    "runtime->combat": {
+      "source": "runtime",
+      "target": "combat",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "combat",
+          "edge_type": "requires_core",
+          "call_count": 3
+        }
+      ]
+    },
+    "runtime->movement": {
+      "source": "runtime",
+      "target": "movement",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 11,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "movement",
+          "edge_type": "requires_core",
+          "call_count": 11
+        }
+      ]
+    },
+    "runtime->objects": {
+      "source": "runtime",
+      "target": "objects",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "objects",
+          "edge_type": "requires_core",
+          "call_count": 5
+        }
+      ]
+    },
+    "runtime->output": {
+      "source": "runtime",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 17,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 17
+        }
+      ]
+    },
+    "runtime->state_rules": {
+      "source": "runtime",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 11,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 11
+        }
+      ]
+    },
+    "runtime->world_structure": {
+      "source": "runtime",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 8,
+      "capability_edges": [
+        {
+          "from_cap": "runtime",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 8
+        }
+      ]
+    },
+    "skills_progression->attributes": {
+      "source": "skills_progression",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 25,
+      "capability_edges": [
+        {
+          "from_cap": "skills_progression",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 25
+        }
+      ]
+    },
+    "skills_progression->output": {
+      "source": "skills_progression",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 12,
+      "capability_edges": [
+        {
+          "from_cap": "skills_progression",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 12
+        }
+      ]
+    },
+    "skills_progression->state_rules": {
+      "source": "skills_progression",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 25,
+      "capability_edges": [
+        {
+          "from_cap": "skills_progression",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 25
+        }
+      ]
+    },
+    "social->output": {
+      "source": "social",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 18,
+      "capability_edges": [
+        {
+          "from_cap": "social",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 18
+        }
+      ]
+    },
+    "social->persistence": {
+      "source": "social",
+      "target": "persistence",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 4,
+      "capability_edges": [
+        {
+          "from_cap": "social",
+          "to_cap": "persistence",
+          "edge_type": "requires_infrastructure",
+          "call_count": 4
+        }
+      ]
+    },
+    "social->state_rules": {
+      "source": "social",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 11,
+      "capability_edges": [
+        {
+          "from_cap": "social",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 11
+        }
+      ]
+    },
+    "state_rules->world_structure": {
+      "source": "state_rules",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 19,
+      "capability_edges": [
+        {
+          "from_cap": "state_rules",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 19
+        }
+      ]
+    },
+    "text_editing->admin": {
+      "source": "text_editing",
+      "target": "admin",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 4,
+      "capability_edges": [
+        {
+          "from_cap": "text_editing",
+          "to_cap": "admin",
+          "edge_type": "requires_infrastructure",
+          "call_count": 4
+        }
+      ]
+    },
+    "text_editing->output": {
+      "source": "text_editing",
+      "target": "output",
+      "edge_types": [
+        "requires_projection"
+      ],
+      "total_calls": 18,
+      "capability_edges": [
+        {
+          "from_cap": "text_editing",
+          "to_cap": "output",
+          "edge_type": "requires_projection",
+          "call_count": 18
+        }
+      ]
+    },
+    "text_editing->persistence": {
+      "source": "text_editing",
+      "target": "persistence",
+      "edge_types": [
+        "requires_infrastructure"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "text_editing",
+          "to_cap": "persistence",
+          "edge_type": "requires_infrastructure",
+          "call_count": 5
+        }
+      ]
+    },
+    "visibility_rules->attributes": {
+      "source": "visibility_rules",
+      "target": "attributes",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 5,
+      "capability_edges": [
+        {
+          "from_cap": "visibility_rules",
+          "to_cap": "attributes",
+          "edge_type": "requires_policy",
+          "call_count": 5
+        }
+      ]
+    },
+    "visibility_rules->state_rules": {
+      "source": "visibility_rules",
+      "target": "state_rules",
+      "edge_types": [
+        "requires_policy"
+      ],
+      "total_calls": 16,
+      "capability_edges": [
+        {
+          "from_cap": "visibility_rules",
+          "to_cap": "state_rules",
+          "edge_type": "requires_policy",
+          "call_count": 16
+        }
+      ]
+    },
+    "visibility_rules->world_structure": {
+      "source": "visibility_rules",
+      "target": "world_structure",
+      "edge_types": [
+        "requires_core"
+      ],
+      "total_calls": 3,
+      "capability_edges": [
+        {
+          "from_cap": "visibility_rules",
+          "to_cap": "world_structure",
+          "edge_type": "requires_core",
+          "call_count": 3
+        }
+      ]
+    }
+  },
+  "implementation_order": [
+    {
+      "wave": 0,
+      "chunks": [
+        "economy",
+        "flags",
+        "imaging",
+        "numerics",
+        "string_ops",
+        "world_structure"
+      ]
+    },
+    {
+      "wave": 1,
+      "chunks": [
+        "state_rules"
+      ]
+    },
+    {
+      "wave": 2,
+      "chunks": [
+        "attributes"
+      ]
+    },
+    {
+      "wave": 3,
+      "chunks": [
+        "visibility_rules"
+      ]
+    },
+    {
+      "wave": 4,
+      "chunks": [
+        "output"
+      ]
+    },
+    {
+      "wave": 5,
+      "chunks": [
+        "admin",
+        "notes",
+        "skills_progression"
+      ]
+    },
+    {
+      "wave": 6,
+      "chunks": [
+        "entity_lookup",
+        "magic",
+        "movement"
+      ]
+    },
+    {
+      "wave": 7,
+      "chunks": [
+        "affects",
+        "npc_behavior",
+        "pvp"
+      ]
+    },
+    {
+      "wave": 8,
+      "chunks": [
+        "objects"
+      ]
+    },
+    {
+      "wave": 9,
+      "chunks": [
+        "display",
+        "persistence",
+        "quests"
+      ]
+    },
+    {
+      "wave": 10,
+      "chunks": [
+        "arg_parsing",
+        "clans",
+        "memory",
+        "social",
+        "text_editing"
+      ]
+    },
+    {
+      "wave": 11,
+      "chunks": [
+        "combat"
+      ]
+    },
+    {
+      "wave": 12,
+      "chunks": [
+        "runtime"
+      ]
+    }
+  ],
+  "bundle_suggestions": [
+    {
+      "support_group": "entity_lookup",
+      "support_type": "policy",
+      "domain_consumers": [
+        "combat",
+        "objects"
+      ],
+      "suggestion": "Consider bundling entity_lookup into combat or objects"
+    }
+  ],
+  "warnings": [
+    {
+      "type": "large_chunk",
+      "message": "affects has 88 members \u2014 may need splitting",
+      "chunks": [
+        "affects"
+      ]
+    },
+    {
+      "type": "large_chunk",
+      "message": "persistence has 94 members \u2014 may need splitting",
+      "chunks": [
+        "persistence"
+      ]
+    },
+    {
+      "type": "orphan",
+      "message": "economy has no DAG dependencies in or out \u2014 verify it belongs in the plan",
+      "chunks": [
+        "economy"
+      ]
+    }
+  ]
+}

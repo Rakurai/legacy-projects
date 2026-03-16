@@ -1,0 +1,199 @@
+{
+  "Game Engine": [
+    "Main Loop",
+    "Tick System",
+    "Entity Lifecycle",
+    "Message Dispatch",
+    "Global State",
+    "Game Time"
+  ],
+  "Networking": [
+    "Socket Management",
+    "Descriptor Lifecycle",
+    "Telnet Protocol",
+    "Terminal Control",
+    "Connection State Machine",
+    "Input/Output Buffering",
+    "Copyover"
+  ],
+  "Command Interpreter": [
+    "Command Dispatch",
+    "Permission Checking",
+    "Command Disabling",
+    "Alias Expansion",
+    "Social Fallback",
+    "Spam Throttling"
+  ],
+  "Event Dispatcher": [
+    "Event Registration",
+    "Event Dispatch"
+  ],
+  "Utilities": [
+    "Custom String Class",
+    "Flag System",
+    "Format System",
+    "Argument Parsing",
+    "Entity Lookup",
+    "Random Number Generation",
+    "Type Information",
+    "Logging",
+    "File Tail",
+    "Image Utilities"
+  ],
+  "Memory & Garbage Collection": [
+    "Object Pooling",
+    "Garbage Collection",
+    "Safe Container"
+  ],
+  "Data Tables": [
+    "Race Definitions",
+    "Guild/Class Definitions",
+    "Skill & Spell Tables",
+    "Skill Group Tables",
+    "Attack Type Tables",
+    "Item Type Tables",
+    "Weapon Type Tables",
+    "Flag Definition Tables",
+    "Loot Generation Tables",
+    "Random Name Syllables"
+  ],
+  "Character Data Model": [
+    "Character Base",
+    "Player Data",
+    "NPC Templates",
+    "Stat Accessors",
+    "NPC Services",
+    "Player Preferences",
+    "Departed Immortals"
+  ],
+  "Character Progression": [
+    "Level Advancement",
+    "Skill Learning",
+    "Remort System",
+    "Skill Groups"
+  ],
+  "Object System": [
+    "Object Instances",
+    "Object Prototypes",
+    "Type-Specific Values",
+    "Equipment & Wear",
+    "Containers & Nesting",
+    "Gem Enhancement",
+    "Dynamic Loot Generation",
+    "Shops",
+    "Object State Persistence",
+    "Storage System"
+  ],
+  "World System": [
+    "Areas",
+    "Rooms",
+    "Room Prototypes & Instances",
+    "Exits & Doors",
+    "Area Resets",
+    "Weather Simulation",
+    "World Map",
+    "Regions",
+    "Scan",
+    "Hunt/Track",
+    "Movement"
+  ],
+  "Combat System": [
+    "Attack Resolution",
+    "Damage Calculation",
+    "Defensive Checks",
+    "Elemental Effects",
+    "Dispel Mechanics",
+    "Death & Corpse",
+    "Group Combat",
+    "Battle State",
+    "Position Effects",
+    "Flee & Recall"
+  ],
+  "Magic System": [
+    "Spell Casting",
+    "Spell Library",
+    "Remort Spells",
+    "Object Casting",
+    "Spell Saves",
+    "Verbal Components"
+  ],
+  "Affect System": [
+    "Affect Application",
+    "Character Affects",
+    "Object Affects",
+    "Room Affects",
+    "Affect Stacking",
+    "Affect Caching",
+    "Affect Table",
+    "Affect List Management"
+  ],
+  "MobProg System": [
+    "Script Language",
+    "Trigger Types",
+    "Mob Commands",
+    "Script Execution",
+    "Special Functions"
+  ],
+  "Notes & Editor": [
+    "Line Editor",
+    "Note Boards",
+    "Note Composition",
+    "Note Reading",
+    "Note Persistence"
+  ],
+  "Help System": [
+    "Help Lookup",
+    "Level Gating",
+    "Category Organization",
+    "Dynamic Editing"
+  ],
+  "Social & Communication": [
+    "Chat Channels",
+    "Direct Messaging",
+    "Social/Emote Commands",
+    "Social Editing",
+    "Ignore System",
+    "Music/Jukebox",
+    "Marriage",
+    "Pose"
+  ],
+  "Economy": [
+    "Auction System",
+    "Banking",
+    "Currency"
+  ],
+  "Quests": [
+    "Automated Quest Generation",
+    "Quest Tracking",
+    "Quest Rewards",
+    "Quest Areas",
+    "Timed Challenges"
+  ],
+  "Organizations & PvP": [
+    "Clan System",
+    "Clan Editing",
+    "War System",
+    "Duel System",
+    "PvP Safeguards"
+  ],
+  "Persistence": [
+    "Player Save/Load",
+    "SQLite Database",
+    "Area File I/O",
+    "Object State Serialization",
+    "Storage System",
+    "Configuration Loading",
+    "Note File I/O"
+  ],
+  "Admin & Builder Commands": [
+    "Player Moderation",
+    "Entity Inspection",
+    "Entity Modification",
+    "World Manipulation",
+    "Content Creation",
+    "Server Control",
+    "Security",
+    "Debugging",
+    "Wiznet"
+  ]
+}

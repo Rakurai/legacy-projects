@@ -367,6 +367,12 @@ def probe_group(group_name: str, cap_defs: dict, threshold: float,
         include_locked=include_locked,
     )
 
+    # Filter: only keep functions locked to THIS group (or unlocked matches)
+    results = [
+        r for r in results
+        if not r.get("locked_group") or r["locked_group"] == group_name
+    ]
+
     body = format_results(results, show_doc=show_doc, show_avoided=show_avoided)
     return "\n".join(header_lines) + "\n" + body
 

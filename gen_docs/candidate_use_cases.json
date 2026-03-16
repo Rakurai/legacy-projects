@@ -1,0 +1,1810 @@
+{
+  "metadata": {
+    "n_clusters": 35,
+    "total_entry_points": 633,
+    "method": "agglomerative_ward_typed_weighted_idf_cosine",
+    "type_weights": {
+      "domain": 0.6,
+      "policy": 0.2,
+      "projection": 0.1,
+      "infrastructure": 0.1,
+      "utility": 0.0
+    }
+  },
+  "clusters": [
+    {
+      "cluster_id": 18,
+      "size": 184,
+      "members": [
+        "do_accept",
+        "do_advance",
+        "do_affects",
+        "do_afk",
+        "do_allow",
+        "do_allsave",
+        "do_alternate",
+        "do_aura",
+        "do_autoboot",
+        "do_backup",
+        "do_ban",
+        "do_bonus",
+        "do_breakup",
+        "do_bug",
+        "do_canmakebag",
+        "do_close",
+        "do_compare",
+        "do_consider",
+        "do_credits",
+        "do_departedlist",
+        "do_disable",
+        "do_divorce",
+        "do_edit",
+        "do_email",
+        "do_equipment",
+        "do_evoset",
+        "do_extraset",
+        "do_file",
+        "do_fill",
+        "do_flag",
+        "do_fly",
+        "do_follow",
+        "do_followerlist",
+        "do_freeze",
+        "do_fry",
+        "do_fyi",
+        "do_gain",
+        "do_gamein",
+        "do_gameout",
+        "do_group",
+        "do_hbb",
+        "do_hbi",
+        "do_hedit",
+        "do_help",
+        "do_immapp",
+        "do_imotd",
+        "do_inventory",
+        "do_invis",
+        "do_land",
+        "do_leader",
+        "do_loadhelps",
+        "do_lock",
+        "do_log",
+        "do_lower",
+        "do_lurk",
+        "do_marry",
+        "do_master",
+        "do_mpasound",
+        "do_mpecho",
+        "do_mpechoaround",
+        "do_mpechoat",
+        "do_mpstat",
+        "do_mset",
+        "do_mwhere",
+        "do_newlock",
+        "do_newpasswd",
+        "do_nofollow",
+        "do_ooc",
+        "do_open",
+        "do_owner",
+        "do_page",
+        "do_paintbow",
+        "do_pardon",
+        "do_password",
+        "do_pecho",
+        "do_permit",
+        "do_pk",
+        "do_pmote",
+        "do_pose",
+        "do_pour",
+        "do_practice",
+        "do_printhelps",
+        "do_propose",
+        "do_protect",
+        "do_pstat",
+        "do_punish",
+        "do_qpconv",
+        "do_raffset",
+        "do_rank",
+        "do_reject",
+        "do_remort",
+        "do_reply",
+        "do_report",
+        "do_revoke",
+        "do_ridea",
+        "do_rppaward",
+        "do_rset",
+        "do_rules",
+        "do_save",
+        "do_scon",
+        "do_setgamein",
+        "do_setgameout",
+        "do_showflags",
+        "do_skillpoint",
+        "do_snoop",
+        "do_sockets",
+        "do_split",
+        "do_sset",
+        "do_storage",
+        "do_story",
+        "do_string",
+        "do_switch",
+        "do_tail",
+        "do_tell",
+        "do_testpose",
+        "do_title",
+        "do_touch",
+        "do_train",
+        "do_typo",
+        "do_undeny",
+        "do_unlock",
+        "do_wake",
+        "do_wbb",
+        "do_wbi",
+        "do_where",
+        "do_whisper",
+        "do_whois",
+        "do_wizgroup",
+        "do_wizlist",
+        "do_wizlock",
+        "do_work",
+        "do_yell",
+        "spec_cast_adept",
+        "spec_nasty",
+        "spec_poison",
+        "spec_thief",
+        "spell_armor",
+        "spell_barrier",
+        "spell_bless",
+        "spell_blood_blade",
+        "spell_blood_moon",
+        "spell_bone_wall",
+        "spell_channel",
+        "spell_dazzling_light",
+        "spell_detect_evil",
+        "spell_detect_good",
+        "spell_detect_hidden",
+        "spell_detect_invis",
+        "spell_detect_magic",
+        "spell_divine_regeneration",
+        "spell_faerie_fire",
+        "spell_fireproof",
+        "spell_flame_blade",
+        "spell_flameshield",
+        "spell_fly",
+        "spell_focus",
+        "spell_force",
+        "spell_frenzy",
+        "spell_frost_blade",
+        "spell_full_heal",
+        "spell_giant_strength",
+        "spell_hex",
+        "spell_infravision",
+        "spell_invis",
+        "spell_ironskin",
+        "spell_know_alignment",
+        "spell_light_of_truth",
+        "spell_locate_object",
+        "spell_mass_invis",
+        "spell_midnight",
+        "spell_pass_door",
+        "spell_protection_evil",
+        "spell_protection_good",
+        "spell_rayban",
+        "spell_regeneration",
+        "spell_remove_invis",
+        "spell_sanctuary",
+        "spell_scry",
+        "spell_sheen",
+        "spell_shield",
+        "spell_shock_blade",
+        "spell_steel_mist",
+        "spell_stone_skin",
+        "spell_talon"
+      ],
+      "type_distribution": {
+        "command": 132,
+        "special": 4,
+        "spell": 48
+      },
+      "wave_range": [
+        10,
+        10
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(6)"
+    },
+    {
+      "cluster_id": 30,
+      "size": 79,
+      "members": [
+        "do_auction",
+        "do_backstab",
+        "do_bash",
+        "do_brandish",
+        "do_buy",
+        "do_cast",
+        "do_circle",
+        "do_clanwithdraw",
+        "do_critical_blow",
+        "do_crush",
+        "do_debug",
+        "do_delete",
+        "do_dirt",
+        "do_disarm",
+        "do_drag",
+        "do_eat",
+        "do_flee",
+        "do_give",
+        "do_kick",
+        "do_kill",
+        "do_mpkill",
+        "do_push",
+        "do_quaff",
+        "do_quest",
+        "do_quit",
+        "do_rage",
+        "do_recite",
+        "do_riposte",
+        "do_shadow",
+        "do_shoot",
+        "do_slay",
+        "do_steal",
+        "do_trip",
+        "do_zap",
+        "spec_clanguard",
+        "spec_executioner",
+        "spec_guard",
+        "spec_ogre_member",
+        "spec_patrolman",
+        "spec_troll_member",
+        "spell_acid_blast",
+        "spell_acid_breath",
+        "spell_acid_rain",
+        "spell_blizzard",
+        "spell_burning_hands",
+        "spell_call_lightning",
+        "spell_cause_critical",
+        "spell_cause_light",
+        "spell_cause_serious",
+        "spell_chain_lightning",
+        "spell_chill_touch",
+        "spell_colour_spray",
+        "spell_demonfire",
+        "spell_dispel_evil",
+        "spell_dispel_good",
+        "spell_earthquake",
+        "spell_energy_drain",
+        "spell_fire_breath",
+        "spell_fireball",
+        "spell_firestorm",
+        "spell_flamestrike",
+        "spell_frost_breath",
+        "spell_gas_breath",
+        "spell_general_purpose",
+        "spell_harm",
+        "spell_heat_metal",
+        "spell_high_explosive",
+        "spell_holy_word",
+        "spell_lightning_bolt",
+        "spell_lightning_breath",
+        "spell_magic_missile",
+        "spell_pain",
+        "spell_power_word",
+        "spell_quick",
+        "spell_ray_of_truth",
+        "spell_sap",
+        "spell_shocking_grasp",
+        "spell_sunray",
+        "spell_wrath"
+      ],
+      "type_distribution": {
+        "command": 34,
+        "special": 6,
+        "spell": 39
+      },
+      "wave_range": [
+        10,
+        12
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "objects": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "persistence": 0.99,
+        "clans": 0.97,
+        "economy": 0.97,
+        "social": 0.97,
+        "combat": 0.97,
+        "magic": 0.97,
+        "runtime": 0.97,
+        "display": 0.92,
+        "pvp": 0.92
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "clans",
+        "combat",
+        "economy",
+        "magic",
+        "movement",
+        "npc_behavior",
+        "objects",
+        "pvp",
+        "quests",
+        "skills_progression",
+        "social",
+        "world_structure"
+      ],
+      "character": "domain:broad(13)"
+    },
+    {
+      "cluster_id": 14,
+      "size": 71,
+      "members": [
+        "do_addexit",
+        "do_alia",
+        "do_alias",
+        "do_announce",
+        "do_autoassist",
+        "do_autoexit",
+        "do_autogold",
+        "do_autolist",
+        "do_autoloot",
+        "do_autorecall",
+        "do_autosac",
+        "do_autosplit",
+        "do_autotick",
+        "do_bamfin",
+        "do_bamfout",
+        "do_brief",
+        "do_chatmode",
+        "do_clear",
+        "do_color",
+        "do_combine",
+        "do_commands",
+        "do_compact",
+        "do_convert",
+        "do_copyove",
+        "do_ctest",
+        "do_deaf",
+        "do_defensive",
+        "do_delet",
+        "do_departed",
+        "do_description",
+        "do_fingerinfo",
+        "do_grouplist",
+        "do_huh",
+        "do_load",
+        "do_motd",
+        "do_mpclearmoney",
+        "do_noloot",
+        "do_nosummon",
+        "do_notify",
+        "do_pet",
+        "do_pipe",
+        "do_prefi",
+        "do_prefix",
+        "do_private",
+        "do_prompt",
+        "do_query",
+        "do_qui",
+        "do_quiet",
+        "do_reboo",
+        "do_remexit",
+        "do_rename",
+        "do_replay",
+        "do_scroll",
+        "do_send_announce",
+        "do_show",
+        "do_showlast",
+        "do_showlost",
+        "do_showraff",
+        "do_shutdow",
+        "do_sla",
+        "do_smote",
+        "do_socials",
+        "do_superwiz",
+        "do_typelist",
+        "do_unalias",
+        "do_video",
+        "do_vnum",
+        "do_wizhelp",
+        "do_wiznet",
+        "spell_detect_poison",
+        "spell_null"
+      ],
+      "type_distribution": {
+        "command": 69,
+        "spell": 2
+      },
+      "wave_range": [
+        4,
+        10
+      ],
+      "dominant_capabilities": {
+        "flags": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0
+      },
+      "dominant_domain_caps": [],
+      "character": "support-only"
+    },
+    {
+      "cluster_id": 22,
+      "size": 36,
+      "members": [
+        "do_chown",
+        "do_create",
+        "do_drink",
+        "do_hone",
+        "do_inset",
+        "do_junk",
+        "do_locker",
+        "do_mpjunk",
+        "do_mpoload",
+        "do_newbiekit",
+        "do_oclone",
+        "do_oload",
+        "do_outfit",
+        "do_pit",
+        "do_put",
+        "do_reload",
+        "do_remove",
+        "do_rest",
+        "do_sacrifice",
+        "do_sit",
+        "do_sleep",
+        "do_stand",
+        "do_strongbox",
+        "spec_fido",
+        "spec_janitor",
+        "spell_continual_light",
+        "spell_create_food",
+        "spell_create_sign",
+        "spell_create_spring",
+        "spell_create_water",
+        "spell_encampment",
+        "spell_enchant_armor",
+        "spell_enchant_weapon",
+        "spell_recharge",
+        "spell_shrink",
+        "spell_teleport_object"
+      ],
+      "type_distribution": {
+        "command": 23,
+        "special": 2,
+        "spell": 11
+      },
+      "wave_range": [
+        10,
+        10
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "objects": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "movement",
+        "npc_behavior",
+        "objects",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(7)"
+    },
+    {
+      "cluster_id": 21,
+      "size": 35,
+      "members": [
+        "do_clone",
+        "do_mload",
+        "do_morph",
+        "do_mpmload",
+        "do_skills",
+        "do_spells",
+        "do_splat",
+        "do_warp",
+        "spell_age",
+        "spell_animate_gargoyle",
+        "spell_animate_skeleton",
+        "spell_animate_wraith",
+        "spell_animate_zombie",
+        "spell_blindness",
+        "spell_cancellation",
+        "spell_change_sex",
+        "spell_cure_blindness",
+        "spell_cure_disease",
+        "spell_cure_poison",
+        "spell_curse",
+        "spell_dispel_magic",
+        "spell_faerie_fog",
+        "spell_fear",
+        "spell_haste",
+        "spell_paralyze",
+        "spell_plague",
+        "spell_poison",
+        "spell_remove_curse",
+        "spell_resurrect",
+        "spell_sleep",
+        "spell_slow",
+        "spell_starve",
+        "spell_summon",
+        "spell_ventriloquate",
+        "spell_weaken"
+      ],
+      "type_distribution": {
+        "command": 8,
+        "spell": 27
+      },
+      "wave_range": [
+        10,
+        12
+      ],
+      "dominant_capabilities": {
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "flags": 1.0,
+        "magic": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "skills_progression": 0.97,
+        "memory": 0.94,
+        "numerics": 0.94,
+        "admin": 0.91,
+        "entity_lookup": 0.91,
+        "movement": 0.91,
+        "npc_behavior": 0.91,
+        "quests": 0.91,
+        "visibility_rules": 0.91,
+        "world_structure": 0.91
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "magic",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(7)"
+    },
+    {
+      "cluster_id": 27,
+      "size": 24,
+      "members": [
+        "do_adjust",
+        "do_align",
+        "do_berserk",
+        "do_deny",
+        "do_envenom",
+        "do_familiar",
+        "do_hammerstrike",
+        "do_hide",
+        "do_lay_on_hands",
+        "do_lore",
+        "do_peek",
+        "do_pick",
+        "do_restore",
+        "do_sneak",
+        "do_wizify",
+        "spec_breath_acid",
+        "spec_breath_any",
+        "spec_breath_fire",
+        "spec_breath_frost",
+        "spec_breath_gas",
+        "spec_breath_lightning",
+        "spec_charm",
+        "spell_calm",
+        "spell_dazzle"
+      ],
+      "type_distribution": {
+        "command": 15,
+        "special": 7,
+        "spell": 2
+      },
+      "wave_range": [
+        11,
+        11
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "combat": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "persistence": 0.58
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "combat",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(7)"
+    },
+    {
+      "cluster_id": 17,
+      "size": 17,
+      "members": [
+        "do_areas",
+        "do_gtell",
+        "do_heed",
+        "do_mfind",
+        "do_mlevel",
+        "do_noreply",
+        "do_ofind",
+        "do_olevel",
+        "do_pocket",
+        "do_qtell",
+        "do_roomlist",
+        "do_rwhere",
+        "do_spousetalk",
+        "do_time",
+        "do_vlist",
+        "do_zecho",
+        "spell_control_weather"
+      ],
+      "type_distribution": {
+        "command": 16,
+        "spell": 1
+      },
+      "wave_range": [
+        4,
+        10
+      ],
+      "dominant_capabilities": {
+        "flags": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "world_structure": 1.0,
+        "arg_parsing": 0.59
+      },
+      "dominant_domain_caps": [
+        "world_structure"
+      ],
+      "character": "domain:world_structure"
+    },
+    {
+      "cluster_id": 23,
+      "size": 17,
+      "members": [
+        "do_balance",
+        "do_check",
+        "do_deposit",
+        "do_drop",
+        "do_get",
+        "do_identify",
+        "do_invite",
+        "do_list",
+        "do_score",
+        "do_stat",
+        "do_value",
+        "do_weddingring",
+        "do_withdraw",
+        "spell_create_parchment",
+        "spell_create_rose",
+        "spell_create_vial",
+        "spell_protect_container"
+      ],
+      "type_distribution": {
+        "command": 13,
+        "spell": 4
+      },
+      "wave_range": [
+        4,
+        10
+      ],
+      "dominant_capabilities": {
+        "economy": 1.0,
+        "flags": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "arg_parsing": 0.94,
+        "admin": 0.88,
+        "affects": 0.88,
+        "attributes": 0.88,
+        "entity_lookup": 0.88,
+        "memory": 0.88,
+        "movement": 0.88,
+        "npc_behavior": 0.88,
+        "numerics": 0.88,
+        "quests": 0.88,
+        "skills_progression": 0.88,
+        "visibility_rules": 0.88,
+        "world_structure": 0.88,
+        "objects": 0.59
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "economy",
+        "movement",
+        "npc_behavior",
+        "objects",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(8)"
+    },
+    {
+      "cluster_id": 33,
+      "size": 16,
+      "members": [
+        "do_cedit",
+        "do_channels",
+        "do_clanlist",
+        "do_clanpower",
+        "do_deputize",
+        "do_finger",
+        "do_flagsearch",
+        "do_guild",
+        "do_iclantalk",
+        "do_oldscan",
+        "do_owhere",
+        "do_scan",
+        "do_scatter",
+        "do_war",
+        "do_who",
+        "spell_locate_life"
+      ],
+      "type_distribution": {
+        "command": 15,
+        "spell": 1
+      },
+      "wave_range": [
+        10,
+        10
+      ],
+      "dominant_capabilities": {
+        "clans": 1.0,
+        "flags": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "arg_parsing": 0.94,
+        "attributes": 0.94,
+        "entity_lookup": 0.88,
+        "skills_progression": 0.88,
+        "visibility_rules": 0.88,
+        "admin": 0.81,
+        "affects": 0.81,
+        "memory": 0.81,
+        "movement": 0.81,
+        "npc_behavior": 0.81,
+        "numerics": 0.81,
+        "quests": 0.81,
+        "world_structure": 0.81
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "clans",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(7)"
+    },
+    {
+      "cluster_id": 25,
+      "size": 15,
+      "members": [
+        "do_enter",
+        "do_fod",
+        "do_goto",
+        "do_hunt",
+        "do_look",
+        "do_mpcast",
+        "do_mpgoto",
+        "do_mppurge",
+        "do_mptransfer",
+        "do_relocate",
+        "do_return",
+        "do_sing",
+        "do_transfer",
+        "do_violate",
+        "spell_word_of_recall"
+      ],
+      "type_distribution": {
+        "command": 14,
+        "spell": 1
+      },
+      "wave_range": [
+        11,
+        11
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "combat": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "magic": 0.87
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "combat",
+        "magic",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(8)"
+    },
+    {
+      "cluster_id": 32,
+      "size": 14,
+      "members": [
+        "do_clandeposit",
+        "do_clanqp",
+        "do_clantalk",
+        "do_flame",
+        "do_globalsocial",
+        "do_gossip",
+        "do_grats",
+        "do_ic",
+        "do_immtalk",
+        "do_memory",
+        "do_music",
+        "do_pray",
+        "do_question",
+        "do_qwest"
+      ],
+      "type_distribution": {
+        "command": 14
+      },
+      "wave_range": [
+        10,
+        10
+      ],
+      "dominant_capabilities": {
+        "clans": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "output": 1.0,
+        "social": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "world_structure": 1.0,
+        "admin": 0.93,
+        "affects": 0.93,
+        "arg_parsing": 0.93,
+        "attributes": 0.93,
+        "entity_lookup": 0.93,
+        "movement": 0.93,
+        "npc_behavior": 0.93,
+        "numerics": 0.93,
+        "quests": 0.93,
+        "skills_progression": 0.93,
+        "visibility_rules": 0.93
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "clans",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "social",
+        "world_structure"
+      ],
+      "character": "domain:broad(8)"
+    },
+    {
+      "cluster_id": 29,
+      "size": 14,
+      "members": [
+        "do_copyover",
+        "do_disconnect",
+        "do_down",
+        "do_east",
+        "do_fuckoff",
+        "do_linkload",
+        "do_north",
+        "do_purge",
+        "do_reboot",
+        "do_shutdown",
+        "do_south",
+        "do_up",
+        "do_west",
+        "spec_mayor"
+      ],
+      "type_distribution": {
+        "command": 13,
+        "special": 1
+      },
+      "wave_range": [
+        12,
+        12
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "clans": 1.0,
+        "display": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "magic": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "runtime": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "persistence": 0.86
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "clans",
+        "magic",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(8)"
+    },
+    {
+      "cluster_id": 31,
+      "size": 13,
+      "members": [
+        "do_at",
+        "do_config",
+        "do_doas",
+        "do_emote",
+        "do_engrave",
+        "do_for",
+        "do_force",
+        "do_ignore",
+        "do_mpat",
+        "do_mpforce",
+        "do_order",
+        "do_say",
+        "do_sedit"
+      ],
+      "type_distribution": {
+        "command": 13
+      },
+      "wave_range": [
+        10,
+        12
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "social": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "persistence": 0.85,
+        "runtime": 0.69
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "social",
+        "world_structure"
+      ],
+      "character": "domain:broad(7)"
+    },
+    {
+      "cluster_id": 24,
+      "size": 10,
+      "members": [
+        "do_battle",
+        "do_clan_recall",
+        "do_duel",
+        "do_join",
+        "do_recall",
+        "do_rescue",
+        "do_rotate",
+        "do_spell",
+        "do_unjoin",
+        "spell_polymorph"
+      ],
+      "type_distribution": {
+        "command": 9,
+        "spell": 1
+      },
+      "wave_range": [
+        11,
+        12
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "combat": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "magic": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "objects": 1.0,
+        "output": 1.0,
+        "pvp": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "persistence": 0.7,
+        "clans": 0.6
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "clans",
+        "combat",
+        "magic",
+        "movement",
+        "npc_behavior",
+        "objects",
+        "pvp",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(11)"
+    },
+    {
+      "cluster_id": 26,
+      "size": 10,
+      "members": [
+        "do_brew",
+        "do_firebuilding",
+        "do_forge",
+        "do_heal",
+        "do_repair",
+        "do_scribe",
+        "do_sell",
+        "do_smite",
+        "spell_imprint",
+        "spell_remove_alignment"
+      ],
+      "type_distribution": {
+        "command": 8,
+        "spell": 2
+      },
+      "wave_range": [
+        11,
+        11
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "combat": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "objects": 0.9,
+        "persistence": 0.9
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "combat",
+        "movement",
+        "npc_behavior",
+        "objects",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(8)"
+    },
+    {
+      "cluster_id": 3,
+      "size": 10,
+      "members": [
+        "do_changes",
+        "do_idea",
+        "do_immquest",
+        "do_next",
+        "do_note",
+        "do_old_next",
+        "do_personal",
+        "do_roleplay",
+        "do_trade",
+        "do_unread"
+      ],
+      "type_distribution": {
+        "command": 10
+      },
+      "wave_range": [
+        10,
+        10
+      ],
+      "dominant_capabilities": {
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "flags": 1.0,
+        "notes": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "admin": 0.7,
+        "affects": 0.7,
+        "entity_lookup": 0.7,
+        "memory": 0.7,
+        "movement": 0.7,
+        "npc_behavior": 0.7,
+        "numerics": 0.7,
+        "quests": 0.7,
+        "skills_progression": 0.7,
+        "visibility_rules": 0.7,
+        "world_structure": 0.7
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "movement",
+        "notes",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(7)"
+    },
+    {
+      "cluster_id": 4,
+      "size": 9,
+      "members": [
+        "do_claninfo",
+        "do_echo",
+        "do_flaglist",
+        "do_recho",
+        "do_relevel",
+        "do_secure",
+        "do_set",
+        "do_wimpy",
+        "spell_refresh"
+      ],
+      "type_distribution": {
+        "command": 8,
+        "spell": 1
+      },
+      "wave_range": [
+        4,
+        10
+      ],
+      "dominant_capabilities": {
+        "attributes": 1.0,
+        "flags": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0
+      },
+      "dominant_domain_caps": [],
+      "character": "support-only"
+    },
+    {
+      "cluster_id": 34,
+      "size": 9,
+      "members": [
+        "do_spousegate",
+        "spell_charm_person",
+        "spell_gate",
+        "spell_nexus",
+        "spell_portal",
+        "spell_smokescreen",
+        "spell_summon_object",
+        "spell_teleport",
+        "spell_vision"
+      ],
+      "type_distribution": {
+        "command": 1,
+        "spell": 8
+      },
+      "wave_range": [
+        10,
+        10
+      ],
+      "dominant_capabilities": {
+        "admin": 1.0,
+        "affects": 1.0,
+        "arg_parsing": 1.0,
+        "attributes": 1.0,
+        "clans": 1.0,
+        "entity_lookup": 1.0,
+        "flags": 1.0,
+        "magic": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "npc_behavior": 1.0,
+        "numerics": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "clans",
+        "magic",
+        "movement",
+        "npc_behavior",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(8)"
+    },
+    {
+      "cluster_id": 20,
+      "size": 7,
+      "members": [
+        "do_addapply",
+        "do_autograph",
+        "do_despell",
+        "do_examine",
+        "do_oset",
+        "do_play",
+        "do_swho"
+      ],
+      "type_distribution": {
+        "command": 7
+      },
+      "wave_range": [
+        9,
+        10
+      ],
+      "dominant_capabilities": {
+        "attributes": 1.0,
+        "flags": 1.0,
+        "output": 1.0,
+        "quests": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "affects": 0.86,
+        "arg_parsing": 0.86,
+        "memory": 0.86,
+        "entity_lookup": 0.71
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "quests",
+        "world_structure"
+      ],
+      "character": "domain:affects+quests+world_structure"
+    },
+    {
+      "cluster_id": 35,
+      "size": 7,
+      "members": [
+        "do_donate",
+        "do_exits",
+        "do_second",
+        "do_wear",
+        "spell_floating_disc",
+        "spell_holy_sword",
+        "spell_identify"
+      ],
+      "type_distribution": {
+        "command": 4,
+        "spell": 3
+      },
+      "wave_range": [
+        10,
+        11
+      ],
+      "dominant_capabilities": {
+        "affects": 1.0,
+        "attributes": 1.0,
+        "clans": 1.0,
+        "flags": 1.0,
+        "memory": 1.0,
+        "movement": 1.0,
+        "objects": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0,
+        "world_structure": 1.0,
+        "admin": 0.86,
+        "arg_parsing": 0.86,
+        "entity_lookup": 0.86,
+        "npc_behavior": 0.86,
+        "numerics": 0.86,
+        "quests": 0.86,
+        "skills_progression": 0.86
+      },
+      "dominant_domain_caps": [
+        "affects",
+        "clans",
+        "movement",
+        "npc_behavior",
+        "objects",
+        "quests",
+        "skills_progression",
+        "world_structure"
+      ],
+      "character": "domain:broad(8)"
+    },
+    {
+      "cluster_id": 2,
+      "size": 7,
+      "members": [
+        "do_eremort",
+        "do_evolve",
+        "do_levels",
+        "do_mark",
+        "spec_cast_cleric",
+        "spec_cast_mage",
+        "spec_cast_undead"
+      ],
+      "type_distribution": {
+        "command": 4,
+        "special": 3
+      },
+      "wave_range": [
+        6,
+        10
+      ],
+      "dominant_capabilities": {
+        "attributes": 1.0,
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "numerics": 0.86,
+        "flags": 0.57,
+        "output": 0.57,
+        "movement": 0.57
+      },
+      "dominant_domain_caps": [
+        "movement",
+        "skills_progression"
+      ],
+      "character": "domain:movement+skills_progression"
+    },
+    {
+      "cluster_id": 1,
+      "size": 6,
+      "members": [
+        "do_autopeek",
+        "do_groups",
+        "do_slookup",
+        "do_worth",
+        "spec_cast_judge",
+        "spell_mass_healing"
+      ],
+      "type_distribution": {
+        "command": 4,
+        "special": 1,
+        "spell": 1
+      },
+      "wave_range": [
+        5,
+        10
+      ],
+      "dominant_capabilities": {
+        "skills_progression": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 0.83,
+        "flags": 0.67,
+        "output": 0.67
+      },
+      "dominant_domain_caps": [
+        "skills_progression"
+      ],
+      "character": "domain:skills_progression"
+    },
+    {
+      "cluster_id": 28,
+      "size": 6,
+      "members": [
+        "do_peace",
+        "spell_cure_critical",
+        "spell_cure_light",
+        "spell_cure_serious",
+        "spell_divine_healing",
+        "spell_heal"
+      ],
+      "type_distribution": {
+        "command": 1,
+        "spell": 5
+      },
+      "wave_range": [
+        11,
+        11
+      ],
+      "dominant_capabilities": {
+        "combat": 1.0,
+        "flags": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "attributes": 0.83,
+        "numerics": 0.67
+      },
+      "dominant_domain_caps": [
+        "combat"
+      ],
+      "character": "domain:combat"
+    },
+    {
+      "cluster_id": 19,
+      "size": 4,
+      "members": [
+        "do_dump",
+        "do_visible",
+        "spell_darkness",
+        "spell_farsight"
+      ],
+      "type_distribution": {
+        "command": 2,
+        "spell": 2
+      },
+      "wave_range": [
+        7,
+        10
+      ],
+      "dominant_capabilities": {
+        "affects": 1.0,
+        "output": 1.0,
+        "string_ops": 1.0,
+        "flags": 0.75,
+        "state_rules": 0.75
+      },
+      "dominant_domain_caps": [
+        "affects"
+      ],
+      "character": "domain:affects"
+    },
+    {
+      "cluster_id": 16,
+      "size": 3,
+      "members": [
+        "do_exlist",
+        "do_roomexits",
+        "do_weather"
+      ],
+      "type_distribution": {
+        "command": 3
+      },
+      "wave_range": [
+        9,
+        9
+      ],
+      "dominant_capabilities": {
+        "display": 1.0,
+        "flags": 1.0,
+        "movement": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "world_structure": 1.0
+      },
+      "dominant_domain_caps": [
+        "movement",
+        "world_structure"
+      ],
+      "character": "domain:movement+world_structure"
+    },
+    {
+      "cluster_id": 6,
+      "size": 1,
+      "members": [
+        "do_censor"
+      ],
+      "type_distribution": {
+        "command": 1
+      },
+      "wave_range": [
+        0,
+        0
+      ],
+      "dominant_capabilities": {
+        "string_ops": 1.0
+      },
+      "dominant_domain_caps": [],
+      "character": "support-only"
+    },
+    {
+      "cluster_id": 5,
+      "size": 1,
+      "members": [
+        "do_count"
+      ],
+      "type_distribution": {
+        "command": 1
+      },
+      "wave_range": [
+        9,
+        9
+      ],
+      "dominant_capabilities": {
+        "attributes": 1.0,
+        "display": 1.0,
+        "flags": 1.0,
+        "output": 1.0,
+        "state_rules": 1.0,
+        "string_ops": 1.0,
+        "visibility_rules": 1.0
+      },
+      "dominant_domain_caps": [],
+      "character": "support-only"
+    },
+    {
+      "cluster_id": 15,
+      "size": 1,
+      "members": [
+        "do_immname"
+      ],
+      "type_distribution": {
+        "command": 1
+      },
+      "wave_range": [
+        1,
+        1
+      ],
+      "dominant_capabilities": {
+        "state_rules": 1.0,
+        "string_ops": 1.0
+      },
+      "dominant_domain_caps": [],
+      "character": "support-only"
+    },
+    {
+      "cluster_id": 7,
+      "size": 1,
+      "members": [
+        "spec_blacksmith"
+      ],
+      "type_distribution": {
+        "special": 1
+      },
+      "wave_range": [
+        0,
+        0
+      ],
+      "dominant_capabilities": {},
+      "dominant_domain_caps": [],
+      "character": "stub/empty"
+    },
+    {
+      "cluster_id": 8,
+      "size": 1,
+      "members": [
+        "spec_fight_clanguard"
+      ],
+      "type_distribution": {
+        "special": 1
+      },
+      "wave_range": [
+        0,
+        0
+      ],
+      "dominant_capabilities": {},
+      "dominant_domain_caps": [],
+      "character": "stub/empty"
+    },
+    {
+      "cluster_id": 9,
+      "size": 1,
+      "members": [
+        "spec_lookup"
+      ],
+      "type_distribution": {
+        "special": 1
+      },
+      "wave_range": [
+        0,
+        0
+      ],
+      "dominant_capabilities": {
+        "string_ops": 1.0
+      },
+      "dominant_domain_caps": [],
+      "character": "support-only"
+    },
+    {
+      "cluster_id": 10,
+      "size": 1,
+      "members": [
+        "spec_name"
+      ],
+      "type_distribution": {
+        "special": 1
+      },
+      "wave_range": [
+        0,
+        0
+      ],
+      "dominant_capabilities": {},
+      "dominant_domain_caps": [],
+      "character": "stub/empty"
+    },
+    {
+      "cluster_id": 11,
+      "size": 1,
+      "members": [
+        "spec_questmaster"
+      ],
+      "type_distribution": {
+        "special": 1
+      },
+      "wave_range": [
+        0,
+        0
+      ],
+      "dominant_capabilities": {},
+      "dominant_domain_caps": [],
+      "character": "stub/empty"
+    },
+    {
+      "cluster_id": 12,
+      "size": 1,
+      "members": [
+        "spec_sage"
+      ],
+      "type_distribution": {
+        "special": 1
+      },
+      "wave_range": [
+        0,
+        0
+      ],
+      "dominant_capabilities": {},
+      "dominant_domain_caps": [],
+      "character": "stub/empty"
+    },
+    {
+      "cluster_id": 13,
+      "size": 1,
+      "members": [
+        "spec_squestmaster"
+      ],
+      "type_distribution": {
+        "special": 1
+      },
+      "wave_range": [
+        0,
+        0
+      ],
+      "dominant_capabilities": {},
+      "dominant_domain_caps": [],
+      "character": "stub/empty"
+    }
+  ]
+}

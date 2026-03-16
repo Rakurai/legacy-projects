@@ -29,6 +29,8 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 * No `Any` in production paths. If unavoidable, annotate with `Any` and add `# TODO refine type`.
 * Narrow types aggressively (Literal/union/enums). Prefer Protocol/TypedDict over weakening types.
 * Public interfaces must be fully typed; return `Optional[T]` **only** when `None` is intentional.
+* **Python 3.14+** lazy evaluation of annotations is native; no `from __future__ import annotations` needed. Forward references work unquoted.
+* Use Unicode for all strings.
 
 ---
 
@@ -55,6 +57,17 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 
 ---
 
+## Tooling
+
+**Rules**
+
+* **Logging**: `from loguru import logger as log` in every module.
+* **Linting & formatting**: `ruff` (lint + format).
+* **Static type checking**: `mypy --strict`.
+* **Testing**: `pytest` and `pytest-randomly` to detect inter-test coupling.
+
+---
+
 ## Minimal, Consistent Logging
 
 **Principle**: Structured context; signal, not noise.
@@ -63,7 +76,7 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 
 * Log **start**, **error**, **completion** of meaningful operations with contextual fields (resource IDs, operation names).
 * Do not duplicate logs and errors; prefer one precise log at the owner boundary.
-* Never use `print`. Use the project’s logger (see domain docs for specifics).
+* Never use `print`. Use `log` (loguru) everywhere.
 
 ---
 
@@ -79,6 +92,15 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 
 ---
 
+## Naming Conventions
+
+* `snake_case` for functions, methods, variables, and modules.
+* `PascalCase` for classes.
+* `UPPER_CASE` for module-level constants.
+* Names carry intent; if a name needs a comment to explain itself, rename it.
+
+---
+
 ## Long-Running Work
 
 **Principle**: Non-blocking orchestration with explicit status (when applicable to the project).
@@ -91,6 +113,18 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 
 ---
 
+## Configuration
+
+**Principle**: Typed, validated settings loaded once at startup.
+
+**Rules**
+
+* Use `pydantic-settings` `BaseSettings` for all configuration.
+* Load environment-specific values from `.env` files; never hardcode secrets.
+* Validate eagerly at startup — missing or invalid config crashes immediately.
+
+---
+
 ## Resource & Process Hygiene
 
 **Principle**: Leave the system clean on all paths.
@@ -98,7 +132,7 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 **Rules**
 
 * Validate config and external resources at startup; import required packages at module scope so missing deps fail early.
-* Ensure cleanup of files/sockets/subprocesses on success, failure, and cancellation paths.
+* Use context managers for files, sockets, sessions, and subprocesses. Ensure cleanup on success, failure, and cancellation paths.
 
 ---
 
@@ -133,18 +167,20 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 * Defensive checks against already-validated inputs.
 * Silent failure, log-and-continue, or catching without re-raising.
 * Legacy/migration/temporary bridging code.
+* Hardcoded secrets or credentials; use environment variables or secret management.
 
 ---
 
 ## Quick Checklist
 
 * [ ] Greenfield mindset: no legacy/migration code.
-* [ ] Strict typing; no `Any` (or TODO-marked if unavoidable).
-* [ ] DI explicit; no hidden globals/dynamic imports.
+* [ ] Strict typing (`mypy --strict`); no `Any` (or TODO-marked if unavoidable).
+* [ ] DI explicit; no hidden globals or dynamic imports.
 * [ ] Fail-fast on config/deps; helpful crash messages.
 * [ ] Errors handled at owner layer only; otherwise propagate.
-* [ ] Structured logs for start/error/complete; no `print`.
-* [ ] Resource-based interfaces; schema-first; **no pagination**.
-* [ ] Long-running work uses explicit job handles (only if applicable).
+* [ ] Logging via loguru (`from loguru import logger as log`); no `print`.
+* [ ] Linting/formatting via `ruff`.
+* [ ] Resource-based interfaces; schema-first.
+* [ ] Context managers for all resources; cleanup on every path.
 * [ ] Happy-path tests only; few high-signal checks.
 * [ ] Comments/docstrings add non-obvious value only.

@@ -1,0 +1,15 @@
+[project]
+name = "classify-fns"
+version = "0.1.0"
+description = "Game subsystem classification and capability analysis"
+requires-python = ">=3.14"
+dependencies = [
+    "legacy-common",
+    "ipykernel>=6.29",
+    "matplotlib>=3.10",
+    "scikit-optimize>=0.10",
+    "seaborn>=0.13",
+]
+
+[tool.uv.sources]
+legacy-common = { workspace = true }

@@ -3,7 +3,7 @@ name = "legacy-mcp-doc-server"
 version = "1.0.0"
 description = "MCP Documentation Server for Legacy MUD Codebase"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.14"
 dependencies = [
     "fastmcp>=0.3.0",
     "pydantic>=2.0.0",
@@ -35,7 +35,7 @@ packages = ["server", "build_helpers"]
 
 [tool.ruff]
 line-length = 120
-target-version = "py311"
+target-version = "py314"
 
 [tool.ruff.lint]
 select = [
@@ -57,7 +57,7 @@ ignore = [
 known-first-party = ["server", "build_helpers"]
 
 [tool.mypy]
-python_version = "3.11"
+python_version = "3.14"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
@@ -92,4 +92,10 @@ python_functions = ["test_*"]
 addopts = "-v --strict-markers"
 markers = [
     "slow: marks tests that require model download (deselect with '-m \"not slow\"')",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.0.2",
+    "pytest-asyncio>=1.3.0",
 ]

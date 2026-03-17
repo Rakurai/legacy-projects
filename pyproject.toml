@@ -1,0 +1,47 @@
+[project]
+name = "legacy-projects"
+version = "0.1.0"
+description = "Auxiliary tools for legacy MUD migration"
+requires-python = ">=3.14"
+dependencies = [
+    "legacy-common",
+    "doc-gen",
+    "classify-fns",
+    "legacy-mcp-doc-server",
+]
+
+[tool.uv.sources]
+legacy-common = { workspace = true }
+doc-gen = { workspace = true }
+classify-fns = { workspace = true }
+legacy-mcp-doc-server = { workspace = true }
+
+[tool.uv.workspace]
+members = [
+    "packages/*",
+    "projects/*",
+    "mcp/*",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py314"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "N",   # pep8-naming
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+ignore = [
+    "E501", # line too long (handled by formatter)
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["legacy_common", "doc_gen", "classify_fns"]

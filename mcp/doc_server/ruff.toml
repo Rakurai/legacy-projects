@@ -1,6 +1,6 @@
 # ruff.toml
 
-target-version = "py311"
+target-version = "py314"
 
 [lint]
 select = [

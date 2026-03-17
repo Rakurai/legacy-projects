@@ -1,0 +1,27 @@
+[project]
+name = "doc-gen"
+version = "0.1.0"
+description = "Doxygen graph mining and LLM-based documentation generation"
+requires-python = ">=3.14"
+dependencies = [
+    "legacy-common",
+    "ipykernel>=6.29",
+    "jinja2>=3.1",
+    "jupyter>=1.1",
+    "matplotlib>=3.10",
+    "pandas>=3.0",
+    "seaborn>=0.13",
+    "sentence-transformers>=5.0",
+    "torch>=2.10",
+    "transformers>=5.0",
+]
+
+[tool.uv.sources]
+legacy-common = { workspace = true }
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["doc_gen"]

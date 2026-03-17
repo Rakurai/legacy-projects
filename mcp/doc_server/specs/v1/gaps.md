@@ -97,6 +97,8 @@ The contracts define tool schemas but contain no worked request/response example
 
 ### 4.1 Resolve + Fetch workflow
 
+> **Note:** Entity IDs shown below use V1 Doxygen format (`compound_member`). These are **not stable** across Doxygen runs. Design 005 replaces them with deterministic `{prefix}:{7 hex}` IDs.
+
 ```
 → resolve_entity(query="damage", kind="function")
 ← {

@@ -276,7 +276,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **A-004**: NetworkX in-memory graph constructed from ~25,000 edges fits in available memory (estimated ~100-200 MB) and is read-only after initial load (no thread safety concerns for concurrent reads)
 - **A-005**: MCP client (VS Code, Claude Desktop) supports stdio transport and can invoke MCP tools/resources/prompts
 - **A-006**: Source code files on disk match artifacts at database build time; users rebuild database after code changes
-- **A-007**: The signature map (`signature_map.json`) bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`, providing the join key for entity-documentation merging <!-- Updated per spec 003: replaces compound_id+signature assumption -->
+- **A-007**: The signature map (`signature_map.json`) bridges entity IDs from `code_graph.json` to `(compound_id, signature)` documentation keys in `doc_db.json`. It is a **derived artifact** — regenerated from `code_graph.json` + `doc_db.json` via `build_signature_map.py`. It must be regenerated any time `code_graph.json` is refreshed, because Doxygen member hashes change across runs while `(compound_id, signature)` keys are stable. <!-- Updated per spec 003: replaces compound_id+signature assumption -->
 - **A-008**: Capability definitions, dependency edges, and function membership lists in `capability_defs.json` and `capability_graph.json` are authoritative
 - **A-009**: Full-text search weighted tsvector composition (name=A, brief/details=B, definition=C, source_text=D) provides reasonable ranking for prose queries
 - **A-010**: BFS traversal with visited set and configurable depth limits prevents performance degradation from circular dependencies or deep call chains

@@ -22,13 +22,15 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE entities (
     -- Identity (internal)
-    entity_id       TEXT PRIMARY KEY,          -- Doxygen compound_member ID
-    compound_id     TEXT NOT NULL,             -- Doxygen compound refid
-    member_id       TEXT,                      -- Member hex hash (NULL for compounds)
+    entity_id       TEXT PRIMARY KEY,          -- Doxygen compound_member ID (compound_id for compounds, compound_id + "_" + member_hash for members)
+                                               -- NOTE: member hashes are NOT stable across Doxygen runs. compound_id IS stable.
+                                               -- See artifacts/artifacts.md §5 for entity ID reconciliation details.
+    compound_id     TEXT NOT NULL,             -- Doxygen compound refid (stable across regenerations)
+    member_id       TEXT,                      -- Member hex hash (NULL for compounds; changes across Doxygen runs)
 
     -- Identity (user-facing)
     name            TEXT NOT NULL,             -- Bare name: "do_look", "race_type"
-    signature       TEXT NOT NULL UNIQUE,      -- Full signature: "void do_look(Character *ch, String argument)"
+    signature       TEXT NOT NULL,             -- Full signature: "void do_look(Character *ch, String argument)" (NOT unique — 521 signatures collide across compounds)
     kind            TEXT NOT NULL,             -- function, variable, class, struct, file, enum, define, typedef, namespace, dir, group
     entity_type     TEXT NOT NULL,             -- "compound" or "member"
 
@@ -193,7 +195,7 @@ class Entity(SQLModel, table=True):
 
     # Identity (user-facing)
     name: str
-    signature: str = Field(unique=True)
+    signature: str  # NOT unique — 521 signatures collide across compounds (e.g. variables named "level" in different files)
     kind: str
     entity_type: str
 
@@ -333,7 +335,7 @@ from typing import Literal
 
 class EntitySummary(BaseModel):
     """Compact entity representation used in all list tools."""
-    entity_id: str = Field(description="Internal Doxygen ID (for passing to get_entity)")
+    entity_id: str = Field(description="Entity ID (for passing to get_entity)")
     signature: str = Field(description="Full human-readable signature (C++ function sig or name)")
     name: str = Field(description="Bare name")
     kind: Literal["function", "variable", "class", "struct", "file", "enum", "define", "typedef", "namespace", "dir", "group"]
@@ -371,7 +373,7 @@ class EntityDetail(BaseModel):
     decl_file_path: str | None
     decl_line: int | None
     definition_text: str | None
-    source_text: str | None  # Optional (include_code=true)
+    source_text: str | None  # Optional (include_code=true), BUT auto-included for enum and group kinds (flag values visible without explicit request)
 
     # Capability & metrics
     capability: str | None
@@ -584,7 +586,7 @@ class ContextBundle(BaseModel):
 ### Entity Identity
 
 - `entity_id` UNIQUE (primary key)
-- `signature` UNIQUE (user-facing key)
+- `signature` NOT NULL (display-only, **not unique** — 521 signatures collide across compounds)
 - `compound_id` NOT NULL
 - `member_id` NULL only for compound entities
 - `kind` IN (function, variable, class, struct, file, enum, define, typedef, namespace, dir, group)
@@ -814,11 +816,18 @@ Key notes: Entity-to-capability mapping from `capabilities[name].members[].name`
 
 ```json
 {
-  "<entity_id>": "<signature>"
+  "<entity_id>": {
+    "compound_id": "<compound_id>",
+    "signature": "<signature>"
+  }
 }
 ```
 
-Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`.
+Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`. The value is the `(compound_id, signature)` tuple that serves as the doc_db key. This file is **derived** — regenerated from `code_graph.json` + `doc_db.json` via `projects/doc_gen/build_signature_map.py`.
+
+**Regeneration lifecycle**: `signature_map.json` must be regenerated any time `code_graph.json` is refreshed from new Doxygen output, because Doxygen member hashes (the `member` part of entity IDs) change across runs. The doc_db key `(compound_id, signature)` is stable because `compound_id` derives from C++ qualified names and `signature` is the entity's definition text or name. See `artifacts/artifacts.md` §4-5 for full details.
+
+**Phantom references**: `code_graph.json` contains ~506 entity IDs in `detailed_refs` and `codeline_refs` that don't appear as entities in the `id` fields. These are `enumvalue` IDs (~479, individual enum constants) and `friend` memberdefs (~27, filtered out during parsing). They are expected and should be silently skipped when translating edge endpoints during the build.
 
 ---
 

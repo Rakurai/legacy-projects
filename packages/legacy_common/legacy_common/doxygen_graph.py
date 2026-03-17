@@ -224,7 +224,7 @@ def build_graph(db: dp.EntityDatabase, exclude: Set[dp.EntityID] = set()) -> nx.
     Returns:
         NetworkX directed multigraph
     """
-    from doxygen_parse import EntityID, DoxygenCompound, DoxygenMember
+    from .doxygen_parse import EntityID, DoxygenCompound, DoxygenMember
     # Change from DiGraph to MultiDiGraph to support multiple edges
     G = nx.MultiDiGraph()
     refs: List[Tuple[dp.EntityID, str, str]] = []

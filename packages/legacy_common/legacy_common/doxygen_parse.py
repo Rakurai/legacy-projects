@@ -525,6 +525,22 @@ def parse_compounddef(elem: ET.Element) -> Dict[str, Any]:
             data['file']['line'] = min_line
             data["codeline_refs"] = codeline_refs
 
+    # For groups, synthesize body range from member locations so extract_source_code picks them up.
+    if data["kind"] == "group" and "body" not in data:
+        member_files: Dict[str, List[int]] = {}
+        for mdef in elem.findall(".//memberdef"):
+            loc = mdef.find("location")
+            if loc is None:
+                continue
+            fn = loc.attrib.get("bodyfile") or loc.attrib.get("file", "")
+            line = int(loc.attrib.get("bodystart") or loc.attrib.get("line", "-1"))
+            if fn and line > 0:
+                member_files.setdefault(fn, []).append(line)
+        if member_files:
+            # Use the file with the most members (groups are typically in one file)
+            fn = max(member_files, key=lambda f: len(member_files[f]))
+            lines = member_files[fn]
+            data["body"] = {"fn": fn, "line": min(lines), "end_line": max(lines), "type": "body"}
 
     return data
 

@@ -38,7 +38,7 @@ A JSON array of objects. Each object describes a single Doxygen entity parsed fr
 
 ### How it's created
 
-1. Doxygen runs on the legacy C++ source, producing XML in `context/doxygen_output/xml/`.
+1. Doxygen runs on the legacy C++ source, producing XML in `<legacy>/doxygen_output/xml/`.
 2. `code_graph.ipynb` calls `doxygen_parse.EntityDatabase.from_xml_dir(xml_dir)` which parses every `<compounddef>` and `<memberdef>` element.
 3. The resulting `EntityDatabase` is serialized with `doxygen_parse.save_db(db, path)`, which calls `EntityDatabase.model_dump_json()` — this flattens the in-memory dictionaries into a single JSON array.
 

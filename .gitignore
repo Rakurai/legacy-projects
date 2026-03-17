@@ -12,3 +12,7 @@ venv/
 
 # Scratch
 .scratch/
+
+# spec-kit
+.specify/
+speckit.*

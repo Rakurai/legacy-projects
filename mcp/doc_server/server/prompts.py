@@ -15,7 +15,7 @@ def explain_entity_prompt(entity_name: str) -> list[dict[str, str]]:
     """
     Generate prompt messages for comprehensive entity explanation.
 
-    Workflow: resolve → get_entity → get_callers → get_callees → get_capability_detail
+    Workflow: search → get_entity → get_callers → get_callees → get_capability_detail
 
     Args:
         entity_name: Entity name or signature to explain
@@ -43,11 +43,11 @@ def explain_entity_prompt(entity_name: str) -> list[dict[str, str]]:
             "content": (
                 f"I'll analyze {entity_name} using the Legacy documentation server. "
                 "Let me gather information:\n\n"
-                "1. First, I'll resolve the entity name to get its full details\n"
-                "2. Then I'll examine its callers to understand usage context\n"
-                "3. Next, I'll look at its callees to understand dependencies\n"
+                "1. First, I'll search for the entity to get its ID\n"
+                "2. Then I'll fetch full details with get_entity\n"
+                "3. Next, I'll examine callers and callees\n"
                 "4. Finally, I'll check its capability membership and architectural role\n\n"
-                "Starting with entity resolution..."
+                "Starting with a search..."
             ),
         },
     ]
@@ -60,7 +60,7 @@ def analyze_behavior_prompt(
     """
     Generate prompt messages for behavioral analysis.
 
-    Workflow: resolve → get_behavior_slice → get_state_touches
+    Workflow: search → get_behavior_slice → get_state_touches
 
     Args:
         entity_name: Entity name or signature to analyze
@@ -102,7 +102,7 @@ def compare_entry_points_prompt(
     """
     Generate prompt messages for entry point comparison.
 
-    Workflow: For each entry point → resolve → get_behavior_slice → get_entry_point_info
+    Workflow: For each entry point → search → get_behavior_slice → get_entry_point_info
               Then compute intersection and differences.
 
     Args:

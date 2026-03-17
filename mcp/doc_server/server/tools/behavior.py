@@ -16,7 +16,6 @@ from server.db_models import Entity
 from server.enums import (
     AccessType,
     Confidence,
-    DocQuality,
     HotspotMetric,
     Provenance,
     SideEffectCategory,
@@ -33,7 +32,7 @@ from server.models import (
     SideEffectMarker,
     TruncationMetadata,
 )
-from server.util import fetch_entity_summaries, resolve_entity_id
+from server.util import fetch_entity_summaries
 
 # Maximum number of example functions listed per capability touch
 _MAX_FUNCTIONS_PER_TOUCH = 10
@@ -95,8 +94,7 @@ def _extract_side_effects_for_entities(
 @mcp.tool()
 async def get_behavior_slice(
     ctx: Context,
-    entity_id: Annotated[str | None, Field(description="Seed entity ID")] = None,
-    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
+    entity_id: Annotated[str, Field(description="Seed entity ID")],
     max_depth: Annotated[int, Field(ge=1, le=10, description="Maximum traversal depth")] = 5,
     max_cone_size: Annotated[int, Field(ge=1, le=1000, description="Maximum cone size before truncation")] = 200,
 ) -> BehaviorSliceResponse:
@@ -112,15 +110,13 @@ async def get_behavior_slice(
     log.info("get_behavior_slice", entity_id=entity_id, max_depth=max_depth)
 
     async with lc["db_manager"].session() as session:
-        eid = await resolve_entity_id(session, entity_id, signature)
-
-        seed_entity = await session.get(Entity, eid)
+        seed_entity = await session.get(Entity, entity_id)
         if not seed_entity:
-            raise EntityNotFoundError(eid)
+            raise EntityNotFoundError(entity_id)
 
         seed_summary = entity_to_summary(seed_entity)
 
-        cone = compute_call_cone(graph, eid, max_depth=max_depth, max_size=max_cone_size)
+        cone = compute_call_cone(graph, entity_id, max_depth=max_depth, max_size=max_cone_size)
         direct_ids: list[str] = cone["direct"]
         transitive_ids: list[str] = cone["transitive"]
         all_cone_ids = direct_ids + transitive_ids
@@ -129,11 +125,11 @@ async def get_behavior_slice(
         direct_summaries = await fetch_entity_summaries(session, direct_ids)
         transitive_summaries = await fetch_entity_summaries(session, transitive_ids)
 
-        all_entity_ids = [eid, *all_cone_ids]
+        all_entity_ids = [entity_id, *all_cone_ids]
 
         # Also fetch uses-targets so globals_used can resolve them
         uses_target_ids: list[str] = []
-        for check_eid in [eid, *all_cone_ids]:
+        for check_eid in [entity_id, *all_cone_ids]:
             if check_eid not in graph:
                 continue
             for _, target, data in graph.out_edges(check_eid, data=True):
@@ -168,8 +164,8 @@ async def get_behavior_slice(
 
     # Globals used
     globals_used: list[GlobalTouch] = []
-    if eid in graph:
-        for _, target, data in graph.out_edges(eid, data=True):
+    if entity_id in graph:
+        for _, target, data in graph.out_edges(entity_id, data=True):
             if data.get("type") == USES:
                 te = all_entities_map.get(target)
                 if te and te.kind == "variable":
@@ -194,7 +190,7 @@ async def get_behavior_slice(
 
     # Side effects
     side_effects: dict[str, list[SideEffectMarker]] = {}
-    for m in _extract_side_effects_for_entities(all_entities_map, [eid], AccessType.DIRECT):
+    for m in _extract_side_effects_for_entities(all_entities_map, [entity_id], AccessType.DIRECT):
         side_effects.setdefault(m.category, []).append(m)
     for m in _extract_side_effects_for_entities(all_entities_map, direct_ids, AccessType.DIRECT):
         side_effects.setdefault(m.category, []).append(m)
@@ -230,8 +226,7 @@ async def get_behavior_slice(
 @mcp.tool()
 async def get_state_touches(
     ctx: Context,
-    entity_id: Annotated[str | None, Field(description="Entity ID")] = None,
-    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
+    entity_id: Annotated[str, Field(description="Entity ID")],
 ) -> StateTouchesResponse:
     """
     Analyze global variable usage and side effects (direct + transitive).
@@ -245,18 +240,16 @@ async def get_state_touches(
     log.info("get_state_touches", entity_id=entity_id)
 
     async with lc["db_manager"].session() as session:
-        eid = await resolve_entity_id(session, entity_id, signature)
-
-        entity = await session.get(Entity, eid)
+        entity = await session.get(Entity, entity_id)
         if not entity:
-            raise EntityNotFoundError(eid)
+            raise EntityNotFoundError(entity_id)
 
         direct_use_ids: list[str] = []
         transitive_use_ids: list[str] = []
         direct_callee_ids: list[str] = []
 
-        if eid in graph:
-            for _, target, data in graph.out_edges(eid, data=True):
+        if entity_id in graph:
+            for _, target, data in graph.out_edges(entity_id, data=True):
                 if data.get("type") == USES:
                     direct_use_ids.append(target)
                 elif data.get("type") == CALLS:
@@ -271,7 +264,7 @@ async def get_state_touches(
                         seen_uses.add(target)
                         transitive_use_ids.append(target)
 
-        all_use_ids = direct_use_ids + transitive_use_ids + direct_callee_ids + [eid]
+        all_use_ids = direct_use_ids + transitive_use_ids + direct_callee_ids + [entity_id]
         result = await session.execute(
             select(Entity).where(Entity.entity_id.in_(all_use_ids))
         )
@@ -307,7 +300,7 @@ async def get_state_touches(
     transitive_side_effects = _extract_side_effects_for_entities(entity_map, indirect_callee_ids, AccessType.TRANSITIVE)
 
     return StateTouchesResponse(
-        entity_id=eid,
+        entity_id=entity_id,
         signature=entity.signature,
         direct_uses=direct_uses,
         direct_side_effects=direct_side_effects,
@@ -352,7 +345,7 @@ async def get_hotspots(
             stmt = stmt.where(Entity.is_bridge == True)  # noqa: E712
             stmt = stmt.order_by(Entity.fan_in.desc())
         elif metric == HotspotMetric.UNDERDOCUMENTED:
-            stmt = stmt.where(Entity.doc_quality.in_([DocQuality.LOW, DocQuality.MEDIUM]))
+            stmt = stmt.where(Entity.brief.is_(None))
             stmt = stmt.order_by(Entity.fan_in.desc())
 
         stmt = stmt.limit(limit)

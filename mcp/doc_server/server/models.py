@@ -11,13 +11,10 @@ from server.enums import (
     AccessType,
     CapabilityType,
     Confidence,
-    DocQuality,
     EntityKind,
     EntityType,
     FocusType,
-    MatchType,
     Provenance,
-    ResolutionStatus,
     SearchMode,
     SideEffectCategory,
     TruncationReason,
@@ -37,8 +34,6 @@ class EntitySummary(BaseModel):
     file_path: str | None = Field(default=None, description="Source file path")
     capability: str | None = Field(default=None, description="Capability group")
     brief: str | None = Field(default=None, description="One-line summary")
-    doc_state: str = Field(description="Documentation pipeline state")
-    doc_quality: DocQuality = Field(description="Derived quality bucket")
     fan_in: int = Field(ge=0, description="Incoming CALLS edges")
     fan_out: int = Field(ge=0, description="Outgoing CALLS edges")
     provenance: Provenance = Field(default=Provenance.PRECOMPUTED, description="Data source")
@@ -69,8 +64,6 @@ class EntityDetail(BaseModel):
     """
     # Identity
     entity_id: str
-    compound_id: str
-    member_id: str | None
     signature: str
     name: str
 
@@ -89,8 +82,6 @@ class EntityDetail(BaseModel):
 
     # Capability & metrics
     capability: str | None
-    doc_state: str
-    doc_quality: DocQuality
     fan_in: int
     fan_out: int
     is_bridge: bool
@@ -113,14 +104,6 @@ class EntityDetail(BaseModel):
 
     # Provenance
     provenance: Provenance = Field(default=Provenance.DOXYGEN_EXTRACTED)
-
-
-class ResolutionEnvelope(BaseModel):
-    """Metadata about entity resolution."""
-    resolution_status: ResolutionStatus
-    resolved_from: str  # Original query string
-    match_type: MatchType
-    resolution_candidates: int  # Total matches found
 
 
 class TruncationMetadata(BaseModel):
@@ -208,7 +191,6 @@ class CapabilitySummary(BaseModel):
     description: str
     function_count: int
     stability: str | None
-    doc_quality_dist: dict[str, int]  # {high: N, medium: N, low: N}
     provenance: Provenance = Field(default=Provenance.PRECOMPUTED)
 
 
@@ -219,7 +201,6 @@ class CapabilityDetail(BaseModel):
     description: str
     function_count: int
     stability: str | None
-    doc_quality_dist: dict[str, int]
     dependencies: list[dict]  # Typed edges to other capabilities
     entry_points: list[str]  # Entry point function names
     functions: list[EntitySummary] | None = None  # Optional full function list

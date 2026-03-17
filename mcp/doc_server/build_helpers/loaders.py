@@ -123,6 +123,16 @@ def load_documents(artifacts_dir: Path) -> DocumentDB:
     return doc_db
 
 
+def load_signature_map(artifacts_dir: Path) -> dict[str, str]:
+    """Load raw signature_map.json as a dict (repr'd tuple key → old entity_id)."""
+    path = artifacts_dir / "signature_map.json"
+    log.info("Loading signature map", path=str(path))
+    with path.open("r", encoding="utf-8") as f:
+        data: dict[str, str] = json.load(f)
+    log.info("Signature map loaded", entries=len(data))
+    return data
+
+
 def load_capability_defs(artifacts_dir: Path) -> dict[str, Any]:
     """
     Load capability group definitions from capability_defs.json.

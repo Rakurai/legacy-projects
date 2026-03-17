@@ -1,86 +1,98 @@
 """
-Centralized entity_id operations for the build pipeline.
+Deterministic entity ID generation for the build pipeline.
 
-All logic that treats entity_id as anything other than an opaque unique string
-lives here. The server runtime must never import this module — it should treat
-entity_id as an opaque key.
+Replaces opaque Doxygen IDs with stable, type-prefixed content-hashed IDs
+of the form ``{prefix}:{sha256(canonical_key)[:7]}``.
 
-Provides:
-- split_entity_id(): Canonical compound/member decomposition.
-- SignatureMap: Loads signature_map.json and provides bidirectional lookups
-  between entity_id and doc_db key (compound_id, signature).
+The canonical key is the signature_map tuple ``(compound_id, second_element)``.
+The server runtime treats entity_id as an opaque key — only the build
+pipeline imports this module.
 """
 
-from __future__ import annotations
-
 import ast
-import json
-import re
-from pathlib import Path
-from typing import Optional
+import hashlib
 
 from server.logging_config import log
 
-_MEMBER_RE = re.compile(r"^(.*)_([0-9a-z]{2}[0-9a-f]{30,})$")
+# Prefix mapping: entity kind → short prefix for deterministic IDs.
+_KIND_PREFIX: dict[str, str] = {
+    "function": "fn",
+    "define": "fn",
+    "variable": "var",
+    "class": "cls",
+    "struct": "cls",
+    "file": "file",
+}
+
+_DEFAULT_PREFIX = "sym"
 
 
-def split_entity_id(entity_id: str) -> tuple[str, Optional[str]]:
-    """Split a Doxygen entity_id into (compound_id, member_hash | None).
+def kind_to_prefix(kind: str) -> str:
+    """Map an entity kind string to its short ID prefix."""
+    return _KIND_PREFIX.get(kind, _DEFAULT_PREFIX)
 
-    This is the single canonical implementation of this operation.
-    The regex matches a trailing ``_XX<30+ hex>`` suffix as the member hash.
+
+def compute_entity_id(kind: str, compound_id: str, second_element: str) -> str:
+    """Compute a deterministic entity ID from kind and canonical key components.
+
+    The canonical key is ``repr((compound_id, second_element))`` — the same
+    format used as keys in ``signature_map.json``.
+
+    Returns:
+        String in ``{prefix}:{7 hex}`` format, e.g. ``fn:a3f8c1d``.
     """
-    m = _MEMBER_RE.match(entity_id.strip())
-    return (m.group(1), m.group(2)) if m else (entity_id, None)
+    prefix = kind_to_prefix(kind)
+    canonical = repr((compound_id, second_element))
+    digest = hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:7]
+    return f"{prefix}:{digest}"
 
 
-class SignatureMap:
-    """Bidirectional mapping between entity_id and doc_db key.
+def build_id_map(
+    signature_map_data: dict[str, str],
+    code_graph_entities: dict[str, dict],
+) -> dict[str, str]:
+    """Compute deterministic IDs for all entities and return old→new mapping.
 
-    Loaded from ``signature_map.json`` whose keys are string-repr tuples
-    ``"('compound_id', 'signature')"`` and values are entity_id strings.
+    Args:
+        signature_map_data: Raw signature_map.json dict
+            (repr'd tuple key string → old entity_id).
+        code_graph_entities: Dict of entity data keyed by old entity_id,
+            each having at least a ``kind`` field.
 
-    Provides:
-    - forward:  doc_db_key (str) → entity_id
-    - reverse:  entity_id → doc_db_key (str)
-    - doc_key_for(): entity_id → parsed (compound_id, signature) tuple
+    Returns:
+        Dict mapping old Doxygen entity_id → new deterministic entity_id.
+
+    Raises:
+        RuntimeError: On any hash collision (two different keys producing
+            the same prefixed ID).
     """
+    old_to_new: dict[str, str] = {}
+    seen_new_ids: dict[str, str] = {}  # new_id → raw key (for collision reporting)
 
-    def __init__(self, forward: dict[str, str]) -> None:
-        self._forward = forward
-        self._reverse: dict[str, str] = {v: k for k, v in forward.items()}
+    for doc_key_str, old_entity_id in signature_map_data.items():
+        entity_data = code_graph_entities.get(old_entity_id)
+        if entity_data is None:
+            continue
 
-    @staticmethod
-    def load(artifacts_dir: Path) -> SignatureMap:
-        path = artifacts_dir / "signature_map.json"
-        log.info("Loading signature map", path=str(path))
-        with path.open("r", encoding="utf-8") as f:
-            forward = json.load(f)
-        sm = SignatureMap(forward)
-        log.info("Signature map loaded", entries=len(forward))
-        return sm
+        kind = entity_data.get("kind", "unknown")
+        parsed_key: tuple[str, str] = ast.literal_eval(doc_key_str)
+        compound_id, second_element = parsed_key
 
-    # -- forward lookups (doc_db key → entity_id) --
+        new_id = compute_entity_id(kind, compound_id, second_element)
 
-    def entity_id_for_doc_key(self, doc_key: str) -> str | None:
-        """Return entity_id for a raw doc_db key string, or None."""
-        return self._forward.get(doc_key)
+        if new_id in seen_new_ids:
+            existing_key = seen_new_ids[new_id]
+            raise RuntimeError(
+                f"Hash collision: {new_id!r} produced by both "
+                f"{existing_key!r} and {doc_key_str!r}"
+            )
 
-    # -- reverse lookups (entity_id → doc_db key) --
+        seen_new_ids[new_id] = doc_key_str
+        old_to_new[old_entity_id] = new_id
 
-    def doc_key_for(self, entity_id: str) -> tuple[str, str] | None:
-        """Return parsed (compound_id, signature) for an entity_id, or None."""
-        raw = self._reverse.get(entity_id)
-        if raw is None:
-            return None
-        return ast.literal_eval(raw)
-
-    def has_entity(self, entity_id: str) -> bool:
-        return entity_id in self._reverse
-
-    @property
-    def entity_ids(self) -> set[str]:
-        return set(self._reverse.keys())
-
-    def __len__(self) -> int:
-        return len(self._forward)
+    log.info(
+        "Deterministic ID map built",
+        total=len(old_to_new),
+        collision_check="passed",
+    )
+    return old_to_new

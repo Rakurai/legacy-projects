@@ -7,8 +7,7 @@ Tests pure-Python functions that don't need a database.
 import pytest
 from pydantic import ValidationError
 
-from server.search import _merge_scores, _provenance_for
-from server.db_models import Entity
+from server.search import _merge_scores
 from server.models import EntitySummary
 
 
@@ -78,26 +77,6 @@ class TestMergeScores:
         assert ids == {"exact_only", "keyword_only", "semantic_only"}
 
 
-# ---------- _provenance_for ----------
-
-class TestProvenanceFor:
-    """Tests for provenance classification."""
-
-    _BASE = dict(entity_id="x", compound_id="x", signature="x", name="x",
-                 kind="function", entity_type="member")
-
-    @pytest.mark.parametrize("doc_state,expected", [
-        ("refined_summary", "llm_generated"),
-        ("refined_usage", "llm_generated"),
-        ("generated_summary", "llm_generated"),
-        ("extracted_summary", "doxygen_extracted"),
-        (None, "doxygen_extracted"),
-    ], ids=["refined_summary", "refined_usage", "generated_summary", "extracted_summary", "none"])
-    def test_provenance(self, doc_state, expected):
-        entity = Entity(**self._BASE, doc_state=doc_state)
-        assert _provenance_for(entity) == expected
-
-
 # ---------- EntitySummary validator ----------
 
 class TestEntitySummaryValidator:
@@ -110,8 +89,6 @@ class TestEntitySummaryValidator:
                 signature="void test()",
                 name="",
                 kind="function",
-                doc_state="extracted_summary",
-                doc_quality="low",
                 fan_in=0,
                 fan_out=0,
             )
@@ -123,8 +100,6 @@ class TestEntitySummaryValidator:
                 signature="   ",
                 name="test",
                 kind="function",
-                doc_state="extracted_summary",
-                doc_quality="low",
                 fan_in=0,
                 fan_out=0,
             )
@@ -135,8 +110,6 @@ class TestEntitySummaryValidator:
             signature="  void test()  ",
             name="  test  ",
             kind="function",
-            doc_state="extracted_summary",
-            doc_quality="low",
             fan_in=0,
             fan_out=0,
         )

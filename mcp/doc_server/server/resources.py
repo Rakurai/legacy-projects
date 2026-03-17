@@ -53,7 +53,6 @@ async def get_capabilities_resource(session: AsyncSession) -> dict:
                 "description": cap.description,
                 "function_count": cap.function_count,
                 "stability": cap.stability,
-                "doc_quality_dist": cap.doc_quality_dist or {},
             }
             for cap in capabilities
         ]
@@ -114,7 +113,6 @@ async def get_capability_detail_resource(
         "description": cap.description,
         "function_count": cap.function_count,
         "stability": cap.stability,
-        "doc_quality_dist": cap.doc_quality_dist or {},
         "dependencies": [
             {
                 "target_capability": e.target_cap,
@@ -163,8 +161,6 @@ async def get_entity_resource(
 
     return {
         "entity_id": entity.entity_id,
-        "compound_id": entity.compound_id,
-        "member_id": entity.member_id,
         "signature": entity.signature,
         "name": entity.name,
         "kind": entity.kind,
@@ -177,8 +173,6 @@ async def get_entity_resource(
         "definition_text": entity.definition_text,
         "source_text": entity.source_text,
         "capability": entity.capability,
-        "doc_state": entity.doc_state,
-        "doc_quality": entity.doc_quality,
         "fan_in": entity.fan_in,
         "fan_out": entity.fan_out,
         "is_bridge": entity.is_bridge,
@@ -257,14 +251,11 @@ async def get_stats_resource(
     )
     entities_by_kind = {row[0]: row[1] for row in kind_result.all()}
 
-    # Entities by doc quality
-    dq_result = await session.execute(
-        select(Entity.doc_quality, func.count(Entity.entity_id))
-        .group_by(Entity.doc_quality)
-    )
-    entities_by_doc_quality = {
-        row[0] or "unknown": row[1] for row in dq_result.all()
-    }
+    # Entities with documentation
+    entities_with_docs = await session.scalar(
+        select(func.count(Entity.entity_id))
+        .where(Entity.brief.isnot(None))
+    ) or 0
 
     # Entities with embeddings
     entities_with_embeddings = await session.scalar(
@@ -302,7 +293,7 @@ async def get_stats_resource(
         "entity_stats": {
             "total_entities": total_entities,
             "entities_by_kind": entities_by_kind,
-            "entities_by_doc_quality": entities_by_doc_quality,
+            "entities_with_documentation": entities_with_docs,
             "entities_with_embeddings": entities_with_embeddings,
         },
         "graph_stats": graph_stats,

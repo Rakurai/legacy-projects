@@ -2,7 +2,7 @@
 Integration tests for entity resolution pipeline.
 
 Tests the multi-stage resolution: entity_id → signature → name → prefix → keyword → semantic.
-Also covers ResolutionResult helper methods (to_envelope, to_entity_summaries).
+Also covers ResolutionResult helper method (to_entity_summaries).
 """
 
 import pytest
@@ -71,17 +71,12 @@ async def test_resolve_by_name_exact(test_session: AsyncSession, sample_entities
 @pytest.mark.asyncio
 async def test_resolve_by_name_ambiguous(test_session: AsyncSession, sample_entities: list[Entity]):
     """Test ambiguous name match when multiple entities share a name."""
-    # Add another entity with same name
     duplicate = Entity(
-        entity_id="combat_8cc_duplicate",
-        compound_id="combat_8cc",
-        member_id="duplicate",
-        name="damage",  # Same name as sample_entities[0]
-        signature="int damage(Character *ch, int amount)",  # Different signature
+        entity_id="fn:dup0001",
+        name="damage",
+        signature="int damage(Character *ch, int amount)",
         kind="function",
         entity_type="member",
-        doc_state="extracted_summary",
-        doc_quality="low",
         fan_in=5,
         fan_out=2,
     )
@@ -99,8 +94,8 @@ async def test_resolve_by_name_ambiguous(test_session: AsyncSession, sample_enti
     assert result.status == "ambiguous"
     assert result.match_type == "name_exact"
     assert len(result.candidates) == 2
-    # Should be ranked by doc_quality (high before low)
-    assert result.candidates[0].doc_quality == "high"
+    # Ranked by fan_in descending
+    assert result.candidates[0].fan_in >= result.candidates[1].fan_in
 
 
 @pytest.mark.asyncio
@@ -156,15 +151,11 @@ async def test_resolve_with_kind_filter(test_session: AsyncSession, sample_entit
 def _make_resolution_entity(**overrides) -> Entity:
     """Create a minimal Entity for ResolutionResult tests."""
     defaults = dict(
-        entity_id="test_8cc_abc",
-        compound_id="test_8cc",
-        member_id="abc",
+        entity_id="fn:abc1234",
         name="test_func",
         signature="void test_func()",
         kind="function",
         entity_type="member",
-        doc_state="extracted_summary",
-        doc_quality="high",
         fan_in=5,
         fan_out=3,
     )
@@ -172,54 +163,11 @@ def _make_resolution_entity(**overrides) -> Entity:
     return Entity(**defaults)
 
 
-def test_resolution_result_to_envelope_exact():
-    """to_envelope() returns correct envelope for exact match."""
-    entity = _make_resolution_entity()
-    r = ResolutionResult(
-        status="exact",
-        match_type="entity_id",
-        candidates=[entity],
-        resolved_from="test_8cc_abc",
-    )
-    env = r.to_envelope()
-    assert env.resolution_status == "exact"
-    assert env.match_type == "entity_id"
-    assert env.resolution_candidates == 1
-    assert env.resolved_from == "test_8cc_abc"
-
-
-def test_resolution_result_to_envelope_ambiguous():
-    """to_envelope() returns correct candidate count for ambiguous match."""
-    entities = [_make_resolution_entity(entity_id=f"e{i}") for i in range(3)]
-    r = ResolutionResult(
-        status="ambiguous",
-        match_type="name_prefix",
-        candidates=entities,
-        resolved_from="do_",
-    )
-    env = r.to_envelope()
-    assert env.resolution_status == "ambiguous"
-    assert env.resolution_candidates == 3
-
-
-def test_resolution_result_to_envelope_not_found():
-    """to_envelope() returns correct envelope for not_found."""
-    r = ResolutionResult(
-        status="not_found",
-        match_type="semantic",
-        candidates=[],
-        resolved_from="xyz",
-    )
-    env = r.to_envelope()
-    assert env.resolution_status == "not_found"
-    assert env.resolution_candidates == 0
-
-
 def test_resolution_result_to_entity_summaries():
     """to_entity_summaries() converts candidates to EntitySummary list."""
     entities = [
-        _make_resolution_entity(entity_id="a", name="alpha", signature="void alpha()"),
-        _make_resolution_entity(entity_id="b", name="beta", signature="void beta()"),
+        _make_resolution_entity(entity_id="fn:aaa0001", name="alpha", signature="void alpha()"),
+        _make_resolution_entity(entity_id="fn:bbb0002", name="beta", signature="void beta()"),
     ]
     r = ResolutionResult(
         status="ambiguous",
@@ -230,5 +178,5 @@ def test_resolution_result_to_entity_summaries():
     summaries = r.to_entity_summaries()
     assert len(summaries) == 2
     assert all(isinstance(s, EntitySummary) for s in summaries)
-    assert summaries[0].entity_id == "a"
-    assert summaries[1].entity_id == "b"
+    assert summaries[0].entity_id == "fn:aaa0001"
+    assert summaries[1].entity_id == "fn:bbb0002"

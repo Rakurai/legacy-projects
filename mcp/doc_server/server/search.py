@@ -29,7 +29,7 @@ if TYPE_CHECKING:
 
 from server.converters import entity_to_summary
 from server.db_models import Entity
-from server.enums import DocQuality, DocState, Provenance, SearchMode
+from server.enums import Provenance, SearchMode
 from server.logging_config import log
 from server.models import SearchResult
 
@@ -43,32 +43,13 @@ def _apply_filters(
     stmt: Select[tuple[Entity]],
     kind: str | None,
     capability: str | None,
-    min_doc_quality: str | None,
 ) -> Select[tuple[Entity]]:
     """Apply optional filters to a SELECT statement."""
     if kind:
         stmt = stmt.where(Entity.kind == kind)
     if capability:
         stmt = stmt.where(Entity.capability == capability)
-    if min_doc_quality:
-        quality_order: dict[str, DocQuality] = {
-            "high": DocQuality.HIGH,
-            "medium": DocQuality.MEDIUM,
-            "low": DocQuality.LOW,
-        }
-        min_quality = quality_order.get(min_doc_quality, DocQuality.LOW)
-        if min_quality == DocQuality.HIGH:
-            stmt = stmt.where(Entity.doc_quality == DocQuality.HIGH)
-        elif min_quality == DocQuality.MEDIUM:
-            stmt = stmt.where(Entity.doc_quality.in_([DocQuality.HIGH, DocQuality.MEDIUM]))
     return stmt
-
-
-def _provenance_for(entity: Entity) -> Provenance:
-    """Determine provenance label from entity doc_state."""
-    if entity.doc_state in (DocState.REFINED_SUMMARY, DocState.REFINED_USAGE, DocState.GENERATED_SUMMARY):
-        return Provenance.LLM_GENERATED
-    return Provenance.DOXYGEN_EXTRACTED
 
 
 async def _exact_match_ids(
@@ -76,14 +57,13 @@ async def _exact_match_ids(
     query: str,
     kind: str | None,
     capability: str | None,
-    min_doc_quality: str | None,
 ) -> set[str]:
     """Find entity IDs with exact signature or name match."""
     stmt = (
         select(Entity.entity_id)
         .where(or_(Entity.signature == query, Entity.name == query))
     )
-    stmt = _apply_filters(stmt, kind, capability, min_doc_quality)
+    stmt = _apply_filters(stmt, kind, capability)
     result = await session.execute(stmt)
     return {row[0] for row in result.all()}
 
@@ -93,7 +73,6 @@ async def _keyword_scores(
     query: str,
     kind: str | None,
     capability: str | None,
-    min_doc_quality: str | None,
     limit: int,
 ) -> dict[str, float]:
     """Get {entity_id: ts_rank score} for keyword matches."""
@@ -104,7 +83,7 @@ async def _keyword_scores(
         select(Entity.entity_id, rank_expr)
         .where(Entity.search_vector.op("@@")(tsq))
     )
-    stmt = _apply_filters(stmt, kind, capability, min_doc_quality)
+    stmt = _apply_filters(stmt, kind, capability)
     stmt = stmt.order_by(rank_expr.desc()).limit(limit)
 
     result = await session.execute(stmt)
@@ -116,7 +95,6 @@ async def _semantic_scores(
     query_embedding: list[float],
     kind: str | None,
     capability: str | None,
-    min_doc_quality: str | None,
     limit: int,
 ) -> dict[str, float]:
     """Get {entity_id: cosine_similarity score} for semantic matches."""
@@ -127,7 +105,7 @@ async def _semantic_scores(
         select(Entity.entity_id, score_expr)
         .where(Entity.embedding.isnot(None))
     )
-    stmt = _apply_filters(stmt, kind, capability, min_doc_quality)
+    stmt = _apply_filters(stmt, kind, capability)
     stmt = stmt.order_by(score_expr.desc()).limit(limit)
 
     result = await session.execute(stmt)
@@ -164,7 +142,6 @@ async def hybrid_search(
     embedding_provider: EmbeddingProvider | None = None,
     kind: str | None = None,
     capability: str | None = None,
-    min_doc_quality: str | None = None,
     limit: int = 20,
 ) -> tuple[list[SearchResult], SearchMode]:
     """Perform hybrid search combining semantic + keyword + exact matching."""
@@ -183,12 +160,12 @@ async def hybrid_search(
         search_mode = SearchMode.KEYWORD_FALLBACK
 
     # Run sub-queries
-    exact_ids = await _exact_match_ids(session, query, kind, capability, min_doc_quality)
-    keyword_sc = await _keyword_scores(session, query, kind, capability, min_doc_quality, limit=100)
+    exact_ids = await _exact_match_ids(session, query, kind, capability)
+    keyword_sc = await _keyword_scores(session, query, kind, capability, limit=100)
 
     semantic_sc: dict[str, float] = {}
     if search_mode == SearchMode.HYBRID and query_embedding:
-        semantic_sc = await _semantic_scores(session, query_embedding, kind, capability, min_doc_quality, limit=100)
+        semantic_sc = await _semantic_scores(session, query_embedding, kind, capability, limit=100)
 
     # Merge scores
     ranked = _merge_scores(exact_ids, keyword_sc, semantic_sc, limit)
@@ -217,7 +194,7 @@ async def hybrid_search(
             result_type="entity",
             score=min(score / normalizer, 1.0),
             search_mode=search_mode,
-            provenance=_provenance_for(entity),
+            provenance=Provenance.PRECOMPUTED,
             entity_summary=entity_to_summary(entity),
         ))
 

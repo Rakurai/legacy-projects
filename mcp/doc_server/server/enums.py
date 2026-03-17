@@ -13,25 +13,6 @@ directly with the enum type — Pydantic v2 accepts StrEnum natively.
 from enum import StrEnum
 
 # ---------------------------------------------------------------------------
-# Documentation pipeline
-# ---------------------------------------------------------------------------
-
-class DocState(StrEnum):
-    """Documentation pipeline state (set by build/LLM pipeline)."""
-    EXTRACTED_SUMMARY = "extracted_summary"
-    GENERATED_SUMMARY = "generated_summary"
-    REFINED_SUMMARY = "refined_summary"
-    REFINED_USAGE = "refined_usage"
-
-
-class DocQuality(StrEnum):
-    """Derived documentation quality bucket."""
-    HIGH = "high"
-    MEDIUM = "medium"
-    LOW = "low"
-
-
-# ---------------------------------------------------------------------------
 # Entity classification
 # ---------------------------------------------------------------------------
 

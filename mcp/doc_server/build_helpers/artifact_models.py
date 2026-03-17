@@ -18,8 +18,6 @@ from typing import Dict, Optional
 
 import networkx as nx
 
-from build_helpers.entity_ids import split_entity_id
-
 # ---------------------------------------------------------------------------
 # Entity ID helpers
 # ---------------------------------------------------------------------------
@@ -46,8 +44,11 @@ class EntityID:
 
     @staticmethod
     def from_str(entity_id: str) -> EntityID:
-        compound, member = split_entity_id(entity_id)
-        return EntityID(compound=compound, member=member)
+        # Split old Doxygen-format ID on last underscore: "fight_8cc_1a2b3c" → ("fight_8cc", "1a2b3c")
+        idx = entity_id.rfind("_")
+        if idx > 0:
+            return EntityID(compound=entity_id[:idx], member=entity_id[idx + 1:])
+        return EntityID(compound=entity_id)
 
 
 # ---------------------------------------------------------------------------

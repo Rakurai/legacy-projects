@@ -58,20 +58,6 @@ async def test_search_with_capability_filter(test_session: AsyncSession, sample_
 
 
 @pytest.mark.asyncio
-async def test_search_with_min_doc_quality(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Test search with minimum doc quality filter."""
-    results, mode = await hybrid_search(
-        session=test_session,
-        query="damage",
-        embedding_provider=None,
-        min_doc_quality="high",
-        limit=20,
-    )
-
-    assert all(r.entity_summary.doc_quality == "high" for r in results)  # type: ignore
-
-
-@pytest.mark.asyncio
 async def test_search_provenance_tagging(test_session: AsyncSession, sample_entities: list[Entity]):
     """Test that search results include correct provenance."""
     results, mode = await hybrid_search(
@@ -82,5 +68,5 @@ async def test_search_provenance_tagging(test_session: AsyncSession, sample_enti
     )
 
     for result in results:
-        assert result.provenance in ("doxygen_extracted", "llm_generated", "subsystem_narrative")
+        assert result.provenance == "precomputed"
         assert result.search_mode == "keyword_fallback"

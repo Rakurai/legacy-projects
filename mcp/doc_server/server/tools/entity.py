@@ -1,5 +1,5 @@
 """
-Entity Lookup Tools - resolve, get, source code, file listing.
+Entity Lookup Tools - get, source code, file listing.
 
 Tools are decorated at module level with @mcp.tool() and remain directly importable.
 """
@@ -16,7 +16,7 @@ from sqlmodel import select
 from server.app import get_ctx, mcp
 from server.converters import entity_to_detail, entity_to_summary
 from server.db_models import Entity
-from server.enums import EntityKind, MatchType, ResolutionStatus
+from server.enums import EntityKind
 from server.errors import EntityNotFoundError
 from server.logging_config import log
 from server.models import (
@@ -25,18 +25,9 @@ from server.models import (
     EntitySummary,
     TruncationMetadata,
 )
-from server.resolver import resolve_entity as resolve_entity_fn
-from server.util import doc_quality_sort_key, fetch_entity_map
+from server.util import fetch_entity_map
 
 # -- Response Models --
-
-class ResolveEntityResponse(BaseModel):
-    """Response from resolve_entity tool."""
-    resolution_status: ResolutionStatus
-    resolved_from: str
-    match_type: MatchType
-    resolution_candidates: int
-    candidates: list[EntitySummary]
 
 
 class FileSummaryResponse(BaseModel):
@@ -45,7 +36,6 @@ class FileSummaryResponse(BaseModel):
     entity_count: int
     entity_count_by_kind: dict[str, int]
     capability_distribution: dict[str, int]
-    doc_quality_distribution: dict[str, int]
     top_entities_by_fan_in: list[EntitySummary]
     truncation: TruncationMetadata
 
@@ -72,75 +62,27 @@ class ListFileEntitiesResponse(BaseModel):
 
 
 @mcp.tool()
-async def resolve_entity(
-    ctx: Context,
-    query: Annotated[str, Field(description="Entity name, signature, or ID to resolve")],
-    kind: Annotated[EntityKind | None, Field(description="Optional kind filter")] = None,
-) -> ResolveEntityResponse:
-    """
-    Resolve entity name to ranked candidates.
-
-    Multi-stage resolution: exact ID → exact signature → exact name → prefix → keyword → semantic.
-    """
-    lc = get_ctx(ctx)
-
-    log.info("resolve_entity", query=query, kind=kind)
-
-    async with lc["db_manager"].session() as session:
-        result = await resolve_entity_fn(
-            session=session,
-            query=query,
-            kind=kind,
-            embedding_provider=lc["embedding_provider"],
-            limit=20,
-        )
-
-    envelope = result.to_envelope()
-    candidates = result.to_entity_summaries()
-
-    return ResolveEntityResponse(
-        resolution_status=envelope.resolution_status,
-        resolved_from=envelope.resolved_from,
-        match_type=envelope.match_type,
-        resolution_candidates=envelope.resolution_candidates,
-        candidates=candidates,
-    )
-
-
-@mcp.tool()
 async def get_entity(
     ctx: Context,
-    entity_id: Annotated[str | None, Field(description="Entity ID (from resolve_entity)")] = None,
-    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
+    entity_id: Annotated[str, Field(description="Entity ID (from search)")],
     include_code: Annotated[bool, Field(description="Include source code in response")] = False,
     include_neighbors: Annotated[bool, Field(description="Include direct neighbors in dependency graph")] = False,
 ) -> EntityDetail:
     """
-    Fetch full entity details by ID or signature.
+    Fetch full entity details by ID.
 
     Provides complete documentation: identity, source location,
     documentation, metrics, optional source code & neighbors.
     """
     lc = get_ctx(ctx)
 
-    log.info("get_entity", entity_id=entity_id, signature=signature)
+    log.info("get_entity", entity_id=entity_id)
 
     async with lc["db_manager"].session() as session:
-        # Fetch entity
-        if entity_id:
-            entity = await session.get(Entity, entity_id)
-        elif signature:
-            result = await session.execute(
-                select(Entity).where(Entity.signature == signature)
-                .order_by(doc_quality_sort_key(), Entity.fan_in.desc())
-                .limit(1)
-            )
-            entity = result.scalar_one_or_none()
-        else:
-            raise ValueError("Either entity_id or signature must be provided")
+        entity = await session.get(Entity, entity_id)
 
         if not entity:
-            raise EntityNotFoundError(entity_id or signature or "unknown")
+            raise EntityNotFoundError(entity_id)
 
         detail = entity_to_detail(entity, include_code=include_code)
 
@@ -287,14 +229,11 @@ async def get_file_summary(
 
     entity_count_by_kind: dict[str, int] = {}
     capability_distribution: dict[str, int] = {}
-    doc_quality_distribution: dict[str, int] = {}
 
     for entity in entities:
         entity_count_by_kind[entity.kind] = entity_count_by_kind.get(entity.kind, 0) + 1
         if entity.capability:
             capability_distribution[entity.capability] = capability_distribution.get(entity.capability, 0) + 1
-        if entity.doc_quality:
-            doc_quality_distribution[entity.doc_quality] = doc_quality_distribution.get(entity.doc_quality, 0) + 1
 
     top_entities = sorted(entities, key=lambda e: e.fan_in, reverse=True)[:10]
     top_summaries = [entity_to_summary(e) for e in top_entities]
@@ -304,7 +243,6 @@ async def get_file_summary(
         entity_count=len(entities),
         entity_count_by_kind=entity_count_by_kind,
         capability_distribution=capability_distribution,
-        doc_quality_distribution=doc_quality_distribution,
         top_entities_by_fan_in=top_summaries,
         truncation=TruncationMetadata(
             truncated=False,

@@ -15,7 +15,6 @@ from server.server import mcp
 
 
 EXPECTED_TOOLS = {
-    "resolve_entity",
     "get_entity",
     "get_source_code",
     "list_file_entities",

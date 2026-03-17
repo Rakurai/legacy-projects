@@ -5,41 +5,8 @@ Unit tests for server.util error paths and edge cases.
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.util import resolve_entity_id, fetch_entity_summaries, fetch_entity_map
-from server.errors import EntityNotFoundError
+from server.util import fetch_entity_summaries, fetch_entity_map
 from server.db_models import Entity
-
-
-@pytest.mark.asyncio
-async def test_resolve_entity_id_by_entity_id(test_session: AsyncSession, sample_entities: list[Entity]):
-    """resolve_entity_id returns entity_id directly when provided."""
-    result = await resolve_entity_id(test_session, "fight_8cc_1a2b3c4d5e6f", None)
-    assert result == "fight_8cc_1a2b3c4d5e6f"
-
-
-@pytest.mark.asyncio
-async def test_resolve_entity_id_by_signature(test_session: AsyncSession, sample_entities: list[Entity]):
-    """resolve_entity_id resolves from signature when entity_id is None."""
-    result = await resolve_entity_id(
-        test_session,
-        None,
-        "void damage(Character *ch, Character *victim, int dam)",
-    )
-    assert result == "fight_8cc_1a2b3c4d5e6f"
-
-
-@pytest.mark.asyncio
-async def test_resolve_entity_id_neither_provided(test_session: AsyncSession):
-    """resolve_entity_id raises ValueError when neither param is given."""
-    with pytest.raises(ValueError, match="Either entity_id or signature"):
-        await resolve_entity_id(test_session, None, None)
-
-
-@pytest.mark.asyncio
-async def test_resolve_entity_id_bad_signature(test_session: AsyncSession, sample_entities: list[Entity]):
-    """resolve_entity_id raises EntityNotFoundError for unknown signature."""
-    with pytest.raises(EntityNotFoundError):
-        await resolve_entity_id(test_session, None, "void nonexistent()")
 
 
 @pytest.mark.asyncio

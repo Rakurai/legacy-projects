@@ -1,0 +1,30 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Local LLM: Run (stdin from prompt input)",
+      "type": "shell",
+      "command": "python",
+      "args": [
+        "${workspaceFolder}/tools/local_llm.py",
+        "--model",
+        "qwen2.5-coder:7b",
+        "--prompt",
+        "${input:localLLMPrompt}"
+      ],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": true
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "localLLMPrompt",
+      "type": "promptString",
+      "description": "Local LLM prompt"
+    }
+  ]
+}

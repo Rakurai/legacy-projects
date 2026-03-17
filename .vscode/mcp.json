@@ -1,0 +1,18 @@
+{
+  "servers": {
+    "local-llm": {
+      "command": "${workspaceFolder}/.venv/bin/python3",
+      "args": ["${workspaceFolder}/tools/mcp_local_llm_server.py"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    },
+    "legacy-docs": {
+      "command": "uv",
+      "args": ["run", "--directory", "${workspaceFolder}/mcp/doc_server", "python", "-m", "server.server"],
+      "env": {
+        "PYTHONUNBUFFERED": "1"
+      }
+    }
+  }
+}

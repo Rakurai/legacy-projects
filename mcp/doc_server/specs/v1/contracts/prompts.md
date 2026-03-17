@@ -1,5 +1,6 @@
 # Prompt Contracts: MCP Documentation Server
 
+<!-- Canonical V1 prompt contracts. MCP prompt interfaces are unchanged by specs 003/004. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14

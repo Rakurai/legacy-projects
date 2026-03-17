@@ -1,5 +1,6 @@
 # Resource Contracts: MCP Documentation Server
 
+<!-- Canonical V1 resource contracts. Updated per spec 004: legacy://stats embedding field reflects provider system. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -209,7 +210,8 @@ Response: {
   },
   server_info: {
     version: string,
-    embedding_endpoint_available: boolean,
+    embedding_provider: "local" | "hosted" | null,  // Active provider mode (null = keyword-only)
+    embedding_available: boolean                       // Whether embedding-based search is operational
     database_connection_status: "connected" | "degraded"
   }
 }
@@ -237,7 +239,8 @@ Response: {
   },
   "server_info": {
     "version": "1.0.0",
-    "embedding_endpoint_available": true,
+    "embedding_provider": "local",
+    "embedding_available": true,
     "database_connection_status": "connected"
   }
 }

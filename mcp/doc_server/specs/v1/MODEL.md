@@ -1,5 +1,6 @@
 # Data Model: MCP Documentation Server
 
+<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build and 004-local-fastembed-provider. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -64,7 +65,8 @@ CREATE TABLE entities (
     side_effect_markers JSONB,                 -- {messaging: [...], persistence: [...], state_mutation: [...], scheduling: [...]}
 
     -- Embedding
-    embedding       vector(4096),              -- pgvector column (doc embedding)
+    embedding       vector(N),                 -- pgvector column; N = EMBEDDING_DIMENSION env var (default 768 for BAAI/bge-base-en-v1.5)
+                                               -- <!-- spec 004: was hardcoded vector(4096); now configurable -->
 
     -- Full-text search
     search_vector   tsvector                   -- Weighted: name=A, brief/details=B, definition_text=C, source_text=D
@@ -79,16 +81,19 @@ CREATE INDEX idx_entities_entry ON entities(is_entry_point) WHERE is_entry_point
 CREATE INDEX idx_entities_bridge ON entities(is_bridge) WHERE is_bridge;
 CREATE INDEX idx_entities_search ON entities USING GIN(search_vector);
 CREATE INDEX idx_entities_embedding ON entities USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
+-- Note: HNSW index may be used instead of ivfflat depending on data size
 ```
 
 **Derived Fields Computation (Build Script):**
+<!-- spec 003: capability assignment from cap_graph members, not doc.system -->
+- `capability`: Assigned from `capability_graph.json` → `capabilities[name].members[].name` mapping (~848 of ~5,305 entities receive a capability). Not from `doc.system` (which is always null).
 - `doc_quality`:
   - `high`: doc_state IN (refined_summary, refined_usage) AND details IS NOT NULL AND (params IS NOT NULL OR kind != 'function')
   - `medium`: doc_state = generated_summary OR (brief IS NOT NULL AND details IS NULL)
   - `low`: doc_state = extracted_summary OR brief IS NULL
 - `fan_in`: COUNT(edges WHERE target_id = entity_id AND edge_type = 'CALLS')
 - `fan_out`: COUNT(edges WHERE source_id = entity_id AND edge_type = 'CALLS')
-- `is_bridge`: EXISTS(edge e1 JOIN edge e2 WHERE e1.source_cap != e2.target_cap AND e1.entity = e2.entity)
+- `is_bridge`: EXISTS(edge e1 JOIN edge e2 WHERE e1.source_cap != e2.target_cap AND e1.entity = e2.entity). Requires capability assignment to be completed first (pipeline ordering). <!-- spec 003: depends on capability assignment -->
 - `is_entry_point`: name LIKE 'do_%' OR name LIKE 'spell_%' OR name LIKE 'spec_%'
 - `side_effect_markers`: BFS from entity through CALLS edges, check callees against curated list, categorize by marker type
 
@@ -120,14 +125,16 @@ CREATE INDEX idx_edges_rel ON edges(relationship);
 
 Capability group definitions (30 groups).
 
+<!-- spec 003: description sourced from cap_defs "desc" key; function_count from cap_graph; doc_quality_dist aggregated from entity data -->
+
 ```sql
 CREATE TABLE capabilities (
     name TEXT PRIMARY KEY,                     -- e.g., "combat", "magic", "persistence"
     type TEXT NOT NULL,                        -- domain, policy, projection, infrastructure, utility
-    description TEXT NOT NULL,
-    function_count INTEGER NOT NULL,
+    description TEXT NOT NULL,                 -- sourced from capability_defs.json "desc" key
+    function_count INTEGER NOT NULL,           -- sourced from capability_graph.json capabilities[name].function_count
     stability TEXT,                            -- stable, evolving, experimental (if defined)
-    doc_quality_dist JSONB NOT NULL            -- {high: N, medium: N, low: N}
+    doc_quality_dist JSONB NOT NULL            -- {high: N, medium: N, low: N} aggregated from entity doc_quality
 );
 ```
 
@@ -139,7 +146,8 @@ Typed dependencies between capability groups.
 CREATE TABLE capability_edges (
     source_cap TEXT NOT NULL,                  -- FK to capabilities(name)
     target_cap TEXT NOT NULL,                  -- FK to capabilities(name)
-    edge_type TEXT NOT NULL,                   -- requires_core, requires_policy, requires_projection, requires_infrastructure, uses_utility
+    edge_type TEXT NOT NULL,                   -- uses_utility, requires_core, requires_policy, requires_projection, requires_infrastructure
+                                               -- <!-- spec 003: key in source artifact is "edge_type", parsed from nested dict dependencies[source][target] -->
     call_count INTEGER NOT NULL,               -- Number of cross-capability CALLS edges
     in_dag BOOLEAN DEFAULT FALSE,              -- Whether this edge is in the DAG overlay
     PRIMARY KEY (source_cap, target_cap)
@@ -222,7 +230,8 @@ class Entity(SQLModel, table=True):
     side_effect_markers: dict | None = Field(default=None, sa_column=Column(JSONB))
 
     # Embedding + search
-    embedding: list[float] | None = Field(default=None, sa_column=Column(Vector(4096)))
+    # <!-- spec 004: dimension is configurable via EMBEDDING_DIMENSION env var, default 768 -->
+    embedding: list[float] | None = Field(default=None, sa_column=Column(Vector(_EMBEDDING_DIM)))
     search_vector: str | None = Field(default=None, sa_column=Column(TSVECTOR))
 
 
@@ -264,7 +273,7 @@ class EntryPoint(SQLModel, table=True):
     entry_type: str | None = None
 ```
 
-> **Note**: JSONB columns use `sa_column=Column(JSONB)` for proper PostgreSQL dialect. `Vector(4096)` comes from `pgvector.sqlalchemy`. `TSVECTOR` from `sqlalchemy.dialects.postgresql`. Indexes are created via `CREATE INDEX` statements during schema initialization (see build script), not in the ORM model, because some indexes require PostgreSQL-specific syntax (GIN, ivfflat).
+> **Note**: JSONB columns use `sa_column=Column(JSONB)` for proper PostgreSQL dialect. `Vector(_EMBEDDING_DIM)` comes from `pgvector.sqlalchemy`, where `_EMBEDDING_DIM = int(os.environ.get("EMBEDDING_DIMENSION", "768"))` is read at module import time. <!-- spec 004: was Vector(4096) --> `TSVECTOR` from `sqlalchemy.dialects.postgresql`. Indexes are created via `CREATE INDEX IF NOT EXISTS` statements during schema initialization (see build script), not in the ORM model, because some indexes require PostgreSQL-specific syntax (GIN, HNSW/ivfflat). <!-- spec 003: IF NOT EXISTS for idempotent index creation -->
 
 ---
 
@@ -431,7 +440,7 @@ Result from behavior analysis (call cone computation).
 ```python
 class BehaviorSlice(BaseModel):
     """Transitive call cone with behavioral metadata."""
-    entry_point: EntitySummary  # Full summary of seed entity (matches DESIGN.md §8.4)
+    entry_point: EntitySummary  # Full summary of seed entity
 
     # Call structure
     direct_callees: list[EntitySummary]
@@ -480,7 +489,7 @@ class TruncationMetadata(BaseModel):
     """Metadata about result truncation."""
     truncated: bool
     total_available: int
-    node_count: int  # Actual result count returned (matches DESIGN.md §4.3)
+    node_count: int  # Actual result count returned
     max_depth_requested: int | None = None
     max_depth_reached: int | None = None
     truncation_reason: Literal["depth_limit", "node_limit", "none"] | None = None
@@ -533,19 +542,28 @@ class ContextBundle(BaseModel):
 
 ### Build Time (Offline ETL)
 
+<!-- Updated per specs 003/004: pipeline reordered for capability assignment before bridge detection; sig_map merge; embedding generation -->
 ```
-1. Parse code_graph.json → DoxygenEntity objects
-2. Parse doc_db.json → Document objects
-3. Merge on (compound_id, signature) → combined entity records
-4. Extract source_text from disk using (file_path, start_line, end_line)
-5. Compute derived metrics (doc_quality, fan_in, fan_out, is_bridge, side_effect_markers, is_entry_point)
-6. Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(to_tsvector(coalesce(brief, '') || ' ' || coalesce(details, '')), 'B') || setweight(to_tsvector(coalesce(definition_text, '')), 'C') || setweight(to_tsvector(coalesce(source_text, '')), 'D')
-7. Load embeddings from embeddings_cache.pkl, map by member_id
-8. INSERT INTO entities (batch, ~5000 rows)
-9. Parse code_graph.gml → NetworkX graph → extract edges
-10. INSERT INTO edges (batch, ~25000 rows)
-11. Parse capability_defs.json, capability_graph.json → capabilities + capability_edges
-12. ANALYZE entities; ANALYZE edges; (update planner statistics)
+1.  Parse code_graph.json → DoxygenEntity objects
+2.  Parse doc_db.json → Document objects
+3.  Merge entities ↔ docs using signature_map.json to bridge entity IDs to doc_db keys
+4.  Extract source_text from disk using (file_path, start_line, end_line)
+5.  Load capability_graph.json → build name→capability mapping from members lists
+6.  Assign capabilities to merged entities (~848 assignments)
+7.  Load graph edges, compute fan_in/fan_out, bridge flags (requires capabilities), side_effect_markers
+8.  Compute doc_quality, is_entry_point
+9.  Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(...brief/details..., 'B') || setweight(...definition_text..., 'C') || setweight(...source_text..., 'D')
+10. Load or generate embeddings:
+    - If matching artifact exists (embed_cache_{model}_{dim}.pkl) → load it
+    - Else if embedding provider configured → generate via provider, save artifact
+    - Else → skip (null embeddings), log warning
+11. Drop/recreate schema (tables + indexes via same engine, CREATE INDEX IF NOT EXISTS)
+12. INSERT INTO entities (batch, ~5000 rows)
+13. Parse code_graph.gml → NetworkX graph → extract edges
+14. INSERT INTO edges (batch, ~25000 rows)
+15. Parse capability_defs.json ("desc" key), capability_graph.json → capabilities + capability_edges (from "dependencies" nested dict, 200 rows)
+16. Compute doc_quality_dist per capability from entity data
+17. ANALYZE entities; ANALYZE edges; (update planner statistics)
 ```
 
 ### Runtime (Server Queries)
@@ -583,13 +601,14 @@ class ContextBundle(BaseModel):
 ### Metrics
 
 - `fan_in >= 0`, `fan_out >= 0`
-- `is_bridge` TRUE only if fan_in > 0 AND fan_out > 0
+- `is_bridge` TRUE only if fan_in > 0 AND fan_out > 0 AND entity has non-null capability <!-- spec 003: bridge detection requires capability assignment -->
 - `is_entry_point` TRUE only if kind = 'function'
 
 ### Embeddings
 
-- `embedding` dimensions = 4096 (enforced by pgvector)
-- `embedding` can be NULL (entity has no embedding; semantic search excludes it)
+<!-- spec 004: dimension is configurable, not hardcoded -->
+- `embedding` dimensions = `EMBEDDING_DIMENSION` env var (default 768, enforced by pgvector column definition)
+- `embedding` can be NULL (entity has no embedding or no documentable content; semantic search excludes it)
 - `search_vector` NOT NULL (always generated, even for entities without docs)
 
 ### Edges
@@ -729,7 +748,121 @@ async def get_direct_callees(session: AsyncSession, entity_id: str, limit: int =
 - **Query Style**: SQLModel `select()` for CRUD/filtered queries; `text()` for hybrid search CTE and pgvector/tsvector operations
 - **In-memory**: NetworkX MultiDiGraph (~5300 nodes, ~25K edges) for BFS/traversal
 - **API Models**: Pydantic v2 (EntitySummary, EntityDetail, SearchResult, BehaviorSlice, etc.)
-- **Build Script**: Offline ETL (artifact parsing → merging → metric computation → DB population via SQLModel session)
-- **Server Runtime**: Async queries (SQLModel + SQLAlchemy async session) + in-memory graph algorithms (NetworkX)
+- **Embedding**: Configurable provider (local FastEmbed ONNX or hosted OpenAI-compatible); vector dimension configurable (default 768) <!-- Added per spec 004 -->
+- **Build Script**: Offline ETL (artifact parsing → sig_map merge → capability assignment → metric computation → embedding load/generate → DB population via SQLModel session) <!-- Updated per specs 003/004 -->
+- **Server Runtime**: Async queries (SQLModel + SQLAlchemy async session) + in-memory graph algorithms (NetworkX) + async embedding (via `to_thread` for local) <!-- Updated per spec 004 -->
 
 All validation rules enforced at database constraints + Pydantic model validation. No runtime LLM inference; all data pre-computed.
+
+---
+
+## Appendix A: Artifact Data Contracts
+
+<!-- Added per spec 003: documents the actual JSON key names and structures in source artifacts -->
+
+These contracts define the actual JSON formats in the source artifacts that the build script must correctly read.
+
+### capability_defs.json
+
+```json
+{
+  "<capability_name>": {
+    "type": "domain | policy | projection | infrastructure | utility",
+    "desc": "Human-readable description",
+    "stability": "stable | evolving | experimental",
+    "avoid": ["..."],
+    "migration_role": "...",
+    "target_surfaces": "...",
+    "locked": true
+  }
+}
+```
+
+Key notes: description is under `"desc"` (not `"description"`). No `"functions"` or `"name"` key exists.
+
+### capability_graph.json
+
+```json
+{
+  "metadata": { ... },
+  "capabilities": {
+    "<capability_name>": {
+      "type": "...",
+      "description": "...",
+      "function_count": 89,
+      "members": [
+        {"name": "function_name", "brief": "...", "min_depth": 1}
+      ],
+      "entry_points_using": [ ... ]
+    }
+  },
+  "dependencies": {
+    "<source_cap>": {
+      "<target_cap>": {
+        "edge_type": "uses_utility | requires_core | ...",
+        "call_count": 3,
+        "in_dag": false
+      }
+    }
+  }
+}
+```
+
+Key notes: Entity-to-capability mapping from `capabilities[name].members[].name`. Dependency edges from `"dependencies"` nested dict (not `"edges"` flat list). Edge type key is `"edge_type"`.
+
+### signature_map.json
+
+```json
+{
+  "<entity_id>": "<signature>"
+}
+```
+
+Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`.
+
+---
+
+## Appendix B: Embedding Provider
+
+<!-- Added per spec 004 -->
+
+### Configuration (ServerConfig extensions)
+
+| Field | Type | Default | Env Var | Notes |
+|---|---|---|---|---|
+| `embedding_provider` | `"local" \| "hosted" \| null` | `null` | `EMBEDDING_PROVIDER` | null = keyword-only |
+| `embedding_local_model` | `str` | `"BAAI/bge-base-en-v1.5"` | `EMBEDDING_LOCAL_MODEL` | Only when provider = "local" |
+| `embedding_dimension` | `int` | `768` | `EMBEDDING_DIMENSION` | Must match provider output |
+| `embedding_base_url` | `str \| null` | `null` | `EMBEDDING_BASE_URL` | Required when provider = "hosted" |
+| `embedding_api_key` | `str \| null` | `null` | `EMBEDDING_API_KEY` | — |
+| `embedding_model` | `str \| null` | `null` | `EMBEDDING_MODEL` | Required when provider = "hosted" |
+
+Derived: `embed_cache_filename` = `embed_cache_{model_slug}_{dim}.pkl` where model_slug has `/` → `-`.
+
+### EmbeddingProvider Protocol
+
+```python
+class EmbeddingProvider(Protocol):
+    @property
+    def dimension(self) -> int: ...
+    async def embed_query(self, text: str) -> list[float]: ...
+    async def embed_documents(self, texts: list[str]) -> list[list[float]]: ...
+    def embed_query_sync(self, text: str) -> list[float]: ...
+    def embed_documents_sync(self, texts: list[str]) -> list[list[float]]: ...
+```
+
+**Variants:**
+- `LocalEmbeddingProvider`: Wraps `fastembed.TextEmbedding`. Async methods use `asyncio.to_thread()`.
+- `HostedEmbeddingProvider`: Wraps `openai.OpenAI` (sync) and `openai.AsyncOpenAI` (async).
+
+**Factory:** `create_provider(config) → EmbeddingProvider | None` — returns appropriate variant or None.
+
+**Invariant:** `provider.dimension == config.embedding_dimension` (validated by factory, fails fast on mismatch).
+
+### Embedding Artifact Lifecycle
+
+1. Build checks if artifact exists at `{artifacts_dir}/{embed_cache_filename}`
+2. If exists → load pickle and attach to entities
+3. If missing and provider configured → generate via `provider.embed_documents_sync()`, save as pickle, attach
+4. If missing and no provider → skip embeddings (null columns), log warning
+5. Invalidation is manual — developer deletes the file

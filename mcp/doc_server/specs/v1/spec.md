@@ -1,8 +1,9 @@
 # Feature Specification: MCP Documentation Server
 
+<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build and 004-local-fastembed-provider. -->
 **Feature Branch**: `001-mcp-doc-server`
 **Created**: 2026-03-14
-**Status**: Draft
+**Status**: Implemented (V1)
 **Input**: User description: "MCP server to serve documentation on this project"
 
 ## User Scenarios & Testing *(mandatory)*
@@ -31,7 +32,7 @@ An AI assistant working on poison damage mechanics needs to find all entities re
 
 **Why this priority**: Search enables discovery of relevant code without knowing exact names. This is essential for exploratory tasks like "find all inventory management code" or "locate authentication logic". Search builds on Phase 1 entity infrastructure and adds discovery capabilities.
 
-**Independent Test**: Can be tested by issuing natural language queries (e.g., "poison damage over time", "player authentication", "room descriptions") and verifying that results include relevant entities with high scores. Test fallback mode by disabling the embedding endpoint and confirming keyword-only results are returned with explicit fallback status.
+**Independent Test**: Can be tested by issuing natural language queries (e.g., "poison damage over time", "player authentication", "room descriptions") and verifying that results include relevant entities with high scores. Test fallback mode by omitting the embedding provider configuration (or setting `EMBEDDING_PROVIDER` to none) and confirming keyword-only results are returned with explicit fallback status. <!-- Updated per spec 004: test fallback by provider config, not endpoint disabling -->
 
 **Acceptance Scenarios**:
 
@@ -103,6 +104,12 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **Ambiguous entity name with 50+ candidates**: Results are truncated to top 20 candidates ranked by score, with truncation metadata indicating total available; no pagination mechanism exists, users must refine query to see different results
 - **Circular dependencies in call graph**: BFS traversal with visited set prevents infinite loops; each entity appears once at shortest path distance
 - **Embedding service down during search**: System returns successful MCP response with keyword-only results and sets `search_mode: "keyword_fallback"` to indicate degraded state (not an MCP error)
+- **No embedding provider configured**: System operates in keyword-only mode permanently until provider is configured. All searches return `search_mode: "keyword_fallback"`. <!-- Added per spec 004 -->
+- **Embedding provider error at query time**: System logs error, degrades to keyword-only for that request, returns `search_mode: "keyword_fallback"` <!-- Added per spec 004 -->
+- **Stale embedding artifact**: Source documentation has changed but artifact file still exists. System loads stale artifact without warning. Developer must delete artifact to trigger regeneration. <!-- Added per spec 004 -->
+- **Corrupt embedding artifact**: Artifact file exists but is corrupted (partial write, invalid pickle). Build fails with clear error rather than loading garbage vectors. <!-- Added per spec 004 -->
+- **First-run model download**: Local ONNX model files not yet cached on machine. System logs that download is occurring; handles download failures with clear error. <!-- Added per spec 004 -->
+- **Embedding dimension mismatch at startup**: Configured dimension does not match provider's actual output. Server fails fast with clear error. <!-- Added per spec 004 -->
 - **Very large behavior slice (>1000 functions)**: Computation stops at configurable `max_cone_size` (default 200), returns partial results with truncation warning
 - **Entity exists in database but source file deleted from disk**: Source code retrieval returns stored source_text from database (extracted at build time)
 - **Source code on disk has changed since database build**: Stored source_text becomes stale; documentation remains valid. Users must rebuild database after code changes.
@@ -131,7 +138,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 #### Search
 
 - **FR-007**: System MUST perform hybrid search combining pgvector cosine similarity and Postgres full-text search with exact name/signature boost
-- **FR-008**: System MUST degrade gracefully to keyword-only search when embedding endpoint is unavailable and report degradation via search_mode field
+- **FR-008**: System MUST degrade gracefully to keyword-only search when no embedding provider is configured or when a configured provider encounters an error, and report degradation via search_mode field <!-- Updated per spec 004: provider-based system replaces single endpoint -->
 - **FR-009**: System MUST support search filtering by entity kind, capability group, and minimum documentation quality
 - **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, search_mode, and provenance
 - **FR-011**: System MUST normalize and combine search scores from semantic and keyword sources into unified ranking
@@ -168,8 +175,8 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Build Script & Data Pipeline
 
-- **FR-030**: Build script MUST ingest all six source artifacts from `.ai/artifacts/` directory: entity database (code_graph.json), dependency graph (code_graph.gml), document database (doc_db.json), embeddings cache (embeddings_cache.pkl), capability definitions (capability_defs.json), and capability graph (capability_graph.json)
-- **FR-031**: Build script MUST merge entity metadata with documentation records via 1:1 join on compound_id and signature, producing complete entity records
+- **FR-030**: Build script MUST ingest all source artifacts from the configured artifacts directory: entity database (code_graph.json), dependency graph (code_graph.gml), document database (doc_db.json), signature map (signature_map.json), capability definitions (capability_defs.json), and capability graph (capability_graph.json). Embedding artifacts are optional — generated on demand when a provider is configured. <!-- Updated per specs 003/004: added signature_map, removed embeddings_cache.pkl from required list, embeddings now optional/auto-generated -->
+- **FR-031**: Build script MUST merge entity metadata with documentation records using the signature map (`signature_map.json`) to bridge entity IDs to doc_db keys, producing complete entity records <!-- Updated per spec 003 FR-002: sig_map replaces compound_id+signature join -->
 - **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column
 - **FR-033**: Build script MUST extract C++ definition lines and store in database definition_text column
 - **FR-034**: Build script MUST compute doc_quality classification (high/medium/low) based on doc_state, presence of details field, and presence of parameters field
@@ -205,21 +212,32 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-052**: Implementation MUST define V2-reserved response shapes (SubsystemSummary, SubsystemDocSummary, ContextBundle) in the model layer, even though they are unused by V1 tools, to prevent response-shape drift when V2 lands
 - **FR-053**: V1 tools MUST NOT expose wave ordering data from capability artifacts in any tool response, maintaining the boundary between factual documentation and migration prescription
 
-### Key Entities
+<!-- FRs added per spec 003 (build script fixes) -->
+#### Build Script: Capability Mapping & Data Corrections
 
-- **Entity**: Core documentation record representing a function, class, variable, struct, or other code element. Contains identity (compound_id, name, kind, signature), documentation (brief, details, parameters, returns, rationale, usage notes), source location (file path, line range), metrics (fan_in, fan_out, doc_quality), and relationships (capability membership, is_entry_point, is_bridge).
+- **FR-054**: Build script MUST assign capability group names to entities by building a name→capability mapping from `capability_graph.json` → `capabilities[name].members[].name` (approximately 848 assignments out of ~5,305 entities). The `doc.system` field is not used for capability assignment.
+- **FR-055**: Build script MUST read capability descriptions from the `"desc"` key in `capability_defs.json` (not `"description"`)
+- **FR-056**: Build script MUST compute `function_count` from `capability_graph.json` → `capabilities[name].function_count` (not from a `"functions"` key in capability_defs.json)
+- **FR-057**: Build script MUST parse capability edges from `capability_graph.json` → `"dependencies"` as a nested dict (`source_cap → target_cap → {edge_type, call_count, in_dag}`), not from an `"edges"` flat list
+- **FR-058**: Build script MUST compute `doc_quality_dist` for each capability by aggregating doc_quality from entities assigned to that capability group
+- **FR-059**: Build script MUST assign entity capabilities before computing bridge flags (pipeline ordering dependency)
+- **FR-060**: Build script MUST create all secondary indexes using the same engine/connection that creates tables, using `CREATE INDEX IF NOT EXISTS` for idempotent re-runs (14 secondary indexes required)
 
-- **Dependency Edge**: Typed relationship between entities representing CALLS, USES, INHERITS, INCLUDES, or CONTAINED_BY semantics. Contains source entity, target entity, edge type, and optional metadata. Forms a directed multigraph enabling graph traversal and analysis.
+<!-- FRs added per spec 004 (embedding provider) -->
+#### Embedding Provider
 
-- **Capability Group**: Architectural grouping of related functions classified by type (domain, policy, projection, infrastructure, utility). Contains group name, description, function membership list, stability indicator, typed dependencies to other groups, and entry point mappings.
-
-- **SearchResult**: Discriminated union envelope for search results supporting both entity matches and (V2) subsystem document matches. Contains result_type, score, search_mode, provenance label, and type-specific summary.
-
-- **BehaviorSlice**: Computed analysis of function's transitive call cone. Contains seed function, direct callees list, transitive cone list, capabilities touched (direct/transitive counts), globals used, side-effect markers (categorized and labeled direct/transitive), and truncation metadata.
-
-- **EntryPoint**: Special entity that serves as command entry point (do_*), spell entry point (spell_*), or special procedure (spec_*). Contains standard entity data plus capability exercise analysis showing which capability groups are touched directly and transitively.
-
-- **Build Script**: Offline ETL pipeline that transforms raw documentation artifacts into queryable database. Ingests six source artifacts (entity database, dependency graph, document database, embeddings, capability definitions, capability graph), merges entity metadata with documentation, extracts source code from disk, computes derived metrics (doc_quality, fan_in/fan_out, is_bridge, side_effect_markers, is_entry_point), generates full-text search vectors, and populates database tables. Must be idempotent and complete within 5 minutes.
+- **FR-061**: System MUST support a configurable embedding provider with at least two modes: "local" (bundled, no external service) and "hosted" (OpenAI-compatible endpoint), selectable via `EMBEDDING_PROVIDER` environment variable
+- **FR-062**: System MUST support a "no provider" mode where embedding is entirely disabled and all search degrades to keyword-only. This MUST be the default when no provider is configured.
+- **FR-063**: When configured for local mode, the system MUST default to the bundled ONNX-based embedding model BAAI/bge-base-en-v1.5 (768-dim). The model name MUST be configurable via `EMBEDDING_LOCAL_MODEL`.
+- **FR-064**: The database build process MUST load embedding vectors from a cached artifact file if one matching the current model configuration exists. Artifact files are named `embed_cache_{model_slug}_{dim}.pkl` (pickle format).
+- **FR-065**: The database build process MUST generate embeddings on demand when no matching artifact file exists and an embedding provider is configured, then save the result as an artifact for future builds.
+- **FR-066**: The database schema MUST use a vector column dimension that matches the configured embedding provider's output dimension (via `EMBEDDING_DIMENSION` env var, default 768), not a hardcoded value.
+- **FR-067**: The text used for embedding each entity MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields (name, kind, brief, details, params, returns, notes, rationale).
+- **FR-068**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency.
+- **FR-069**: The old hardcoded `embeddings_cache.pkl` artifact MUST NOT be required by build validation.
+- **FR-070**: The system MUST validate at startup that the configured vector dimension matches the embedding provider's actual output dimension and fail fast with a clear error if they disagree.
+- **FR-071**: The local embedding provider MUST NOT block the server's event loop during query-time embedding. Embedding computation MUST be offloaded to a background thread.
+- **FR-072**: Entities with no documentable content (no brief, details, params, or other documentation fields) MUST be skipped during embedding generation and receive a null embedding.
 
 ## Success Criteria *(mandatory)*
 
@@ -230,7 +248,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-003**: Graph traversal at depth 3 completes and returns results in under 200 milliseconds for typical entities (fan-in/fan-out < 50)
 - **SC-004**: Behavior slice computation for entry points completes in under 1 second when call cone contains fewer than 200 functions
 - **SC-005**: Server starts and loads dependency graph (25,000 edges) into memory in under 5 seconds
-- **SC-006**: When embedding service is unavailable, search automatically falls back to keyword mode with explicit degradation reporting and no failures
+- **SC-006**: When no embedding provider is configured or the provider encounters an error, search automatically falls back to keyword mode with explicit degradation reporting and no failures <!-- Updated per spec 004: reflects provider-based system -->
 - **SC-007**: Ambiguous entity names return ranked candidates with sufficient context for human or AI to select correct match without additional queries
 - **SC-008**: 95% of entity lookups result in exact match (resolution_status=exact) without requiring disambiguation
 - **SC-009**: Build script processes all artifacts (5,293 entities, 25,000 edges, 30 capabilities) and populates database in under 5 minutes
@@ -240,18 +258,33 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-013**: Full-text search tsvector enables relevant keyword matches for natural language queries against entity documentation and source code
 - **SC-014**: All server responses include structured provenance labels enabling consumers to assess data reliability (precomputed, inferred, heuristic, measured)
 
+<!-- Success criteria added per specs 003/004 -->
+- **SC-015**: After a full build, approximately 848 entities have non-null capability assignment (from capability_graph.json members)
+- **SC-016**: After a full build, at least 10 entities are flagged as bridge functions (is_bridge=true)
+- **SC-017**: After a full build, all 30 capabilities have function_count > 0 and non-empty descriptions
+- **SC-018**: After a full build, capability_edges table contains exactly 200 rows
+- **SC-019**: After a full build, at least 19 database indexes exist (5 PKs + 14 secondary)
+- **SC-020**: A developer can build the database and run semantic searches with zero external service dependencies by configuring local embedding mode
+- **SC-021**: Embedding artifact generation for the full entity set completes within 5 minutes on a standard development machine
+- **SC-022**: Query-time embedding adds less than 100ms of latency to search requests when using the local provider
+
 ### Assumptions
 
 - **A-001**: Pre-computed artifacts in `.ai/artifacts/` are complete, up-to-date, and internally consistent at time of database build; build script is run offline before server startup and not during server operation
 - **A-002**: PostgreSQL database with pgvector extension is available and accessible via connection string in `.env` file
-- **A-003**: OpenAI-compatible embedding endpoint is available for semantic search but system must function correctly if unavailable
+- **A-003**: Embedding is available via a configurable provider: local (bundled ONNX model, default), hosted (OpenAI-compatible endpoint), or none (keyword-only). System must function correctly without any embedding provider configured. <!-- Updated per spec 004: replaces single hosted endpoint assumption -->
 - **A-004**: NetworkX in-memory graph constructed from ~25,000 edges fits in available memory (estimated ~100-200 MB) and is read-only after initial load (no thread safety concerns for concurrent reads)
 - **A-005**: MCP client (VS Code, Claude Desktop) supports stdio transport and can invoke MCP tools/resources/prompts
 - **A-006**: Source code files on disk match artifacts at database build time; users rebuild database after code changes
-- **A-007**: Entity compound_id and signature combination uniquely identifies entities for join operations between artifacts
+- **A-007**: The signature map (`signature_map.json`) bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`, providing the join key for entity-documentation merging <!-- Updated per spec 003: replaces compound_id+signature assumption -->
 - **A-008**: Capability definitions, dependency edges, and function membership lists in `capability_defs.json` and `capability_graph.json` are authoritative
 - **A-009**: Full-text search weighted tsvector composition (name=A, brief/details=B, definition=C, source_text=D) provides reasonable ranking for prose queries
 - **A-010**: BFS traversal with visited set and configurable depth limits prevents performance degradation from circular dependencies or deep call chains
+- **A-011**: The `capability_graph.json` member names match entity names in the entity database exactly. The `doc.system` field remains unused for capability assignment. <!-- Added per spec 003 -->
+- **A-012**: The BAAI/bge-base-en-v1.5 model produces 768-dimensional vectors. This is verified at runtime; if a future model version changes dimensions, the config must be updated accordingly. <!-- Added per spec 004 -->
+- **A-013**: Embedding ~5,300 entities locally takes approximately 1–3 minutes on a modern CPU. Single-query local embedding takes approximately 5–20ms. Both are acceptable for their respective use cases. <!-- Added per spec 004 -->
+- **A-014**: After switching embedding providers, the developer is responsible for re-running the database build. The server does not detect dimension mismatches between the configured provider and vectors already in the database. <!-- Added per spec 004 -->
+- **A-015**: The ONNX model files are cached locally by the FastEmbed library (in `~/.cache/fastembed/`) after initial download. First run requires internet access; subsequent runs are fully offline. <!-- Added per spec 004 -->
 
 ## Clarifications
 
@@ -266,13 +299,4 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 ## Deployment Context *(optional)*
 
-The MCP server runs as a **long-lived process** on developer machines, handling multiple sequential tool invocations until the client disconnects. The server uses **async/await** for I/O-bound operations (database queries via asyncpg, embedding API calls) to avoid blocking during network or disk operations. The in-memory NetworkX graph is read-only after initial load and supports concurrent access without locking. The server is typically invoked by AI coding assistants via stdio transport. Configuration is managed through a `.env` file containing:
-- PostgreSQL connection string
-- Embedding endpoint URL (optional)
-- Project root path for source file access
-- Artifacts directory path
-- Log level (DEBUG/INFO/WARNING/ERROR, defaults to INFO)
-
-PostgreSQL runs in a Docker container using `pgvector/pgvector:pg17` image. The database is populated by running an offline build script (`build_mcp_db.py`) that processes artifacts from `.ai/artifacts/` directory. The server executable is started via `uv run python -m server.server` from the project directory and remains active until the client terminates the connection.
-
-The server integrates with MCP clients configured to recognize the `legacy://` URI scheme for resources and the documented tool/prompt interfaces. No authentication or network transport is required; all communication happens via stdin/stdout. The in-memory dependency graph (loaded at startup) persists across multiple tool invocations within a session. Structured logs are emitted to stderr (separate from MCP protocol on stdout) for monitoring, debugging, and performance analysis.
+Long-lived stdio process on developer machines. Async I/O (database, embedding) with read-only in-memory graph. Configuration via `.env`. See MODEL.md for schema, Appendix B for embedding config, and PRD.md NFR-3 for deployment requirements.

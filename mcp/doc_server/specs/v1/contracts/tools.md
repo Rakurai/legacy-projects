@@ -1,5 +1,6 @@
 # Tool Contracts: MCP Documentation Server
 
+<!-- Canonical V1 tool contracts. MCP tool interfaces are unchanged by specs 003/004 (build/embedding changes are internal). -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -26,7 +27,7 @@ Resolve entity name to ranked candidate list with match metadata.
 {
   query: string,              // Entity name or signature
   kind?: string,              // Filter by kind (function, class, etc.)
-  limit?: number = 10,        // Max candidates to return (DESIGN.md §8.1)
+  limit?: number = 10,        // Max candidates to return
   verbose?: boolean = false   // Include per-stage pipeline details for each candidate
 }
 ```
@@ -203,7 +204,7 @@ Hybrid semantic + keyword search with exact match boost.
 ```typescript
 {
   query: string,              // Natural language query
-  top_k?: number = 10,        // Number of results (DESIGN.md §8.2)
+  top_k?: number = 10,        // Number of results
   kind?: string,              // Filter by kind
   capability?: string,        // Filter by capability
   min_doc_quality?: "high" | "medium" | "low",
@@ -214,7 +215,7 @@ Hybrid semantic + keyword search with exact match boost.
 **Response:**
 ```typescript
 {
-  search_mode: "hybrid" | "semantic_only" | "keyword_fallback",  // Includes semantic_only per DESIGN.md §4.5
+  search_mode: "hybrid" | "semantic_only" | "keyword_fallback",
   results: SearchResult[],
   truncation: TruncationMetadata
 }
@@ -226,7 +227,7 @@ Hybrid semantic + keyword search with exact match boost.
   result_type: "entity",  // V2: "subsystem_doc"
   score: number,          // Combined score (exact * 10 + semantic * 0.6 + keyword * 0.4)
   search_mode: "hybrid" | "semantic_only" | "keyword_fallback",
-  provenance: "doxygen_extracted" | "llm_generated" | "subsystem_narrative",  // Doc source provenance (DESIGN.md §4.5)
+  provenance: "doxygen_extracted" | "llm_generated" | "subsystem_narrative",  // Doc source provenance
   summary: EntitySummary  // V1 always EntitySummary; V2 may be SubsystemDocSummary
 }
 ```
@@ -385,7 +386,7 @@ Get files related via INCLUDES edges, co-dependency, or shared entities.
 ```typescript
 {
   file_path: string,
-  relationship?: "includes" | "included_by" | "co_dependent",  // NULL = all (matches DESIGN.md §8.3)
+  relationship?: "includes" | "included_by" | "co_dependent",  // NULL = all
   limit?: number = 50
 }
 ```
@@ -468,7 +469,7 @@ Analyze which global variables an entity uses (direct and transitive).
 {
   entity_id?: string,
   signature?: string
-  // Note: transitive reach is fixed at 2 hops (CALLS → USES) per DESIGN.md §8.4
+  // Note: transitive reach is fixed at 2 hops (CALLS → USES)
 }
 ```
 
@@ -507,7 +508,7 @@ Find architectural hotspots ranked by metric.
   metric: "fan_in" | "fan_out" | "bridge" | "underdocumented",
   kind?: string,
   capability?: string,
-  limit?: number = 20   // DESIGN.md §8.4 default
+  limit?: number = 20
 }
 ```
 

@@ -170,12 +170,12 @@ async def test_hotspots_bridge(mock_ctx, sample_entities):
 
 @pytest.mark.asyncio
 async def test_hotspots_underdocumented(mock_ctx, sample_entities):
-    """Underdocumented hotspots filter to low/medium quality."""
+    """Underdocumented hotspots filter to entities with no brief."""
     result = await get_hotspots(mock_ctx, metric="underdocumented", limit=5)
 
     assert result.metric == "underdocumented"
-    for h in result.hotspots:
-        assert h.doc_quality in ("low", "medium")
+    # All sample entities have briefs, so no underdocumented results
+    assert result.hotspots == []
 
 
 @pytest.mark.asyncio

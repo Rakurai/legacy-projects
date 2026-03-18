@@ -1,6 +1,6 @@
 # Prompt Contracts: MCP Documentation Server
 
-<!-- Canonical V1 prompt contracts. MCP prompt interfaces are unchanged by specs 003/004. -->
+<!-- Canonical V1 prompt contracts. Updated per spec 005: resolve_entity references replaced with search; entity_id-only pattern. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -41,7 +41,7 @@ MCP prompts provide canned conversation starters for common workflows. Prompts r
 ```
 
 **Workflow Steps:**
-1. `resolve_entity(query=entity_name)` → Get entity_id
+1. `search(query=entity_name)` → Get entity_id from results <!-- spec 005: search replaces resolve_entity -->
 2. `get_entity(entity_id, include_code=true, include_neighbors=true)` → Full details
 3. `get_callers(entity_id, depth=2, limit=10)` → Usage context
 4. `get_callees(entity_id, depth=2, limit=10)` → Dependencies
@@ -119,9 +119,9 @@ Calls 8 functions including:
 ```
 
 **Workflow Steps:**
-1. `resolve_entity(query=entity_name)` → Get entity_id
+1. `search(query=entity_name)` → Get entity_id from results <!-- spec 005: search replaces resolve_entity -->
 2. `get_behavior_slice(entity_id, max_depth=max_depth, max_cone_size=200)` → Full behavioral data
-3. `get_state_touches(entity_id, max_depth=3)` → Global variable usage
+3. `get_state_touches(entity_id)` → Global variable usage <!-- spec 005: entity_id only -->
 
 **Example Output:**
 ```markdown
@@ -193,7 +193,7 @@ Calls 8 functions including:
 
 **Workflow Steps:**
 1. For each entry point:
-   - `resolve_entity(query=name)` → entity_id
+   - `search(query=name)` → entity_id <!-- spec 005: search replaces resolve_entity -->
    - `get_behavior_slice(entity_id, max_depth=5)` → Call cone
    - `get_entry_point_info(entity_id)` → Capabilities exercised
 2. Compute intersection (shared) and set differences (unique) across call cones
@@ -294,6 +294,7 @@ Functions ONLY called by `do_examine`:
 **Function Count**: 127
 **Stability**: Stable
 **Doc Quality**: 95 high, 25 medium, 7 low
+<!-- spec 005: doc_quality_dist no longer in server responses; agent would need to derive this from brief/details presence -->
 
 ## Dependencies (Outgoing)
 | Target Capability | Edge Type | Call Count | Purpose |

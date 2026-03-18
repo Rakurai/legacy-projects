@@ -1,6 +1,6 @@
 # Feature Specification: MCP Documentation Server
 
-<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build and 004-local-fastembed-provider. -->
+<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, and 005-mcp-key-issue. -->
 **Feature Branch**: `001-mcp-doc-server`
 **Created**: 2026-03-14
 **Status**: Implemented (V1)
@@ -10,19 +10,19 @@
 
 ### User Story 1 - Entity Lookup and Documentation Access (Priority: P1) 🎯 MVP
 
-An AI assistant needs to understand what a specific function, class, or variable does in the Legacy MUD codebase. The assistant can ask "What is `damage`?" and receive complete documentation including the function signature, parameter descriptions, return values, usage examples, source code location, and optionally the actual C++ source code. When multiple entities share the same name, the assistant receives a ranked list of candidates with enough context to choose the correct one.
+An AI assistant needs to understand what a specific function, class, or variable does in the Legacy MUD codebase. The assistant can search for "damage" and receive entity IDs in the results, then pass those IDs to `get_entity` for complete documentation including the function signature, parameter descriptions, return values, usage examples, source code location, and optionally the actual C++ source code. Entity IDs are deterministic (`{prefix}:{7hex}`) and stable across database rebuilds from the same artifacts. <!-- spec 005: resolve_entity retired; search is the sole discovery path; entity_id is deterministic -->
 
 **Why this priority**: Entity lookup is the foundational capability. Without reliable entity resolution and documentation retrieval, no other analysis can proceed. This is the MVP that makes the pre-computed documentation artifacts accessible to AI assistants.
 
-**Independent Test**: Can be fully tested by querying known entities (e.g., `damage` function, `Character` class, `game_loop_unix` function) and verifying that returned documentation matches the pre-computed artifacts in `.ai/artifacts/doc_db.json`. Success means an assistant can explore the codebase without parsing raw JSON files.
+**Independent Test**: Can be fully tested by querying known entities (e.g., `damage` function, `Character` class, `game_loop_unix` function) and verifying that returned documentation matches the pre-computed artifacts in `artifacts/doc_db.json`. Entity IDs are deterministic and stable across rebuilds. Success means an assistant can explore the codebase without parsing raw JSON files. <!-- spec 005: deterministic IDs -->
 
 **Acceptance Scenarios**:
 
-1. **Given** an entity name with unique match, **When** assistant requests entity resolution, **Then** receive exact match with full documentation, source location, and metrics
-2. **Given** an ambiguous entity name (e.g., "save" matches multiple functions), **When** assistant requests resolution, **Then** receive ranked candidate list with file paths, signatures, and brief descriptions to disambiguate
+1. **Given** a search query with a unique match, **When** assistant searches, **Then** receive exact match with full documentation, source location, and metrics via entity_id <!-- spec 005: search replaces resolve_entity -->
+2. **Given** an ambiguous search query (e.g., "save" matches multiple functions), **When** assistant searches, **Then** receive ranked result list with file paths, signatures, and brief descriptions to disambiguate
 3. **Given** an entity identifier, **When** assistant requests full entity details with source code, **Then** receive complete documentation plus actual C++ source text from database
 4. **Given** a source file path, **When** assistant requests all entities in that file, **Then** receive list of all functions, classes, variables, and structs defined in that file with summaries
-5. **Given** a source file path, **When** assistant requests file summary, **Then** receive aggregated statistics including entity counts by type, capability distribution, and documentation quality breakdown
+5. **Given** a source file path, **When** assistant requests file summary, **Then** receive aggregated statistics including entity counts by type and capability distribution <!-- spec 005: doc_quality_distribution removed from file summary -->
 
 ---
 
@@ -40,7 +40,7 @@ An AI assistant working on poison damage mechanics needs to find all entities re
 2. **Given** an exact entity name in search query, **When** assistant searches, **Then** that entity receives a score boost and appears at top of results
 3. **Given** search filters for kind=function and capability=combat, **When** assistant searches, **Then** receive only functions from combat capability group
 4. **Given** embedding service is unavailable, **When** assistant searches, **Then** receive keyword-only results with search_mode="keyword_fallback" explicitly indicated
-5. **Given** search for low-quality documentation, **When** assistant filters by min_doc_quality=medium, **Then** receive only entities with medium or high documentation quality ratings
+<!-- spec 005: Acceptance scenario 5 (min_doc_quality filter) removed; min_doc_quality parameter retired -->
 
 ---
 
@@ -59,6 +59,7 @@ An AI assistant analyzing the `do_kill` command needs to understand what other f
 3. **Given** a class name, **When** assistant requests class hierarchy, **Then** receive inheritance tree showing both parent classes and derived classes
 4. **Given** a source file, **When** assistant requests related files, **Then** receive files connected via include relationships, co-dependency, or shared entity definitions
 5. **Given** a large call tree exceeding result limit, **When** assistant requests dependencies, **Then** receive truncated results with metadata indicating total available count and what was returned
+<!-- spec 005: resolution envelope no longer present on graph tools; tools accept only entity_id -->
 
 ---
 
@@ -90,7 +91,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 **Acceptance Scenarios**:
 
-1. **Given** no parameters, **When** assistant lists capabilities, **Then** receive all 30 groups with types, descriptions, function counts, and documentation quality distributions
+1. **Given** no parameters, **When** assistant lists capabilities, **Then** receive all 30 groups with types, descriptions, function counts, and stability indicators <!-- spec 005: doc_quality_dist removed from capability responses -->
 2. **Given** a capability name, **When** assistant requests capability detail, **Then** receive group definition, typed dependency edges, entry points, and optionally full function list
 3. **Given** two or more capability names, **When** assistant compares capabilities, **Then** receive shared dependencies, unique dependencies per group, and bridge entities connecting them
 4. **Given** a filter for capability=combat, **When** assistant lists entry points, **Then** receive only entry points that directly exercise combat capability functions
@@ -100,7 +101,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 ### Edge Cases
 
-- **Unknown entity name**: System returns successful MCP response with `not_found` status and nearest matches from full-text search (not an MCP error)
+- **Unknown entity name**: System returns empty search results with `search_mode` indicator (not an MCP error) <!-- spec 005: resolve_entity retired; search handles discovery -->
 - **Ambiguous entity name with 50+ candidates**: Results are truncated to top 20 candidates ranked by score, with truncation metadata indicating total available; no pagination mechanism exists, users must refine query to see different results
 - **Circular dependencies in call graph**: BFS traversal with visited set prevents infinite loops; each entity appears once at shortest path distance
 - **Embedding service down during search**: System returns successful MCP response with keyword-only results and sets `search_mode: "keyword_fallback"` to indicate degraded state (not an MCP error)
@@ -114,8 +115,8 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **Entity exists in database but source file deleted from disk**: Source code retrieval returns stored source_text from database (extracted at build time)
 - **Source code on disk has changed since database build**: Stored source_text becomes stale; documentation remains valid. Users must rebuild database after code changes.
 - **Graph traversal depth exceeds reasonable limit**: Depth is capped at maximum 5 for behavior analysis, 3 for general traversal to prevent performance degradation
-- **Entity has no documentation (doc_quality=low)**: System returns entity with empty details/rationale fields; brief may be auto-generated from signature
-- **Multiple files define entities with same compound_id**: Resolution pipeline disambiguates using file path and signature; all candidates returned with match metadata
+- **Entity has no documentation (brief is null)**: System returns entity with empty details/rationale fields; agents use `brief is not null` as the practical quality signal <!-- spec 005: doc_quality removed; null-brief check replaces quality bucket -->
+- **Multiple files define entities with same compound_id**: Deterministic IDs from signature_map keys ensure unique identification <!-- spec 005: entity_id is deterministic, not Doxygen-format -->
 - **Database connection failure**: System returns MCP error (hard failure) rather than successful response; client must handle connection retry or alert user
 - **Invalid tool parameters** (e.g., depth=-1, invalid entity_id format): System returns MCP error with validation message rather than successful response with error indicator
 - **Build script encounters missing artifact file**: Build process fails with clear error message indicating which artifact is missing and expected path
@@ -128,18 +129,18 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Entity Resolution & Lookup
 
-- **FR-001**: System MUST resolve entity names through multi-stage pipeline: exact signature match → exact name match → prefix match → full-text search → semantic search
-- **FR-002**: System MUST return ranked candidate list with match metadata including match type, score, kind, file path, capability, brief, and documentation quality
-- **FR-003**: System MUST support retrieving full entity records including identity, documentation fields, source location, capability, metrics, and optionally source code
-- **FR-004**: System MUST include resolution envelope in all responses from tools accepting entity names, containing resolution_status (exact/ambiguous/not_found), resolved_from, match_type, and resolution_candidates
+- **FR-001**: System MUST support entity discovery through `search` tool with multi-stage pipeline: exact signature match → exact name match → prefix match → full-text search → semantic search <!-- spec 005: resolve_entity retired; search subsumes the resolution pipeline -->
+- **FR-002**: System MUST return ranked results with match metadata including match type, score, kind, file path, capability, and brief
+- **FR-003**: System MUST support retrieving full entity records by `entity_id` (required parameter) including identity, documentation fields, source location, capability, metrics, and optionally source code <!-- spec 005: entity_id is the sole lookup key; signature no longer accepted -->
+- **FR-004**: ~~System MUST include resolution envelope in all responses from tools accepting entity names~~ <!-- spec 005: REMOVED — ResolutionEnvelope retired; tools accept only entity_id -->
 - **FR-005**: System MUST list all entities defined in a source file, filterable by entity kind (function, class, variable, struct, etc.)
-- **FR-006**: System MUST provide file-level summaries including entity count by kind, capability distribution, documentation quality distribution, and top entities by fan-in
+- **FR-006**: System MUST provide file-level summaries including entity count by kind, capability distribution, and top entities by fan-in <!-- spec 005: doc_quality_distribution removed from file summary -->
 
 #### Search
 
 - **FR-007**: System MUST perform hybrid search combining pgvector cosine similarity and Postgres full-text search with exact name/signature boost
 - **FR-008**: System MUST degrade gracefully to keyword-only search when no embedding provider is configured or when a configured provider encounters an error, and report degradation via search_mode field <!-- Updated per spec 004: provider-based system replaces single endpoint -->
-- **FR-009**: System MUST support search filtering by entity kind, capability group, and minimum documentation quality
+- **FR-009**: System MUST support search filtering by entity kind and capability group <!-- spec 005: min_doc_quality filter removed -->
 - **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, search_mode, and provenance
 - **FR-011**: System MUST normalize and combine search scores from semantic and keyword sources into unified ranking
 - **FR-012**: Search tool MUST accept a `source` parameter (defaulting to `entity`) that is V2-reserved for unified search across entity docs and subsystem docs; in V1 only `entity` is functional
@@ -162,7 +163,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Capability System
 
-- **FR-023**: System MUST list all capability groups with type, description, function count, stability indicator, and documentation quality distribution
+- **FR-023**: System MUST list all capability groups with type, description, function count, and stability indicator <!-- spec 005: doc_quality_dist removed from capability responses -->
 - **FR-024**: System MUST provide detailed capability information including group definition, typed dependency edges, entry points, and optionally full function list
 - **FR-025**: System MUST support comparing multiple capabilities showing shared dependencies, unique dependencies, and bridge entities
 - **FR-026**: System MUST list entry points (do_*, spell_*, spec_* functions) filterable by capability and name pattern
@@ -179,7 +180,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-031**: Build script MUST merge entity metadata with documentation records using the signature map (`signature_map.json`) to bridge entity IDs to doc_db keys, producing complete entity records <!-- Updated per spec 003 FR-002: sig_map replaces compound_id+signature join -->
 - **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column
 - **FR-033**: Build script MUST extract C++ definition lines and store in database definition_text column
-- **FR-034**: Build script MUST compute doc_quality classification (high/medium/low) based on doc_state, presence of details field, and presence of parameters field
+- **FR-034**: ~~Build script MUST compute doc_quality classification (high/medium/low)~~ <!-- spec 005: REMOVED — doc_quality and doc_state columns dropped -->
 - **FR-035**: Build script MUST compute fan_in and fan_out metrics by counting CALLS edges in dependency graph
 - **FR-036**: Build script MUST compute is_bridge flag by checking whether function's incoming vs. outgoing CALLS neighbors span different capability groups
 - **FR-037**: Build script MUST compute side_effect_markers by checking each function's CALLS edges against curated side-effect function list and categorizing as messaging, persistence, state_mutation, or scheduling
@@ -198,7 +199,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 #### Error Handling
 
 - **FR-046**: Server MUST return MCP errors for hard failures including database connectivity errors, invalid tool parameters, malformed requests, or internal server errors
-- **FR-047**: Server MUST return successful MCP responses with explicit status indicators for degraded or partial results including embedding service unavailable (search_mode: keyword_fallback), result truncation (truncated: true), entity not found (resolution_status: not_found), or ambiguous resolution (resolution_status: ambiguous)
+- **FR-047**: Server MUST return successful MCP responses with explicit status indicators for degraded or partial results including embedding service unavailable (search_mode: keyword_fallback), result truncation (truncated: true), or empty search results <!-- spec 005: resolution_status indicators removed (resolve_entity retired) -->
 
 #### Observability
 
@@ -219,7 +220,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-055**: Build script MUST read capability descriptions from the `"desc"` key in `capability_defs.json` (not `"description"`)
 - **FR-056**: Build script MUST compute `function_count` from `capability_graph.json` → `capabilities[name].function_count` (not from a `"functions"` key in capability_defs.json)
 - **FR-057**: Build script MUST parse capability edges from `capability_graph.json` → `"dependencies"` as a nested dict (`source_cap → target_cap → {edge_type, call_count, in_dag}`), not from an `"edges"` flat list
-- **FR-058**: Build script MUST compute `doc_quality_dist` for each capability by aggregating doc_quality from entities assigned to that capability group
+- **FR-058**: ~~Build script MUST compute `doc_quality_dist` for each capability by aggregating doc_quality from entities assigned to that capability group~~ <!-- spec 005: REMOVED — doc_quality_dist dropped from capabilities table -->
 - **FR-059**: Build script MUST assign entity capabilities before computing bridge flags (pipeline ordering dependency)
 - **FR-060**: Build script MUST create all secondary indexes using the same engine/connection that creates tables, using `CREATE INDEX IF NOT EXISTS` for idempotent re-runs (14 secondary indexes required)
 
@@ -239,21 +240,39 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-071**: The local embedding provider MUST NOT block the server's event loop during query-time embedding. Embedding computation MUST be offloaded to a background thread.
 - **FR-072**: Entities with no documentable content (no brief, details, params, or other documentation fields) MUST be skipped during embedding generation and receive a null embedding.
 
+<!-- FRs added per spec 005 (deterministic IDs, doc merge fix, tool simplification) -->
+#### Deterministic Entity IDs
+
+- **FR-073**: Build pipeline MUST compute entity IDs as `{prefix}:{sha256(canonical_key)[:7]}` where the canonical key is the signature_map tuple `(compound_id, signature_or_name)`
+- **FR-074**: Prefix MUST be determined by entity kind: `fn` for function/define, `var` for variable, `cls` for class/struct, `file` for file, `sym` for everything else
+- **FR-075**: Build pipeline MUST halt with a clear error on any ID collision (two different canonical keys producing the same prefixed hash)
+- **FR-076**: `resolve_entity` tool MUST be removed from the MCP tool catalog (total tools: 20 → 19)
+- **FR-077**: All tools that previously accepted `entity_id` and `signature` parameters MUST accept only `entity_id` as a required parameter
+- **FR-078**: `ResolutionEnvelope` MUST be removed from all tool response shapes
+- **FR-079**: `search` tool MUST remove the `min_doc_quality` parameter
+- **FR-080**: `list_capabilities` and `get_capability_detail` responses MUST remove the `doc_quality_dist` field
+- **FR-081**: `EntitySummary` MUST remove `doc_state` and `doc_quality` fields
+- **FR-082**: `EntityDetail` MUST remove `compound_id`, `member_id`, `doc_state`, and `doc_quality` fields
+- **FR-083**: `search` is the sole path from human-readable text to entity IDs — no other tool performs name-to-ID resolution
+- **FR-084**: Schema MUST remove columns: `compound_id`, `member_id`, `doc_state`, `doc_quality` from the entities table
+- **FR-085**: Schema MUST remove column: `doc_quality_dist` from the capabilities table
+- **FR-086**: Build pipeline MUST carry all documentation fields (brief, details, params, returns, notes, rationale, usages) from doc_db through the merge without loss
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: AI assistants can resolve any entity name and receive correct documentation in under 100 milliseconds for single-entity lookup
+- **SC-001**: AI assistants can resolve any entity name via search and receive correct documentation in under 100 milliseconds for single-entity lookup <!-- spec 005: search replaces resolve_entity -->
 - **SC-002**: Hybrid search queries return relevant results ranked by combined semantic and keyword score in under 500 milliseconds including embedding query
 - **SC-003**: Graph traversal at depth 3 completes and returns results in under 200 milliseconds for typical entities (fan-in/fan-out < 50)
 - **SC-004**: Behavior slice computation for entry points completes in under 1 second when call cone contains fewer than 200 functions
 - **SC-005**: Server starts and loads dependency graph (25,000 edges) into memory in under 5 seconds
 - **SC-006**: When no embedding provider is configured or the provider encounters an error, search automatically falls back to keyword mode with explicit degradation reporting and no failures <!-- Updated per spec 004: reflects provider-based system -->
-- **SC-007**: Ambiguous entity names return ranked candidates with sufficient context for human or AI to select correct match without additional queries
-- **SC-008**: 95% of entity lookups result in exact match (resolution_status=exact) without requiring disambiguation
+- **SC-007**: Ambiguous search queries return ranked results with sufficient context for human or AI to select correct match without additional queries <!-- spec 005: search replaces resolve_entity -->
+- **SC-008**: ~~95% of entity lookups result in exact match (resolution_status=exact)~~ <!-- spec 005: REMOVED — resolve_entity retired; agents use search + entity_id pattern -->
 - **SC-009**: Build script processes all artifacts (5,293 entities, 25,000 edges, 30 capabilities) and populates database in under 5 minutes
 - **SC-010**: Build script produces identical database state on repeated runs from same input artifacts (idempotent operation)
-- **SC-011**: All derived metrics (doc_quality, fan_in, fan_out, is_bridge, side_effect_markers) are correctly computed from source artifacts and match validation samples
+- **SC-011**: All derived metrics (fan_in, fan_out, is_bridge, side_effect_markers) are correctly computed from source artifacts and match validation samples <!-- spec 005: doc_quality removed from derived metrics -->
 - **SC-012**: Source code extraction captures 100% of entities with valid source locations, storing complete function/class definitions in database
 - **SC-013**: Full-text search tsvector enables relevant keyword matches for natural language queries against entity documentation and source code
 - **SC-014**: All server responses include structured provenance labels enabling consumers to assess data reliability (precomputed, inferred, heuristic, measured)
@@ -268,15 +287,22 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-021**: Embedding artifact generation for the full entity set completes within 5 minutes on a standard development machine
 - **SC-022**: Query-time embedding adds less than 100ms of latency to search requests when using the local provider
 
+<!-- Success criteria added per spec 005 -->
+- **SC-023**: Two consecutive builds from the same artifacts produce identical entity ID sets (100% determinism)
+- **SC-024**: Zero ID collisions across ~5,305 entities (enforced by build-time collision detection)
+- **SC-025**: After a full build, at least 95% of doc_db.json entries with non-empty brief have non-null brief in the database
+- **SC-026**: An agent can complete search → get_entity → get_callers → get_behavior_slice using only entity_ids, with zero signature-based lookups
+- **SC-027**: No tool in the MCP catalog accepts a `signature` parameter for entity lookup (19 tools total)
+
 ### Assumptions
 
-- **A-001**: Pre-computed artifacts in `.ai/artifacts/` are complete, up-to-date, and internally consistent at time of database build; build script is run offline before server startup and not during server operation
+- **A-001**: Pre-computed artifacts in `artifacts/` are complete, up-to-date, and internally consistent at time of database build; build script is run offline before server startup and not during server operation
 - **A-002**: PostgreSQL database with pgvector extension is available and accessible via connection string in `.env` file
 - **A-003**: Embedding is available via a configurable provider: local (bundled ONNX model, default), hosted (OpenAI-compatible endpoint), or none (keyword-only). System must function correctly without any embedding provider configured. <!-- Updated per spec 004: replaces single hosted endpoint assumption -->
 - **A-004**: NetworkX in-memory graph constructed from ~25,000 edges fits in available memory (estimated ~100-200 MB) and is read-only after initial load (no thread safety concerns for concurrent reads)
 - **A-005**: MCP client (VS Code, Claude Desktop) supports stdio transport and can invoke MCP tools/resources/prompts
 - **A-006**: Source code files on disk match artifacts at database build time; users rebuild database after code changes
-- **A-007**: The signature map (`signature_map.json`) bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`, providing the join key for entity-documentation merging <!-- Updated per spec 003: replaces compound_id+signature assumption -->
+- **A-007**: The signature map (`signature_map.json`) bridges entity IDs from `code_graph.json` to `(compound_id, signature)` documentation keys in `doc_db.json`. It is a **derived artifact** — regenerated from `code_graph.json` + `doc_db.json` via `build_signature_map.py`. It must be regenerated any time `code_graph.json` is refreshed, because Doxygen member hashes change across runs while `(compound_id, signature)` keys are stable. <!-- Updated per spec 003: replaces compound_id+signature assumption -->
 - **A-008**: Capability definitions, dependency edges, and function membership lists in `capability_defs.json` and `capability_graph.json` are authoritative
 - **A-009**: Full-text search weighted tsvector composition (name=A, brief/details=B, definition=C, source_text=D) provides reasonable ranking for prose queries
 - **A-010**: BFS traversal with visited set and configurable depth limits prevents performance degradation from circular dependencies or deep call chains

@@ -43,15 +43,15 @@ def load_graph_edges(
 
     g = load_gml_graph(gml_path)
 
-    # Build mapping from graph node ID to entity ID.
+    # Build mapping from graph node ID to deterministic entity ID.
     # GML uses: bare member hash for members, compound_id string for compounds.
-    # Members and compounds are mapped separately to avoid compound overwrite.
     node_to_entity: dict[str, str] = {}
     for entity in merged_entities:
-        if entity.member_id:
-            node_to_entity[entity.member_id] = entity.entity_id
+        member = entity.entity.id.member
+        if member:
+            node_to_entity[member] = entity.entity_id
         else:
-            node_to_entity[entity.compound_id] = entity.entity_id
+            node_to_entity[entity.entity.id.compound] = entity.entity_id
 
     edges_set: set[tuple[str, str, str]] = set()
     skipped = 0

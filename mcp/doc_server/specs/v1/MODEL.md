@@ -1,6 +1,6 @@
 # Data Model: MCP Documentation Server
 
-<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build and 004-local-fastembed-provider. -->
+<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, and 005-mcp-key-issue. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -22,13 +22,15 @@ CREATE EXTENSION IF NOT EXISTS vector;
 
 CREATE TABLE entities (
     -- Identity (internal)
-    entity_id       TEXT PRIMARY KEY,          -- Doxygen compound_member ID
-    compound_id     TEXT NOT NULL,             -- Doxygen compound refid
-    member_id       TEXT,                      -- Member hex hash (NULL for compounds)
+    entity_id       TEXT PRIMARY KEY,          -- Deterministic content-hashed ID: {prefix}:{sha256(canonical_key)[:7]}
+                                               -- Prefix: fn (function/define), var (variable), cls (class/struct), file (file), sym (other)
+                                               -- Canonical key: signature_map tuple (compound_id, signature_or_name)
+                                               -- Stable across rebuilds from same artifacts. See spec 005.
+    -- <!-- spec 005: compound_id and member_id columns removed; identity is now the deterministic entity_id -->
 
     -- Identity (user-facing)
     name            TEXT NOT NULL,             -- Bare name: "do_look", "race_type"
-    signature       TEXT NOT NULL UNIQUE,      -- Full signature: "void do_look(Character *ch, String argument)"
+    signature       TEXT NOT NULL,             -- Full signature: "void do_look(Character *ch, String argument)" (NOT unique — 521 signatures collide across compounds)
     kind            TEXT NOT NULL,             -- function, variable, class, struct, file, enum, define, typedef, namespace, dir, group
     entity_type     TEXT NOT NULL,             -- "compound" or "member"
 
@@ -51,8 +53,7 @@ CREATE TABLE entities (
     notes           TEXT,
     rationale       TEXT,
     usages          JSONB,                     -- {caller_key: usage_description}
-    doc_state       TEXT,                      -- extracted_summary, refined_summary, etc.
-    doc_quality     TEXT,                      -- derived: high, medium, low
+    -- <!-- spec 005: doc_state and doc_quality columns removed -->
 
     -- Classification
     capability      TEXT,                      -- Capability group name (NULL if ungrouped)
@@ -87,10 +88,7 @@ CREATE INDEX idx_entities_embedding ON entities USING ivfflat (embedding vector_
 **Derived Fields Computation (Build Script):**
 <!-- spec 003: capability assignment from cap_graph members, not doc.system -->
 - `capability`: Assigned from `capability_graph.json` → `capabilities[name].members[].name` mapping (~848 of ~5,305 entities receive a capability). Not from `doc.system` (which is always null).
-- `doc_quality`:
-  - `high`: doc_state IN (refined_summary, refined_usage) AND details IS NOT NULL AND (params IS NOT NULL OR kind != 'function')
-  - `medium`: doc_state = generated_summary OR (brief IS NOT NULL AND details IS NULL)
-  - `low`: doc_state = extracted_summary OR brief IS NULL
+- <!-- spec 005: doc_quality derivation removed; doc_quality and doc_state columns dropped from schema -->
 - `fan_in`: COUNT(edges WHERE target_id = entity_id AND edge_type = 'CALLS')
 - `fan_out`: COUNT(edges WHERE source_id = entity_id AND edge_type = 'CALLS')
 - `is_bridge`: EXISTS(edge e1 JOIN edge e2 WHERE e1.source_cap != e2.target_cap AND e1.entity = e2.entity). Requires capability assignment to be completed first (pipeline ordering). <!-- spec 003: depends on capability assignment -->
@@ -133,8 +131,8 @@ CREATE TABLE capabilities (
     type TEXT NOT NULL,                        -- domain, policy, projection, infrastructure, utility
     description TEXT NOT NULL,                 -- sourced from capability_defs.json "desc" key
     function_count INTEGER NOT NULL,           -- sourced from capability_graph.json capabilities[name].function_count
-    stability TEXT,                            -- stable, evolving, experimental (if defined)
-    doc_quality_dist JSONB NOT NULL            -- {high: N, medium: N, low: N} aggregated from entity doc_quality
+    stability TEXT                             -- stable, evolving, experimental (if defined)
+    -- <!-- spec 005: doc_quality_dist column removed -->
 );
 ```
 
@@ -187,13 +185,11 @@ class Entity(SQLModel, table=True):
     __tablename__ = "entities"
 
     # Identity (internal)
-    entity_id: str = Field(primary_key=True)
-    compound_id: str
-    member_id: str | None = None
+    entity_id: str = Field(primary_key=True)  # <!-- spec 005: deterministic {prefix}:{7hex} format; compound_id and member_id removed -->
 
     # Identity (user-facing)
     name: str
-    signature: str = Field(unique=True)
+    signature: str  # NOT unique — 521 signatures collide across compounds (e.g. variables named "level" in different files)
     kind: str
     entity_type: str
 
@@ -216,8 +212,7 @@ class Entity(SQLModel, table=True):
     notes: str | None = None
     rationale: str | None = None
     usages: dict | None = Field(default=None, sa_column=Column(JSONB))
-    doc_state: str | None = None
-    doc_quality: str | None = None
+    # <!-- spec 005: doc_state and doc_quality fields removed -->
 
     # Classification
     capability: str | None = None
@@ -251,7 +246,7 @@ class Capability(SQLModel, table=True):
     description: str
     function_count: int
     stability: str | None = None
-    doc_quality_dist: dict = Field(sa_column=Column(JSONB))
+    # <!-- spec 005: doc_quality_dist field removed -->
 
 
 class CapabilityEdge(SQLModel, table=True):
@@ -333,15 +328,14 @@ from typing import Literal
 
 class EntitySummary(BaseModel):
     """Compact entity representation used in all list tools."""
-    entity_id: str = Field(description="Internal Doxygen ID (for passing to get_entity)")
+    entity_id: str = Field(description="Deterministic entity ID ({prefix}:{7hex})")  # <!-- spec 005: deterministic format -->
     signature: str = Field(description="Full human-readable signature (C++ function sig or name)")
     name: str = Field(description="Bare name")
     kind: Literal["function", "variable", "class", "struct", "file", "enum", "define", "typedef", "namespace", "dir", "group"]
     file_path: str | None = Field(None, description="Source file path")
     capability: str | None = Field(None, description="Capability group")
     brief: str | None = Field(None, description="One-line summary")
-    doc_state: str = Field(description="Documentation pipeline state")
-    doc_quality: Literal["high", "medium", "low"] = Field(description="Derived quality bucket")
+    # <!-- spec 005: doc_state and doc_quality fields removed from EntitySummary -->
     fan_in: int = Field(ge=0, description="Incoming CALLS edges")
     fan_out: int = Field(ge=0, description="Outgoing CALLS edges")
 ```
@@ -354,9 +348,7 @@ Full entity record (returned by `get_entity`).
 class EntityDetail(BaseModel):
     """Complete entity documentation and metadata."""
     # Identity
-    entity_id: str
-    compound_id: str
-    member_id: str | None
+    entity_id: str  # <!-- spec 005: deterministic {prefix}:{7hex}; compound_id and member_id removed -->
     signature: str
     name: str
 
@@ -371,12 +363,11 @@ class EntityDetail(BaseModel):
     decl_file_path: str | None
     decl_line: int | None
     definition_text: str | None
-    source_text: str | None  # Optional (include_code=true)
+    source_text: str | None  # Optional (include_code=true), BUT auto-included for enum and group kinds (flag values visible without explicit request)
 
     # Capability & metrics
     capability: str | None
-    doc_state: str
-    doc_quality: Literal["high", "medium", "low"]
+    # <!-- spec 005: doc_state and doc_quality removed from EntityDetail -->
     fan_in: int
     fan_out: int
     is_bridge: bool
@@ -407,16 +398,7 @@ class EntityNeighbor(BaseModel):
 
 ### 3.3 Resolution Envelope
 
-Wraps responses from tools accepting entity names.
-
-```python
-class ResolutionEnvelope(BaseModel):
-    """Metadata about entity resolution."""
-    resolution_status: Literal["exact", "ambiguous", "not_found"]
-    resolved_from: str  # Original query string
-    match_type: Literal["entity_id", "signature_exact", "name_exact", "name_prefix", "keyword", "semantic"]
-    resolution_candidates: int  # Total matches found (1 for exact)
-```
+<!-- spec 005: ResolutionEnvelope removed from all tool responses. Resolution logic is internal to search; tools accept only entity_id. -->
 
 ### 3.4 SearchResult
 
@@ -428,9 +410,9 @@ class SearchResult(BaseModel):
     result_type: Literal["entity", "subsystem_doc"]  # V2: subsystem_doc not used in V1
     score: float = Field(ge=0, le=1, description="Normalized combined score")
     search_mode: Literal["hybrid", "semantic_only", "keyword_fallback"] = Field(description="Which search mode was used")
-    provenance: Literal["doxygen_extracted", "llm_generated", "subsystem_narrative"]  # Doc source provenance
-    summary: EntitySummary | SubsystemDocSummary | dict  # EntitySummary in V1; V2 adds SubsystemDocSummary
-    # In V1, result_type is always "entity" and summary is always EntitySummary
+    provenance: Literal["doxygen_extracted", "llm_generated", "precomputed", "subsystem_narrative"]  # Doc source provenance <!-- spec 005: added "precomputed" -->
+    entity_summary: EntitySummary | SubsystemDocSummary | dict  # EntitySummary in V1; V2 adds SubsystemDocSummary
+    # <!-- spec 005: field renamed from "summary" to "entity_summary" in implementation -->
 ```
 
 ### 3.5 BehaviorSlice
@@ -542,39 +524,43 @@ class ContextBundle(BaseModel):
 
 ### Build Time (Offline ETL)
 
-<!-- Updated per specs 003/004: pipeline reordered for capability assignment before bridge detection; sig_map merge; embedding generation -->
+<!-- Updated per specs 003/004/005: pipeline reordered for capability assignment before bridge detection; sig_map merge; embedding generation; deterministic IDs -->
 ```
 1.  Parse code_graph.json → DoxygenEntity objects
 2.  Parse doc_db.json → Document objects
-3.  Merge entities ↔ docs using signature_map.json to bridge entity IDs to doc_db keys
-4.  Extract source_text from disk using (file_path, start_line, end_line)
-5.  Load capability_graph.json → build name→capability mapping from members lists
-6.  Assign capabilities to merged entities (~848 assignments)
-7.  Load graph edges, compute fan_in/fan_out, bridge flags (requires capabilities), side_effect_markers
-8.  Compute doc_quality, is_entry_point
-9.  Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(...brief/details..., 'B') || setweight(...definition_text..., 'C') || setweight(...source_text..., 'D')
-10. Load or generate embeddings:
+3.  Load signature_map.json → bridge entity IDs to doc_db keys (compound_id, signature)
+4.  Compute deterministic entity IDs: {prefix}:{sha256(canonical_key)[:7]} from signature_map tuples  <!-- spec 005 -->
+5.  Merge entities ↔ docs using signature_map bridge; halt on any ID collision  <!-- spec 005 -->
+6.  Extract source_text from disk using (file_path, start_line, end_line)
+7.  Load capability_graph.json → build name→capability mapping from members lists
+8.  Assign capabilities to merged entities (~848 assignments)
+9.  Load graph edges (translate to deterministic IDs), compute fan_in/fan_out, bridge flags (requires capabilities), side_effect_markers  <!-- spec 005: edge ID translation -->
+10. Compute is_entry_point  <!-- spec 005: doc_quality computation removed -->
+11. Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(...brief/details..., 'B') || setweight(...definition_text..., 'C') || setweight(...source_text..., 'D')
+12. Load or generate embeddings:
     - If matching artifact exists (embed_cache_{model}_{dim}.pkl) → load it
     - Else if embedding provider configured → generate via provider, save artifact
     - Else → skip (null embeddings), log warning
-11. Drop/recreate schema (tables + indexes via same engine, CREATE INDEX IF NOT EXISTS)
-12. INSERT INTO entities (batch, ~5000 rows)
-13. Parse code_graph.gml → NetworkX graph → extract edges
-14. INSERT INTO edges (batch, ~25000 rows)
-15. Parse capability_defs.json ("desc" key), capability_graph.json → capabilities + capability_edges (from "dependencies" nested dict, 200 rows)
-16. Compute doc_quality_dist per capability from entity data
-17. ANALYZE entities; ANALYZE edges; (update planner statistics)
+13. Drop/recreate schema (tables + indexes via same engine, CREATE INDEX IF NOT EXISTS)
+14. INSERT INTO entities (batch, ~5000 rows)
+15. Parse code_graph.gml → NetworkX graph → extract edges (translate to deterministic IDs)  <!-- spec 005 -->
+16. INSERT INTO edges (batch, ~25000 rows)
+17. Parse capability_defs.json ("desc" key), capability_graph.json → capabilities + capability_edges (from "dependencies" nested dict, 200 rows)
+18. ANALYZE entities; ANALYZE edges; (update planner statistics)
 ```
+
+<!-- spec 005: step 16 (compute doc_quality_dist per capability) removed; step numbering adjusted -->
 
 ### Runtime (Server Queries)
 
 ```
-1. Tool invocation (e.g., resolve_entity)
-2. Resolution pipeline: exact signature → exact name → prefix → keyword → semantic
-3. Database query (SELECT ... WHERE ... ORDER BY score LIMIT N)
-4. Map rows → Pydantic models (EntitySummary, EntityDetail, etc.)
-5. Attach resolution envelope, truncation metadata
-6. Return JSON response to MCP client
+1. Tool invocation (e.g., search, get_entity)  <!-- spec 005: resolve_entity removed; search is the sole entry point for text-to-ID resolution -->
+2. For search: resolution pipeline (exact signature → exact name → prefix → keyword → semantic) runs internally
+3. For all other tools: direct entity_id lookup (no resolution)  <!-- spec 005: tools accept only entity_id -->
+4. Database query (SELECT ... WHERE ... ORDER BY score LIMIT N)
+5. Map rows → Pydantic models (EntitySummary, EntityDetail, etc.)
+6. Attach truncation metadata
+7. Return JSON response to MCP client
 ```
 
 ---
@@ -583,18 +569,15 @@ class ContextBundle(BaseModel):
 
 ### Entity Identity
 
-- `entity_id` UNIQUE (primary key)
-- `signature` UNIQUE (user-facing key)
-- `compound_id` NOT NULL
-- `member_id` NULL only for compound entities
+- `entity_id` UNIQUE (primary key), format `{prefix}:{7 hex chars}` where prefix ∈ {fn, var, cls, file, sym}  <!-- spec 005 -->
+- `signature` NOT NULL (display-only, **not unique** — 521 signatures collide across compounds; not a lookup key)  <!-- spec 005: no longer accepted as lookup key -->
+- <!-- spec 005: compound_id, member_id validation rules removed -->
 - `kind` IN (function, variable, class, struct, file, enum, define, typedef, namespace, dir, group)
 - `entity_type` IN (compound, member)
 
-### Documentation Quality
+### Documentation
 
-- `doc_state` NOT NULL, IN (extracted_summary, generated_summary, refined_summary, generated_usage, refined_usage)
-- `doc_quality` NOT NULL, IN (high, medium, low)
-- `doc_quality = high` → (details IS NOT NULL)
+<!-- spec 005: doc_state and doc_quality validation rules removed -->
 - `brief` max length: 200 characters
 - `details` max length: 10,000 characters
 
@@ -633,6 +616,9 @@ from sqlalchemy.ext.asyncio import AsyncSession
 async def get_by_signature(session: AsyncSession, sig: str) -> Entity | None:
     result = await session.execute(select(Entity).where(Entity.signature == sig))
     return result.scalar_one_or_none()
+
+# <!-- spec 005: signature-based lookup retained for search-internal resolution only;
+#      no public tool accepts signature as a parameter -->
 
 # Exact name (ranked)
 async def get_by_name(session: AsyncSession, name: str, limit: int = 20) -> list[Entity]:
@@ -744,12 +730,13 @@ async def get_direct_callees(session: AsyncSession, entity_id: str, limit: int =
 ## Summary
 
 - **Database**: PostgreSQL 17 + pgvector, 5 tables (entities, edges, capabilities, capability_edges, entry_points)
+- **Entity Identity**: Deterministic `{prefix}:{7hex}` IDs computed from signature_map keys; stable across rebuilds from same artifacts <!-- spec 005 -->
 - **ORM Layer**: SQLModel `table=True` table definitions with SQLAlchemy async engine (asyncpg driver)
 - **Query Style**: SQLModel `select()` for CRUD/filtered queries; `text()` for hybrid search CTE and pgvector/tsvector operations
 - **In-memory**: NetworkX MultiDiGraph (~5300 nodes, ~25K edges) for BFS/traversal
-- **API Models**: Pydantic v2 (EntitySummary, EntityDetail, SearchResult, BehaviorSlice, etc.)
+- **API Models**: Pydantic v2 (EntitySummary, EntityDetail, SearchResult, BehaviorSlice, etc.); ResolutionEnvelope removed <!-- spec 005 -->
 - **Embedding**: Configurable provider (local FastEmbed ONNX or hosted OpenAI-compatible); vector dimension configurable (default 768) <!-- Added per spec 004 -->
-- **Build Script**: Offline ETL (artifact parsing → sig_map merge → capability assignment → metric computation → embedding load/generate → DB population via SQLModel session) <!-- Updated per specs 003/004 -->
+- **Build Script**: Offline ETL (artifact parsing → sig_map merge → deterministic ID generation → capability assignment → metric computation → embedding load/generate → DB population via SQLModel session) <!-- Updated per specs 003/004/005 -->
 - **Server Runtime**: Async queries (SQLModel + SQLAlchemy async session) + in-memory graph algorithms (NetworkX) + async embedding (via `to_thread` for local) <!-- Updated per spec 004 -->
 
 All validation rules enforced at database constraints + Pydantic model validation. No runtime LLM inference; all data pre-computed.
@@ -814,11 +801,21 @@ Key notes: Entity-to-capability mapping from `capabilities[name].members[].name`
 
 ```json
 {
-  "<entity_id>": "<signature>"
+  "<entity_id>": {
+    "compound_id": "<compound_id>",
+    "signature": "<signature>"
+  }
 }
 ```
 
-Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`.
+Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`. The value is the `(compound_id, signature)` tuple that serves as the doc_db key. This file is **derived** — regenerated from `code_graph.json` + `doc_db.json` via `projects/doc_gen/build_signature_map.py`.
+
+<!-- spec 005: The signature_map tuple (compound_id, signature_or_name) is also the canonical key
+     used to compute deterministic entity IDs: {prefix}:{sha256(str(tuple))[:7]} -->
+
+**Regeneration lifecycle**: `signature_map.json` must be regenerated any time `code_graph.json` is refreshed from new Doxygen output, because Doxygen member hashes (the `member` part of entity IDs) change across runs. The doc_db key `(compound_id, signature)` is stable because `compound_id` derives from C++ qualified names and `signature` is the entity's definition text or name. See `artifacts/artifacts.md` §4-5 for full details.
+
+**Phantom references**: `code_graph.json` contains ~506 entity IDs in `detailed_refs` and `codeline_refs` that don't appear as entities in the `id` fields. These are `enumvalue` IDs (~479, individual enum constants) and `friend` memberdefs (~27, filtered out during parsing). They are expected and should be silently skipped when translating edge endpoints during the build.
 
 ---
 

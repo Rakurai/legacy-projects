@@ -25,11 +25,10 @@ from build_helpers.embeddings_loader import (
     generate_embeddings,
     load_embeddings,
 )
-from build_helpers.entity_ids import SignatureMap
 from build_helpers.entity_processor import (
     MergedEntity,
     assign_capabilities,
-    compute_doc_quality,
+    assign_deterministic_ids,
     compute_is_entry_point,
     extract_source_code,
     merge_entities,
@@ -45,6 +44,7 @@ from build_helpers.loaders import (
     load_capability_graph,
     load_documents,
     load_entities,
+    load_signature_map,
     validate_artifacts,
 )
 from server.config import ServerConfig
@@ -106,11 +106,8 @@ async def drop_and_create_schema(engine: AsyncEngine) -> None:
     ]
 
     for idx_sql in indexes:
-        try:
-            async with engine.begin() as conn:
-                await conn.execute(text(idx_sql))
-        except Exception as e:
-            log.warning("Index creation failed", sql=idx_sql[:60], error=str(e))
+        async with engine.begin() as conn:
+            await conn.execute(text(idx_sql))
 
     log.info("Schema created with indexes")
 
@@ -127,12 +124,10 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
     for merged in merged_entities:
         entity = Entity(
             entity_id=merged.entity_id,
-            compound_id=merged.compound_id,
-            member_id=merged.member_id,
             name=merged.entity.name,
             signature=merged.signature,
             kind=merged.entity.kind,
-            entity_type="member" if merged.member_id else "compound",
+            entity_type="member" if merged.entity.id.member else "compound",
             file_path=merged.entity.body.fn if merged.entity.body else None,
             body_start_line=merged.entity.body.line if merged.entity.body else None,
             body_end_line=merged.entity.body.end_line if merged.entity.body else None,
@@ -147,15 +142,13 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             notes=merged.doc.notes if merged.doc else None,
             rationale=merged.doc.rationale if merged.doc else None,
             usages=merged.doc.usages if merged.doc else None,
-            doc_state=merged.doc.state if merged.doc else "extracted_summary",
-            doc_quality=merged.doc_quality,
             capability=merged.capability,
             is_entry_point=merged.is_entry_point,
             fan_in=merged.fan_in,
             fan_out=merged.fan_out,
             is_bridge=merged.is_bridge,
             side_effect_markers=merged.side_effect_markers,
-            embedding=merged.embedding if hasattr(merged, 'embedding') else None,
+            embedding=merged.embedding,
             search_vector=None,
         )
         entities_batch.append(entity)
@@ -198,36 +191,19 @@ async def populate_capabilities(
     session: AsyncSession,
     cap_defs: dict,
     cap_graph: dict,
-    merged_entities: list[MergedEntity],
 ) -> None:
     """Populate capabilities and capability_edges tables."""
     log.info("Populating capabilities table")
-
-    # Pre-compute doc_quality distribution per capability from entities
-    cap_quality_dist: dict[str, dict[str, int]] = {}
-    for merged in merged_entities:
-        cap = merged.capability
-        if cap and merged.doc_quality:
-            if cap not in cap_quality_dist:
-                cap_quality_dist[cap] = {"high": 0, "medium": 0, "low": 0}
-            cap_quality_dist[cap][merged.doc_quality] = (
-                cap_quality_dist[cap].get(merged.doc_quality, 0) + 1
-            )
 
     cap_graph_caps = cap_graph.get("capabilities", {})
 
     # Populate capabilities
     for cap_name, cap_def in cap_defs.items():
-        # Read function_count from cap_graph (not from cap_defs which has no "functions" key)
         function_count = 0
         if cap_name in cap_graph_caps:
             function_count = cap_graph_caps[cap_name].get("function_count", 0)
 
-        # Read description from "desc" key (not "description")
         description = cap_def.get("desc", "")
-
-        # Get aggregated doc_quality distribution
-        doc_quality_dist = cap_quality_dist.get(cap_name, {"high": 0, "medium": 0, "low": 0})
 
         capability = Capability(
             name=cap_name,
@@ -235,7 +211,6 @@ async def populate_capabilities(
             description=description,
             function_count=function_count,
             stability=cap_def.get("stability"),
-            doc_quality_dist=doc_quality_dist,
         )
         session.add(capability)
 
@@ -316,56 +291,52 @@ async def main() -> None:
     # Stage 1: Validate artifacts
     validate_artifacts(config.artifacts_path)
 
-    # Stage 2: Load signature map (source of truth for entity_id <-> doc_db key)
-    sig_map = SignatureMap.load(config.artifacts_path)
+    # Stage 2: Load signature map (raw dict for merge + ID computation)
+    signature_map_data = load_signature_map(config.artifacts_path)
 
     # Stage 3: Load entities and docs
     entity_db = load_entities(config.artifacts_path)
     doc_db = load_documents(config.artifacts_path)
 
-    # Stage 4: Merge
-    merged_entities = merge_entities(entity_db, doc_db, sig_map)
+    # Stage 4: Merge entities + docs
+    merged_entities = merge_entities(entity_db, doc_db, signature_map_data)
 
-    # Stage 5: Extract source code
+    # Stage 5: Compute deterministic IDs
+    id_map = assign_deterministic_ids(merged_entities)
+
+    # Stage 6: Extract source code
     extract_source_code(merged_entities, config.project_root)
 
-    # Stage 6: Load capabilities (before graph metrics so bridge detection has capability data)
+    # Stage 7: Load capabilities (before graph metrics so bridge detection has capability data)
     cap_defs = load_capability_defs(config.artifacts_path)
     cap_graph = load_capability_graph(config.artifacts_path)
 
-    # Stage 7: Assign capabilities to entities from cap_graph members
+    # Stage 8: Assign capabilities to entities from cap_graph members
     assign_capabilities(merged_entities, cap_graph)
 
-    # Stage 8: Load graph and compute metrics (bridge detection needs capabilities)
-    # TODO: 785 entity_ids exist in signature_map + doc_db but not code_graph.json
-    #   (e.g., Vnum::operator< / member 1a29987e54e75885b7cd1d114ddf0f04f3).
-    #   These are real entities with docs but were excluded from the GML graph
-    #   for unknown reasons. Currently we drop them; revisit after investigating
-    #   the graph generation pipeline in gen_docs/clustering/doxygen_graph.py.
-    #   See artifacts/unmapped.json for full list.
+    # Stage 9: Load graph and compute metrics (bridge detection needs capabilities)
     edges = load_graph_edges(config.artifacts_path, merged_entities)
     compute_fan_metrics(merged_entities, edges)
     compute_bridge_flags(merged_entities, edges)
     compute_side_effect_markers(merged_entities, edges)
 
-    # Stage 9: Compute other derived fields
-    compute_doc_quality(merged_entities)
+    # Stage 10: Compute other derived fields
     compute_is_entry_point(merged_entities)
 
-    # Stage 10: Load or generate embeddings
+    # Stage 11: Load or generate embeddings (with ID translation)
     provider = create_provider(config)
-    embeddings = load_embeddings(config.artifacts_path, config, sig_map)
+    embeddings = load_embeddings(config.artifacts_path, config, id_map)
 
     if embeddings is None and provider is not None:
         log.info("No cached artifact found; generating embeddings from doc_db via provider")
-        embeddings = generate_embeddings(config.artifacts_path, provider, config, sig_map)
+        embeddings = generate_embeddings(config.artifacts_path, provider, config, signature_map_data, id_map)
     elif embeddings is None and provider is None:
         log.warning("No embedding provider configured and no artifact found; entities will have null embeddings")
         embeddings = {}
 
     attach_embeddings(merged_entities, embeddings)
 
-    # Stage 11: Populate database
+    # Stage 12: Populate database
     db_manager = DatabaseManager(config)
 
     # DDL (tables + indexes) uses engine directly, outside session
@@ -374,7 +345,7 @@ async def main() -> None:
     async with db_manager.session() as session:
         await populate_entities(session, merged_entities)
         await populate_edges(session, edges)
-        await populate_capabilities(session, cap_defs, cap_graph, merged_entities)
+        await populate_capabilities(session, cap_defs, cap_graph)
         await populate_entry_points(session, merged_entities)
 
         # Analyze tables for query planner

@@ -7,7 +7,7 @@ This document describes the two primary data artifacts produced and consumed by 
 ## Big-Picture View
 
 ```
-Doxygen XML  ──►  doxygen_parse  ──►  code_graph.json   (entity database)
+Doxygen XML  ──►  doxygen_parse  ──►  code_graph.json   (canonical entity database)
                   doxygen_graph  ──►  code_graph.gml     (dependency graph)
 
                         ▼                    ▼
@@ -16,12 +16,14 @@ Doxygen XML  ──►  doxygen_parse  ──►  code_graph.json   (entity data
               │  gen_common  ·  llm_utils  ·  templates │
               └──────────────────┬───────────────────────┘
                                  ▼
-                    generated_docs/<compound>.json   (doc_db)
-                                 ▼
-              ┌──────────────────┴───────────────────────┐
-              │  clustering · subsystem discovery ·       │
-              │  hierarchy builder · subsystem documenter │
-              └──────────────────────────────────────────┘
+                    generated_docs/<compound>.json  ──►  doc_db.json
+                                                            │
+              code_graph.json + doc_db.json  ──►  signature_map.json
+                                                     (entity ID bridge)
+                                                            │
+              ┌─────────────────────────────────────────────┘
+              │  MCP server build  ·  classify_fns  ·  clustering
+              └─────────────────────────────────────────────────
 ```
 
 The **entity database** (`code_graph.json`) is a flat list of every Doxygen-recognized entity (functions, classes, structs, files, variables, etc.) extracted from the legacy C++ codebase. The **dependency graph** (`code_graph.gml`) is a directed multigraph built from references found in those entities—"who calls whom," "who includes whom," "who inherits from whom." The **document database** (`generated_docs/`) stores the LLM-generated documentation for each entity, keyed by compound ID and entity signature.
@@ -291,13 +293,84 @@ extracted_summary  →  generated_summary  →  refined_summary
 
 Current state distribution: 4,447 refined_summary, 732 extracted_summary, 94 generated_summary, 22 refined_usage.
 
-### `doc_db.json` (legacy flat file)
+### `doc_db.json` (flat export)
 
-There is also a `context/internal/doc_db.json` file that stores a flat dictionary keyed by `(compound_id, entity_signature)` tuples (as strings). This is a legacy format — the pipeline now uses the per-compound files in `generated_docs/` instead, but `doc_db.json` may still be present for backward compatibility.
+`doc_db.json` is a flat dictionary export of the per-compound files, keyed by stringified `(compound_id, signature)` tuples. The docgen notebooks write per-compound files in `generated_docs/`; `doc_db.json` is the consolidated form consumed by `classify_fns` and the MCP server build pipeline.
+
+The key design is intentional: `(compound_id, signature)` is a **stable key** because `compound_id` is the Doxygen compound refid (immutable across regenerations) and `signature` is derived from the source code text (`definition + argsstring` for functions, `name` for everything else). Neither changes when Doxygen is re-run against the same source.
+
+The `mid` field inside each doc entry stores the member hash from the Doxygen run at the time the doc was generated. **This field is untrustworthy** after a code_graph refresh — see "Entity ID Reconciliation" below.
 
 ---
 
-## 4. `forward_pass_schedule.json` — Visit Order
+## 4. `signature_map.json` — Entity ID Bridge
+
+### What it is
+
+A derived mapping that bridges `code_graph.json` entity IDs to `doc_db.json` keys. It is regenerated from those two sources whenever code_graph.json is refreshed.
+
+### Why it exists
+
+`code_graph.json` identifies members by Doxygen member hashes (e.g. `1acb9fb86413bad3f692989a4d59200b39`), but these hashes change every time Doxygen processes modified source code. `doc_db.json` keys are `(compound_id, signature)` tuples which are stable across regenerations. `signature_map.json` connects the two: given a current entity ID from code_graph, it tells you which doc_db key holds that entity's documentation.
+
+### How it's created
+
+`projects/doc_gen/build_signature_map.py` loads both `code_graph.json` and `doc_db.json`, builds a signature for each code_graph entity using `definition + argsstring` (functions) or `name` (everything else), and matches against doc_db keys sharing the same `compound_id`. The output is a dict mapping each entity ID string to its doc_db `(compound_id, signature)` key.
+
+### When to regenerate
+
+Regenerate `signature_map.json` any time `code_graph.json` is refreshed from new Doxygen output:
+
+```bash
+uv run python projects/doc_gen/build_signature_map.py
+```
+
+---
+
+## 5. Entity ID Reconciliation
+
+### The member hash instability problem
+
+Doxygen assigns each `<memberdef>` a hash (the `member` part of an entity ID, e.g. `1acb9fb86413bad3f692989a4d59200b39`). These hashes **change when source code changes** — even whitespace-only edits can produce different hashes. This means:
+
+- `code_graph.json` entity IDs are only valid for the Doxygen run that produced them.
+- `doc_db.json` entries store a `mid` field from a previous Doxygen run. After refreshing code_graph.json, these `mid` values no longer match.
+- **`compound_id` is stable.** Doxygen compound refids (e.g. `class_room_i_d`, `_fight_8cc`) are deterministic and don't change across runs.
+
+### Which artifact is canonical
+
+**`code_graph.json` is canonical** — it is kept fresh with the current Doxygen output and is the source of truth for entity structure, locations, and relationships. When it's regenerated, `signature_map.json` must be re-derived from it. `doc_db.json` entries are stable (keyed by compound_id + signature), but their `mid` field should not be trusted without cross-checking via `signature_map.json`.
+
+### What about entities in doc_db but not code_graph?
+
+`code_graph.json` is intentionally pruned — `doxygen_parse.py` skips `friend`-kind members, and the graph only includes entities that Doxygen emitted as `<memberdef>` or `<compounddef>`. Some doc_db entries reference member hashes from a previous Doxygen run that no longer appear in the current code_graph. These are not "missing" entities — they're stale references. The `signature_map` reconciliation handles this: entries that can't be matched by `(compound_id, signature)` are simply unmatched and get no docs in the MCP server build.
+
+### What are the "phantom" references in code_graph.json?
+
+`code_graph.json` entities contain `detailed_refs` and `codeline_refs` arrays that reference other entity IDs. Some of these referenced IDs (506 in current data) don't appear as entities in the `id` fields. Investigation shows these are:
+
+| Category | Count | Explanation |
+|----------|-------|-------------|
+| **`enumvalue` IDs** | ~479 | Individual enum constants (e.g. `TO_ROOM`, `paladin`). Doxygen gives each `<enumvalue>` its own ID, but the parser treats the enclosing `<memberdef kind="enum">` as the entity — individual values are sub-entity detail. |
+| **`friend` memberdefs** | ~27 | Friend function declarations, explicitly filtered out by `doxygen_parse.py`. |
+
+These are **not missing entities**. They're cross-references at a finer granularity than the entity model supports. The enum and group source-code handling (below) ensures their information is still accessible.
+
+### Enum and group source code
+
+Enums and groups (`@defgroup` blocks for flag constants) contain sub-members whose values matter for understanding the entity, but those sub-members aren't individual entities in the graph. To make this information available:
+
+1. **Enums** already have `body` locations from Doxygen — the source span covers the full enum definition including all values and inline `/**<` comments.
+
+2. **Groups** (`@defgroup` blocks defining sets of `constexpr` flag constants) historically had no `body` because Doxygen doesn't put a `<location>` on group `<compounddef>` elements. We now synthesize a body range from the min/max source lines of the group's member definitions during `parse_compounddef()`.
+
+3. **The MCP server** auto-includes `source_text` for enum and group entities in `get_entity` responses (regardless of `include_code` flag), so the LLM consumer always sees the full list of values without needing a separate request.
+
+This means an agent asking about `ActMessageTypes` (a group) gets the docstring *and* the source block showing `TO_ROOM = 0`, `TO_NOTVICT = 1`, etc. No need to look up individual flag constants as separate entities.
+
+---
+
+## 6. `forward_pass_schedule.json` — Visit Order
 
 ### What it is
 
@@ -327,7 +400,7 @@ Entities with `fan_in: 0` are leaf nodes with no unseen dependencies—they're d
 
 ---
 
-## 5. How the Artifacts Connect
+## 7. How the Artifacts Connect
 
 Here's a concrete example of how entity `"RoomID::RoomID()"` is represented across the three artifacts:
 
@@ -356,4 +429,4 @@ Here's a concrete example of how entity `"RoomID::RoomID()"` is represented acro
 - `state`: `"refined_summary"` (or whatever the pipeline has reached)
 - `brief`, `details`, etc. — the generated documentation
 
-The **entity ID** (`compound` + `member`) is the join key across all three artifacts: entity DB → graph node → doc_db entry.
+The **entity ID** (`compound` + `member`) joins code_graph.json to code_graph.gml. The **signature_map** bridges entity IDs to doc_db keys: `entity_id → (compound_id, signature)`. Do not attempt to join code_graph and doc_db by member hash directly — use `signature_map.json`.

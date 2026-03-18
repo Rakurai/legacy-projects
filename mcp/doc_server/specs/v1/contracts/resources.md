@@ -1,6 +1,6 @@
 # Resource Contracts: MCP Documentation Server
 
-<!-- Canonical V1 resource contracts. Updated per spec 004: legacy://stats embedding field reflects provider system. -->
+<!-- Canonical V1 resource contracts. Updated per spec 004: legacy://stats embedding field reflects provider system. Updated per spec 005: doc_quality_dist removed from capability responses; entity_id format updated. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -38,8 +38,8 @@ MCP resources provide read-only access to documentation artifacts via URIs. All 
     type: "domain" | "policy" | "projection" | "infrastructure" | "utility",
     description: string,
     function_count: number,
-    stability: string,
-    doc_quality_dist: Record<string, number>
+    stability: string
+    // <!-- spec 005: doc_quality_dist removed -->
   }>
 }
 ```
@@ -54,8 +54,7 @@ Response: {
       "type": "domain",
       "description": "Combat mechanics including damage, death, corpses, and positioning",
       "function_count": 127,
-      "stability": "stable",
-      "doc_quality_dist": {"high": 95, "medium": 25, "low": 7}
+      "stability": "stable"
     },
     ...
   ]
@@ -81,7 +80,7 @@ Response: {
   description: string,
   function_count: number,
   stability: string,
-  doc_quality_dist: Record<string, number>,
+  // <!-- spec 005: doc_quality_dist removed -->
   dependencies: Array<{
     target_capability: string,
     edge_type: string,
@@ -108,7 +107,7 @@ Response: {
     {"target_capability": "output", "edge_type": "requires_projection", "call_count": 156}
   ],
   "entry_points": [
-    {"entity_id": "interp_8cc_do_kill", "signature": "void do_kill(...)", "name": "do_kill"},
+    {"entity_id": "fn:x1y2z3w", "signature": "void do_kill(...)", "name": "do_kill"},  <!-- spec 005: deterministic entity_id -->
     ...
   ],
   "sample_functions": [...]
@@ -124,7 +123,7 @@ Response: {
 **Description**: Get full entity details by internal entity_id.
 
 **Parameters:**
-- `{entity_id}`: Internal Doxygen entity ID (e.g., `fight_8cc_1a2b3c4d...`)
+- `{entity_id}`: Deterministic entity ID (e.g., `fn:a1b2c3d`) <!-- spec 005: deterministic format replaces Doxygen-format IDs -->
 
 **Response Schema:**
 ```typescript
@@ -133,9 +132,9 @@ EntityDetail  // Full entity record (see data-model.md)
 
 **Example:**
 ```bash
-URI: legacy://entity/fight_8cc_1a2b3c4d5e6f7890abcdef1234567890ab
+URI: legacy://entity/fn:a1b2c3d
 Response: {
-  "entity_id": "fight_8cc_1a2b3c...",
+  "entity_id": "fn:a1b2c3d",
   "signature": "void damage(Character *ch, Character *victim, int dam)",
   "name": "damage",
   "kind": "function",
@@ -174,8 +173,8 @@ Response: {
   "file_path": "src/fight.cc",
   "entity_count": 42,
   "entities": [
-    {"entity_id": "fight_8cc_1a...", "signature": "void damage(...)", "name": "damage", "kind": "function", ...},
-    {"entity_id": "fight_8cc_2b...", "signature": "void update_pos(...)", "name": "update_pos", "kind": "function", ...},
+    {"entity_id": "fn:a1b2c3d", "signature": "void damage(...)", "name": "damage", "kind": "function", ...},
+    {"entity_id": "fn:e4f5a6b", "signature": "void update_pos(...)", "name": "update_pos", "kind": "function", ...},
     ...
   ]
 }
@@ -195,7 +194,7 @@ Response: {
   entity_stats: {
     total_entities: number,
     entities_by_kind: Record<string, number>,
-    entities_by_doc_quality: Record<string, number>,
+    // <!-- spec 005: entities_by_doc_quality removed -->
     entities_with_embeddings: number
   },
   graph_stats: {
@@ -224,7 +223,7 @@ Response: {
   "entity_stats": {
     "total_entities": 5305,
     "entities_by_kind": {"function": 2365, "variable": 2369, "class": 56, ...},
-    "entities_by_doc_quality": {"high": 4447, "medium": 826, "low": 32},
+    <!-- spec 005: entities_by_doc_quality removed -->
     "entities_with_embeddings": 5293
   },
   "graph_stats": {
@@ -318,8 +317,8 @@ All resources are **read-only** and **deterministic** (database contents don't c
 
 - **File paths**: URL-encode slashes and special characters
   - `src/fight.cc` → `legacy://file/src%2Ffight.cc`
-- **Entity IDs**: Use as-is (alphanumeric + underscore)
-  - `fight_8cc_1a2b3c...` → `legacy://entity/fight_8cc_1a2b3c...`
+- **Entity IDs**: Use as-is (type prefix + colon + hex)
+  - `fn:a1b2c3d` → `legacy://entity/fn:a1b2c3d`  <!-- spec 005: deterministic format -->
 - **Capability names**: Use as-is (lowercase, underscores)
   - `character_state` → `legacy://capability/character_state`
 
@@ -337,4 +336,4 @@ All resources are **read-only** and **deterministic** (database contents don't c
 - Resolution/disambiguation logic needed
 - Result aggregation or computation required
 
-**Example**: `legacy://entity/{entity_id}` is a resource (static lookup), but `resolve_entity` is a tool (complex resolution pipeline).
+**Example**: `legacy://entity/{entity_id}` is a resource (static lookup). Search via `search` tool discovers entity IDs. <!-- spec 005: resolve_entity retired; search is the discovery tool -->

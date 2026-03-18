@@ -4,8 +4,8 @@ Embeddings Loader - Load, generate, and attach embedding vectors.
 Supports config-aware artifact naming (embed_cache_{model}_{dim}.pkl).
 Can generate embeddings on demand via an EmbeddingProvider when no artifact exists.
 
-Generation iterates doc_db.json entries directly, using signature_map to convert
-doc_db keys to entity_ids. Every doc entry with a signature_map mapping gets embedded.
+Generation iterates doc_db.json entries directly, using signature_map_data and
+id_map to convert doc_db keys to deterministic entity_ids.
 """
 
 import json
@@ -15,7 +15,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from build_helpers.embed_text import build_embed_text
-from build_helpers.entity_ids import SignatureMap
 from build_helpers.entity_processor import MergedEntity
 from server.logging_config import log
 
@@ -24,23 +23,23 @@ if TYPE_CHECKING:
     from server.embedding import EmbeddingProvider
 
 
-def get_embed_cache_path(artifacts_dir: Path, config: "ServerConfig") -> Path:
+def get_embed_cache_path(artifacts_dir: Path, config: ServerConfig) -> Path:
     """Return the full path to the embedding artifact for the current config."""
     return artifacts_dir / config.embed_cache_filename
 
 
 def load_embeddings(
     artifacts_dir: Path,
-    config: "ServerConfig",
-    sig_map: SignatureMap,
+    config: ServerConfig,
+    id_map: dict[str, str],
 ) -> dict[str, list[float]] | None:
     """Load embeddings from a config-derived artifact file.
 
-    Normalises keys to entity_id strings via signature_map when the cached
-    artifact was produced with an older key format.
+    Re-keys old entity_id keys to deterministic IDs via id_map.
 
     Returns:
-        Dict mapping entity_id → embedding vector, or None if the file doesn't exist.
+        Dict mapping new deterministic entity_id → embedding vector, or None
+        if the file doesn't exist.
 
     Raises:
         RuntimeError: If the artifact exists but is corrupt.
@@ -62,15 +61,17 @@ def load_embeddings(
             f"Delete the file and re-run the build to regenerate. Error: {e}"
         ) from e
 
+    new_id_set = set(id_map.values())
     embeddings: dict[str, list[float]] = {}
     for key, embedding in raw_embeddings.items():
-        entity_id = str(key)
-        if sig_map.has_entity(entity_id):
-            embeddings[entity_id] = embedding
-        else:
-            # Key may be a doc_db key string or compound_id from older artifact.
-            # Skip unrecognised keys; a rebuild will regenerate with correct keys.
-            pass
+        key_str = str(key)
+        # Try translating as old ID
+        new_id = id_map.get(key_str)
+        if new_id:
+            embeddings[new_id] = embedding
+        elif key_str in new_id_set:
+            # Already a new-format key (from a previous build with new code)
+            embeddings[key_str] = embedding
 
     log.info("Embeddings loaded", embedding_count=len(embeddings))
     return embeddings
@@ -78,23 +79,25 @@ def load_embeddings(
 
 def generate_embeddings(
     artifacts_dir: Path,
-    provider: "EmbeddingProvider",
-    config: "ServerConfig",
-    sig_map: SignatureMap,
+    provider: EmbeddingProvider,
+    config: ServerConfig,
+    signature_map_data: dict[str, str],
+    id_map: dict[str, str],
 ) -> dict[str, list[float]]:
     """Generate embeddings for every doc_db.json entry, save artifact.
 
-    Uses signature_map to convert each doc_db key to an entity_id.
-    Entries without a signature_map mapping are skipped.
+    Uses signature_map_data to find old entity_id per doc_db key, then
+    id_map to translate to deterministic entity_id.
 
     Args:
         artifacts_dir: Directory containing doc_db.json and for the artifact file.
         provider: An active EmbeddingProvider instance.
         config: Server config (for filename derivation).
-        sig_map: Canonical entity_id ↔ doc_db key mapping.
+        signature_map_data: Raw signature_map.json dict.
+        id_map: old Doxygen entity_id → new deterministic entity_id.
 
     Returns:
-        Dict mapping entity_id → embedding vector.
+        Dict mapping deterministic entity_id → embedding vector.
     """
     doc_db_path = config.artifacts_path / "doc_db.json"
     log.info("Loading doc_db.json for embedding generation", path=str(doc_db_path))
@@ -104,16 +107,18 @@ def generate_embeddings(
 
     log.info("Generating embeddings from doc_db", doc_count=len(raw_docs))
 
-    # Build texts keyed by entity_id via signature_map
     entity_ids: list[str] = []
     texts: list[str] = []
 
     for key_str, doc in raw_docs.items():
-        eid = sig_map.entity_id_for_doc_key(key_str)
-        if eid is None:
+        old_eid = signature_map_data.get(key_str)
+        if old_eid is None:
+            continue
+        new_eid = id_map.get(old_eid)
+        if new_eid is None:
             continue
         text = build_embed_text(doc)
-        entity_ids.append(eid)
+        entity_ids.append(new_eid)
         texts.append(text)
 
     log.info("Docs to embed", count=len(texts))
@@ -122,7 +127,6 @@ def generate_embeddings(
         log.warning("No docs found in doc_db; no embeddings generated")
         return {}
 
-    # Batch embed
     vectors = provider.embed_documents_sync(texts)
 
     embeddings: dict[str, list[float]] = {}

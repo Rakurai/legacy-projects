@@ -10,7 +10,7 @@ from fastmcp import Context
 from pydantic import BaseModel, Field
 
 from server.app import get_ctx, mcp
-from server.enums import DocQuality, SearchMode
+from server.enums import SearchMode
 from server.logging_config import log
 from server.models import SearchResult
 from server.search import hybrid_search
@@ -35,10 +35,6 @@ async def search(
     ] = "entity",
     kind: Annotated[str | None, Field(description="Optional kind filter (function, class, etc.)")] = None,
     capability: Annotated[str | None, Field(description="Optional capability filter")] = None,
-    min_doc_quality: Annotated[
-        DocQuality | None,
-        Field(description="Minimum documentation quality"),
-    ] = None,
     limit: Annotated[int, Field(ge=1, le=100, description="Maximum results")] = 20,
 ) -> SearchResponse:
     """
@@ -68,7 +64,6 @@ async def search(
             embedding_provider=lc["embedding_provider"],
             kind=kind,
             capability=capability,
-            min_doc_quality=min_doc_quality,
             limit=limit,
         )
 

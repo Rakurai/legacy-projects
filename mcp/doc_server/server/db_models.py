@@ -25,10 +25,8 @@ class Entity(SQLModel, table=True):
     """
     __tablename__ = "entities"
 
-    # Identity (internal)
-    entity_id: str = Field(primary_key=True, description="Doxygen compound_member ID")
-    compound_id: str = Field(description="Doxygen compound refid")
-    member_id: str | None = Field(default=None, description="Member hex hash (NULL for compounds)")
+    # Identity
+    entity_id: str = Field(primary_key=True, description="Deterministic {prefix}:{7 hex} ID")
 
     # Identity (user-facing)
     name: str = Field(default="", description="Bare name: do_look, race_type, etc. (empty for files/dirs)")
@@ -55,8 +53,6 @@ class Entity(SQLModel, table=True):
     notes: str | None = Field(default=None, description="Implementation notes")
     rationale: str | None = Field(default=None, description="Design rationale")
     usages: dict[str, str] | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {caller_key: usage_description}")
-    doc_state: str | None = Field(default=None, description="extracted_summary, refined_summary, etc.")
-    doc_quality: str | None = Field(default=None, description="Derived: high, medium, low")
 
     # Classification
     capability: str | None = Field(default=None, description="Capability group name")
@@ -118,10 +114,6 @@ class Capability(SQLModel, table=True):
     description: str = Field(description="Human-readable description")
     function_count: int = Field(ge=0, description="Number of functions in this capability")
     stability: str | None = Field(default=None, description="stable, evolving, experimental")
-    doc_quality_dist: dict = Field(
-        sa_column=Column(JSONB),
-        description="{high: N, medium: N, low: N}"
-    )
 
 
 class CapabilityEdge(SQLModel, table=True):

@@ -4,7 +4,7 @@ Artifact Loaders - Validation and parsing of pre-computed artifacts.
 Reuses existing parsers from projects/gen_docs/clustering/ to load:
 - code_graph.json (entity database via doxygen_parse)
 - doc_db.json (documentation database via doc_db)
-- signature_map.json (entity_id ↔ doc_db key mapping — loaded via entity_ids.SignatureMap)
+- signature_map.json (repr'd tuple key → old entity_id mapping)
 - capability_defs.json (capability group definitions)
 - capability_graph.json (capability dependencies)
 
@@ -121,6 +121,16 @@ def load_documents(artifacts_dir: Path) -> DocumentDB:
 
     log.info("Documentation database loaded", document_count=doc_db.count())
     return doc_db
+
+
+def load_signature_map(artifacts_dir: Path) -> dict[str, str]:
+    """Load raw signature_map.json as a dict (repr'd tuple key → old entity_id)."""
+    path = artifacts_dir / "signature_map.json"
+    log.info("Loading signature map", path=str(path))
+    with path.open("r", encoding="utf-8") as f:
+        data: dict[str, str] = json.load(f)
+    log.info("Signature map loaded", entries=len(data))
+    return data
 
 
 def load_capability_defs(artifacts_dir: Path) -> dict[str, Any]:

@@ -3,7 +3,6 @@ Entity Processor - Merge, enrich, and compute derived metrics.
 
 Takes raw entity and documentation data and produces enriched entity records
 ready for database insertion. Computes:
-- doc_quality (high/medium/low based on doc_state and field presence)
 - fan_in/fan_out (from CALLS edges in dependency graph)
 - is_bridge (cross-capability callers/callees)
 - side_effect_markers (categorized by type)
@@ -19,8 +18,7 @@ from build_helpers.artifact_models import (
     DoxygenEntity,
     EntityDatabase,
 )
-from build_helpers.entity_ids import SignatureMap
-from server.enums import DocQuality, DocState
+from build_helpers.entity_ids import compute_entity_id
 from server.logging_config import log
 
 # Side-effect function markers (categorized)
@@ -51,33 +49,34 @@ class MergedEntity:
     This is an intermediate representation before database insertion.
     """
 
-    def __init__(self, entity: DoxygenEntity, doc: Document | None):
+    def __init__(self, entity: DoxygenEntity, doc: Document | None, sig_key: tuple[str, str]):
         self.entity = entity
         self.doc = doc
+        self._sig_key = sig_key  # (compound_id, second_element) from signature_map
+
+        self._deterministic_id: str | None = None
 
         # Derived fields (computed later)
         self.source_text: str | None = None
         self.definition_text: str | None = None
-        self.doc_quality: str | None = None
         self.fan_in: int = 0
         self.fan_out: int = 0
         self.is_bridge: bool = False
         self.is_entry_point: bool = False
         self.side_effect_markers: dict[str, list[str]] = {}
+        self.embedding: list[float] | None = None
         self._capability: str | None = None
 
     @property
-    def entity_id(self) -> str:
-        """Doxygen compound_member ID."""
+    def old_entity_id(self) -> str:
+        """Original Doxygen entity ID for cross-referencing during build."""
         return str(self.entity.id)
 
     @property
-    def compound_id(self) -> str:
-        return self.entity.id.compound
-
-    @property
-    def member_id(self) -> str | None:
-        return self.entity.id.member
+    def entity_id(self) -> str:
+        """Deterministic entity ID. Must be assigned before use."""
+        assert self._deterministic_id is not None, "Deterministic ID not yet assigned"
+        return self._deterministic_id
 
     @property
     def signature(self) -> str:
@@ -97,22 +96,27 @@ class MergedEntity:
 def merge_entities(
     entity_db: EntityDatabase,
     doc_db: DocumentDB,
-    sig_map: SignatureMap,
+    signature_map_data: dict[str, str],
 ) -> list[MergedEntity]:
     """
     Merge entity database and documentation database via signature_map lookup.
 
-    Uses signature_map.json as source of truth for entity_id → doc_db key.
-
     Args:
         entity_db: Entity database from code_graph.json
         doc_db: Documentation database from doc_db.json
-        sig_map: Canonical entity_id ↔ doc_db key mapping
+        signature_map_data: Raw signature_map.json dict (repr'd tuple key → old entity_id)
 
     Returns:
         List of merged entity records
     """
+    import ast
+
     log.info("Merging entities and documentation")
+
+    # Build reverse mapping: old_entity_id → parsed (compound_id, second_element)
+    reverse: dict[str, tuple[str, str]] = {}
+    for key_str, old_entity_id in signature_map_data.items():
+        reverse[old_entity_id] = ast.literal_eval(key_str)
 
     merged: list[MergedEntity] = []
     unmatched_entities = 0
@@ -120,16 +124,16 @@ def merge_entities(
     for entity in entity_db.entities.values():
         entity_id = str(entity.id)
 
-        doc = None
-        doc_key = sig_map.doc_key_for(entity_id)
-        if doc_key is not None:
-            compound_id, signature = doc_key
-            doc = doc_db.get_doc(compound_id, signature)
+        sig_key = reverse.get(entity_id)
+        assert sig_key is not None, f"Entity {entity_id} has no signature_map entry"
+
+        compound_id, second_element = sig_key
+        doc = doc_db.get_doc(compound_id, second_element)
 
         if doc is None:
             unmatched_entities += 1
 
-        merged.append(MergedEntity(entity, doc))
+        merged.append(MergedEntity(entity, doc, sig_key))
 
     log.info(
         "Entities merged",
@@ -139,6 +143,44 @@ def merge_entities(
     )
 
     return merged
+
+
+def assign_deterministic_ids(merged_entities: list[MergedEntity]) -> dict[str, str]:
+    """
+    Compute and assign deterministic IDs to all merged entities.
+
+    Returns:
+        Dict mapping old Doxygen entity_id → new deterministic entity_id.
+
+    Raises:
+        RuntimeError: On any hash collision.
+    """
+    log.info("Assigning deterministic entity IDs")
+
+    old_to_new: dict[str, str] = {}
+    seen_new_ids: dict[str, str] = {}  # new_id → old_entity_id for collision reporting
+
+    for merged in merged_entities:
+        kind = merged.entity.kind
+        compound_id, second_element = merged._sig_key
+        new_id = compute_entity_id(kind, compound_id, second_element)
+
+        if new_id in seen_new_ids:
+            raise RuntimeError(
+                f"Hash collision: {new_id!r} produced by both "
+                f"{seen_new_ids[new_id]!r} and {merged.old_entity_id!r}"
+            )
+
+        seen_new_ids[new_id] = merged.old_entity_id
+        merged._deterministic_id = new_id
+        old_to_new[merged.old_entity_id] = new_id
+
+    log.info(
+        "Deterministic IDs assigned",
+        total=len(old_to_new),
+        collision_check="passed",
+    )
+    return old_to_new
 
 
 def extract_source_code(
@@ -197,45 +239,6 @@ def extract_source_code(
         extracted=extracted_count,
         failed=failed_count
     )
-
-
-def compute_doc_quality(merged_entities: list[MergedEntity]) -> None:
-    """
-    Compute doc_quality (high/medium/low) based on doc_state and field presence.
-
-    Rules:
-        - high: doc_state IN (refined_summary, refined_usage) AND details IS NOT NULL
-                AND (params IS NOT NULL OR kind != 'function')
-        - medium: doc_state = generated_summary OR (brief IS NOT NULL AND details IS NULL)
-        - low: doc_state = extracted_summary OR brief IS NULL
-
-    Updates merged_entity.doc_quality in place.
-
-    Args:
-        merged_entities: List of merged entity records
-    """
-    log.info("Computing documentation quality")
-
-    for merged in merged_entities:
-        doc = merged.doc
-        if not doc:
-            merged.doc_quality = DocQuality.LOW
-            continue
-
-        doc_state = doc.state or DocState.EXTRACTED_SUMMARY
-
-        # High quality
-        if doc_state in (DocState.REFINED_SUMMARY, DocState.REFINED_USAGE) and doc.details and (merged.entity.kind != "function" or doc.params):
-            merged.doc_quality = DocQuality.HIGH
-            continue
-
-        # Medium quality
-        if doc_state == DocState.GENERATED_SUMMARY or (doc.brief and not doc.details):
-            merged.doc_quality = DocQuality.MEDIUM
-            continue
-
-        # Low quality (default)
-        merged.doc_quality = DocQuality.LOW
 
 
 def compute_is_entry_point(merged_entities: list[MergedEntity]) -> None:

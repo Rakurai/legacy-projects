@@ -2,8 +2,7 @@
 Integration tests for entity lookup tools.
 
 Tests actual DB execution via mock_ctx of:
-- resolve_entity
-- get_entity (by id, by signature, with code, with neighbors)
+- get_entity (by id, with code, with neighbors)
 - get_source_code
 - list_file_entities
 - get_file_summary
@@ -15,43 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from server.db_models import Entity, Edge
 from server.errors import EntityNotFoundError
 from server.tools.entity import (
-    resolve_entity,
     get_entity,
     get_source_code,
     list_file_entities,
     get_file_summary,
 )
-
-
-# ---------- resolve_entity ----------
-
-@pytest.mark.asyncio
-async def test_resolve_entity_exact_name(mock_ctx, sample_entities):
-    """Tool returns exact match for unambiguous entity name."""
-    result = await resolve_entity(mock_ctx, query="do_kill")
-
-    assert result.resolution_status == "exact"
-    assert result.match_type == "name_exact"
-    assert len(result.candidates) == 1
-    assert result.candidates[0].name == "do_kill"
-
-
-@pytest.mark.asyncio
-async def test_resolve_entity_with_kind_filter(mock_ctx, sample_entities):
-    """Tool respects kind filter."""
-    result = await resolve_entity(mock_ctx, query="Character", kind="class")
-
-    assert result.resolution_status == "exact"
-    assert all(c.kind == "class" for c in result.candidates)
-
-
-@pytest.mark.asyncio
-async def test_resolve_entity_not_found(mock_ctx, sample_entities):
-    """Tool returns not_found for unknown entities."""
-    result = await resolve_entity(mock_ctx, query="zzz_unknown_xyz_42")
-
-    assert result.resolution_status == "not_found"
-    assert result.resolution_candidates == 0
 
 
 # ---------- get_entity ----------
@@ -67,16 +34,6 @@ async def test_get_entity_by_id(mock_ctx, sample_entities):
     assert detail.kind == "function"
     assert detail.brief is not None
     assert detail.source_text is None  # include_code defaults to False
-
-
-@pytest.mark.asyncio
-async def test_get_entity_by_signature(mock_ctx, sample_entities):
-    """Fetch entity by signature resolves correctly."""
-    detail = await get_entity(
-        mock_ctx,
-        signature="void damage(Character *ch, Character *victim, int dam)",
-    )
-    assert detail.name == "damage"
 
 
 @pytest.mark.asyncio

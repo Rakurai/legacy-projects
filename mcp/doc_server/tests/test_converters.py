@@ -14,9 +14,7 @@ from server.converters import entity_to_summary, entity_to_detail, capability_to
 def _make_entity(**overrides) -> Entity:
     """Create a minimal Entity for testing."""
     defaults = dict(
-        entity_id="test_8cc_abc123",
-        compound_id="test_8cc",
-        member_id="abc123",
+        entity_id="fn:a1b2c3d",
         name="test_func",
         signature="void test_func()",
         kind="function",
@@ -30,8 +28,6 @@ def _make_entity(**overrides) -> Entity:
         details="A test function for unit testing.",
         params={"x": "parameter x"},
         returns="void",
-        doc_state="refined_summary",
-        doc_quality="high",
         capability="combat",
         is_entry_point=False,
         fan_in=5,
@@ -57,24 +53,9 @@ def test_entity_to_summary_basic():
     assert summary.file_path == entity.file_path
     assert summary.capability == entity.capability
     assert summary.brief == entity.brief
-    assert summary.doc_quality == "high"
     assert summary.fan_in == 5
     assert summary.fan_out == 3
     assert summary.provenance == "precomputed"
-
-
-def test_entity_to_summary_null_doc_state():
-    """entity_to_summary handles None doc_state with fallback."""
-    entity = _make_entity(doc_state=None)
-    summary = entity_to_summary(entity)
-    assert summary.doc_state == "extracted_summary"
-
-
-def test_entity_to_summary_null_doc_quality():
-    """entity_to_summary handles None doc_quality with fallback."""
-    entity = _make_entity(doc_quality=None)
-    summary = entity_to_summary(entity)
-    assert summary.doc_quality == "low"
 
 
 # ---------- entity_to_detail ----------
@@ -97,28 +78,12 @@ def test_entity_to_detail_include_code_false():
     assert detail.source_text is None
 
 
-def test_entity_to_detail_provenance_extracted():
-    """entity_to_detail sets doxygen_extracted provenance for extracted_summary."""
-    entity = _make_entity(doc_state="extracted_summary")
+def test_entity_to_detail_provenance():
+    """entity_to_detail sets doxygen_extracted provenance."""
+    entity = _make_entity()
     detail = entity_to_detail(entity)
 
     assert detail.provenance == "doxygen_extracted"
-
-
-def test_entity_to_detail_provenance_llm_refined():
-    """entity_to_detail sets llm_generated provenance for refined states."""
-    entity = _make_entity(doc_state="refined_summary")
-    detail = entity_to_detail(entity)
-
-    assert detail.provenance == "llm_generated"
-
-
-def test_entity_to_detail_provenance_llm_generated():
-    """entity_to_detail sets llm_generated provenance for generated_summary."""
-    entity = _make_entity(doc_state="generated_summary")
-    detail = entity_to_detail(entity)
-
-    assert detail.provenance == "llm_generated"
 
 
 def test_entity_to_detail_all_fields():
@@ -133,8 +98,6 @@ def test_entity_to_detail_all_fields():
     )
     detail = entity_to_detail(entity, include_code=True)
 
-    assert detail.compound_id == entity.compound_id
-    assert detail.member_id == entity.member_id
     assert detail.kind == entity.kind
     assert detail.entity_type == entity.entity_type
     assert detail.body_start_line == entity.body_start_line
@@ -159,7 +122,6 @@ def test_capability_to_summary_basic():
         description="Combat system",
         function_count=25,
         stability="stable",
-        doc_quality_dist={"high": 10, "medium": 10, "low": 5},
     )
     summary = capability_to_summary(cap)
 
@@ -168,20 +130,4 @@ def test_capability_to_summary_basic():
     assert summary.description == "Combat system"
     assert summary.function_count == 25
     assert summary.stability == "stable"
-    assert summary.doc_quality_dist == {"high": 10, "medium": 10, "low": 5}
     assert summary.provenance == "precomputed"
-
-
-def test_capability_to_summary_invalid_doc_quality_dist():
-    """capability_to_summary falls back when doc_quality_dist is not a dict."""
-    cap = Capability(
-        name="test",
-        type="utility",
-        description="Test",
-        function_count=0,
-        stability=None,
-        doc_quality_dist="invalid",  # type: ignore
-    )
-    summary = capability_to_summary(cap)
-
-    assert summary.doc_quality_dist == {"high": 0, "medium": 0, "low": 0}

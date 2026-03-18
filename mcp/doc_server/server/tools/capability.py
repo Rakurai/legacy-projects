@@ -22,7 +22,6 @@ from server.models import (
     EntitySummary,
     TruncationMetadata,
 )
-from server.util import resolve_entity_id
 
 # -- Response Models --
 
@@ -125,17 +124,12 @@ async def get_capability_detail(
             func_entities = list(func_result.scalars().all())
             functions = [entity_to_summary(e) for e in func_entities]
 
-    dqd = cap.doc_quality_dist
-    if not isinstance(dqd, dict):
-        dqd = {"high": 0, "medium": 0, "low": 0}
-
     detail = CapabilityDetail(
         name=cap.name,
         type=cap.type,
         description=cap.description,
         function_count=cap.function_count,
         stability=cap.stability,
-        doc_quality_dist=dqd,
         dependencies=dependencies,
         entry_points=entry_points,
         functions=functions,
@@ -278,8 +272,7 @@ async def list_entry_points(
 @mcp.tool()
 async def get_entry_point_info(
     ctx: Context,
-    entity_id: Annotated[str | None, Field(description="Entry point entity ID")] = None,
-    signature: Annotated[str | None, Field(description="Entity signature (alternative to entity_id)")] = None,
+    entity_id: Annotated[str, Field(description="Entry point entity ID")],
 ) -> EntryPointInfoResponse:
     """
     Analyze which capabilities an entry point exercises.
@@ -290,17 +283,15 @@ async def get_entry_point_info(
     log.info("get_entry_point_info", entity_id=entity_id)
 
     async with lc["db_manager"].session() as session:
-        eid = await resolve_entity_id(session, entity_id, signature)
-
-        entity = await session.get(Entity, eid)
+        entity = await session.get(Entity, entity_id)
         if not entity:
-            raise EntityNotFoundError(eid)
+            raise EntityNotFoundError(entity_id)
         if not entity.is_entry_point:
-            raise ValueError(f"Entity is not an entry point: {eid}")
+            raise ValueError(f"Entity is not an entry point: {entity_id}")
 
         ep_summary = entity_to_summary(entity)
 
-        cone = compute_call_cone(graph, eid, max_depth=5, max_size=200)
+        cone = compute_call_cone(graph, entity_id, max_depth=5, max_size=200)
         direct_ids = cone["direct"]
         transitive_ids = cone["transitive"]
         all_ids = direct_ids + transitive_ids

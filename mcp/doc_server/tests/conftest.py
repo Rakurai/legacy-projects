@@ -83,9 +83,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
     entities = [
         # [0] High-quality function with full documentation
         Entity(
-            entity_id="fight_8cc_1a2b3c4d5e6f",
-            compound_id="fight_8cc",
-            member_id="1a2b3c4d5e6f",
+            entity_id="fn:a1b2c3d",
             name="damage",
             signature="void damage(Character *ch, Character *victim, int dam)",
             kind="function",
@@ -99,8 +97,6 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             details="Calculates and applies damage to a victim character, considering armor, resistances, and other factors.",
             params={"ch": "Attacker", "victim": "Target", "dam": "Base damage amount"},
             returns="void",
-            doc_state="refined_summary",
-            doc_quality="high",
             capability="combat",
             is_entry_point=False,
             fan_in=23,
@@ -111,9 +107,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
 
         # [1] Entry point (command) — calls damage
         Entity(
-            entity_id="act_8wiz_8cc_2b3c4d5e6f7g",
-            compound_id="act_8wiz_8cc",
-            member_id="2b3c4d5e6f7g",
+            entity_id="fn:b2c3d4e",
             name="do_kill",
             signature="void do_kill(Character *ch, String argument)",
             kind="function",
@@ -124,8 +118,6 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             definition_text="void do_kill(Character *ch, String argument)",
             source_text="void do_kill(Character *ch, String argument) {\n    // Kill handler\n    damage(ch, victim, 100);\n}",
             brief="Kill command implementation",
-            doc_state="generated_summary",
-            doc_quality="medium",
             capability="commands",
             is_entry_point=True,
             fan_in=1,
@@ -136,17 +128,13 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
 
         # [2] Class entity
         Entity(
-            entity_id="Character_8hh",
-            compound_id="Character_8hh",
-            member_id=None,
+            entity_id="cls:c3d4e5f",
             name="Character",
             signature="class Character",
             kind="class",
             entity_type="compound",
             file_path="src/include/Character.hh",
             brief="Core character class",
-            doc_state="extracted_summary",
-            doc_quality="low",
             capability="character_state",
             is_entry_point=False,
             fan_in=0,
@@ -155,9 +143,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
 
         # [3] Global variable (used by damage)
         Entity(
-            entity_id="global_max_damage",
-            compound_id="fight_8cc",
-            member_id="max_damage_var",
+            entity_id="var:d4e5f6a",
             name="max_damage",
             signature="int max_damage",
             kind="variable",
@@ -166,8 +152,6 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             body_start_line=10,
             body_end_line=10,
             brief="Maximum damage cap",
-            doc_state="extracted_summary",
-            doc_quality="low",
             capability="combat",
             is_entry_point=False,
             fan_in=5,
@@ -176,9 +160,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
 
         # [4] Another function in combat capability (called by damage transitively)
         Entity(
-            entity_id="fight_8cc_armor_absorb",
-            compound_id="fight_8cc",
-            member_id="armor_absorb",
+            entity_id="fn:e5f6a7b",
             name="armor_absorb",
             signature="int armor_absorb(Character *victim, int dam)",
             kind="function",
@@ -189,8 +171,6 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             definition_text="int armor_absorb(Character *victim, int dam)",
             source_text="int armor_absorb(Character *victim, int dam) { return dam / 2; }",
             brief="Calculate armor absorption",
-            doc_state="refined_summary",
-            doc_quality="high",
             capability="combat",
             is_entry_point=False,
             fan_in=10,
@@ -200,17 +180,13 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
 
         # [5] File entity for src/fight.cc (used by related_files)
         Entity(
-            entity_id="file_fight_cc",
-            compound_id="file_fight_cc",
-            member_id=None,
+            entity_id="file:f6a7b8c",
             name="fight.cc",
             signature="src/fight.cc",
             kind="file",
             entity_type="compound",
             file_path="src/fight.cc",
             brief="Combat implementation file",
-            doc_state="extracted_summary",
-            doc_quality="medium",
             capability="combat",
             is_entry_point=False,
             fan_in=0,
@@ -219,17 +195,13 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
 
         # [6] File entity for src/include/Character.hh (include target)
         Entity(
-            entity_id="file_character_hh",
-            compound_id="file_character_hh",
-            member_id=None,
+            entity_id="file:a7b8c9d",
             name="Character.hh",
             signature="src/include/Character.hh",
             kind="file",
             entity_type="compound",
             file_path="src/include/Character.hh",
             brief="Character class header",
-            doc_state="extracted_summary",
-            doc_quality="medium",
             capability="character_state",
             is_entry_point=False,
             fan_in=0,
@@ -304,7 +276,6 @@ async def sample_capabilities(test_session: AsyncSession, sample_entities: list[
             description="Combat system: damage, healing, attacks",
             function_count=25,
             stability="stable",
-            doc_quality_dist={"high": 10, "medium": 10, "low": 5},
         ),
         Capability(
             name="commands",
@@ -312,7 +283,6 @@ async def sample_capabilities(test_session: AsyncSession, sample_entities: list[
             description="Player command handlers (do_* functions)",
             function_count=80,
             stability="evolving",
-            doc_quality_dist={"high": 20, "medium": 40, "low": 20},
         ),
         Capability(
             name="character_state",
@@ -320,7 +290,6 @@ async def sample_capabilities(test_session: AsyncSession, sample_entities: list[
             description="Character attributes, stats, and state management",
             function_count=40,
             stability="stable",
-            doc_quality_dist={"high": 15, "medium": 15, "low": 10},
         ),
     ]
 

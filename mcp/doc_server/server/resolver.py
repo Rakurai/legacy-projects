@@ -1,17 +1,18 @@
 """
 Entity Resolution Pipeline - Multi-stage entity name resolution.
 
+Internal pipeline used by search to resolve user queries to entities.
+
 Pipeline stages (fail-through):
-1. Exact signature match
-2. Exact name match (ranked by doc_quality, fan_in)
-3. Prefix match (ranked by length, doc_quality)
-4. Keyword search (full-text via tsvector)
-5. Semantic search (pgvector cosine similarity)
+1. Exact entity_id match
+2. Exact signature match
+3. Exact name match (ranked by fan_in)
+4. Prefix match (ranked by length, fan_in)
+5. Keyword search (full-text via tsvector)
+6. Semantic search (pgvector cosine similarity)
 
-Returns ResolutionEnvelope with match metadata and candidates.
+Returns ResolutionResult with match metadata and candidates.
 """
-
-from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
@@ -24,13 +25,13 @@ from server.converters import entity_to_summary
 from server.db_models import Entity
 from server.enums import MatchType, ResolutionStatus
 from server.logging_config import log
-from server.models import EntitySummary, ResolutionEnvelope
-from server.util import doc_quality_sort_key
+from server.models import EntitySummary
 
 if TYPE_CHECKING:
     from server.embedding import EmbeddingProvider
 
-_ENTITY_ID_MIN_LEN = 20
+# Maximum length of a deterministic entity ID (e.g. "file:a1b2c3d" = 12 chars)
+_MAX_ENTITY_ID_LENGTH = 15
 
 
 @dataclass
@@ -40,15 +41,6 @@ class ResolutionResult:
     match_type: MatchType
     candidates: list[Entity]
     resolved_from: str
-
-    def to_envelope(self) -> ResolutionEnvelope:
-        """Convert to ResolutionEnvelope."""
-        return ResolutionEnvelope(
-            resolution_status=self.status,
-            resolved_from=self.resolved_from,
-            match_type=self.match_type,
-            resolution_candidates=len(self.candidates),
-        )
 
     def to_entity_summaries(self) -> list[EntitySummary]:
         """Convert candidates to EntitySummary list."""
@@ -65,8 +57,8 @@ async def resolve_entity(
     """Resolve entity name through multi-stage pipeline (fail-through stages 1-6)."""
     log.info("Resolving entity", query=query, kind=kind)
 
-    # Stage 1: Exact entity_id match (if query looks like entity_id)
-    if "_" in query and len(query) > _ENTITY_ID_MIN_LEN:
+    # Stage 1: Exact entity_id match (if query looks like a deterministic ID)
+    if ":" in query and len(query) <= _MAX_ENTITY_ID_LENGTH:
         result = await _resolve_by_entity_id(session, query)
         if result:
             log.info("Resolved by entity_id", entity_id=query, match_type="entity_id")
@@ -142,7 +134,7 @@ async def _resolve_by_signature(
     if kind:
         stmt = stmt.where(Entity.kind == kind)
 
-    stmt = stmt.order_by(doc_quality_sort_key(), Entity.fan_in.desc()).limit(20)
+    stmt = stmt.order_by(Entity.fan_in.desc()).limit(20)
 
     result = await session.execute(stmt)
     entities = list(result.scalars().all())
@@ -165,14 +157,13 @@ async def _resolve_by_name(
     kind: str | None,
     limit: int,
 ) -> ResolutionResult | None:
-    """Stage 3: Exact name match (ranked by doc_quality, fan_in)."""
+    """Stage 3: Exact name match (ranked by fan_in)."""
     stmt = select(Entity).where(Entity.name == name)
 
     if kind:
         stmt = stmt.where(Entity.kind == kind)
 
     stmt = stmt.order_by(
-        doc_quality_sort_key(),
         Entity.fan_in.desc(),
     ).limit(limit)
 
@@ -197,7 +188,7 @@ async def _resolve_by_prefix(
     kind: str | None,
     limit: int,
 ) -> ResolutionResult | None:
-    """Stage 4: Prefix match (ranked by length, doc_quality)."""
+    """Stage 4: Prefix match (ranked by length, fan_in)."""
     stmt = select(Entity).where(Entity.name.startswith(prefix))
 
     if kind:
@@ -205,7 +196,7 @@ async def _resolve_by_prefix(
 
     stmt = stmt.order_by(
         func.length(Entity.name),
-        doc_quality_sort_key(),
+        Entity.fan_in.desc(),
     ).limit(limit)
 
     result = await session.execute(stmt)
@@ -287,7 +278,7 @@ async def _resolve_by_semantic(
                 resolved_from=query,
             )
 
-    except Exception as e:
-        log.warning("Semantic search failed", error=str(e), query=query[:50])
+    except (OSError, RuntimeError, TimeoutError) as e:
+        log.warning("Semantic search failed (embedding provider error)", error=str(e), query=query[:50])
 
     return None

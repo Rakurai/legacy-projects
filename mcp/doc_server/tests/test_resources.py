@@ -51,7 +51,6 @@ async def test_capabilities_resource_fields(
     cap = next(c for c in data["capabilities"] if c["name"] == "combat")
     assert cap["type"] == "domain"
     assert cap["function_count"] == 25
-    assert isinstance(cap["doc_quality_dist"], dict)
 
 
 # ---------- get_capability_detail_resource ----------

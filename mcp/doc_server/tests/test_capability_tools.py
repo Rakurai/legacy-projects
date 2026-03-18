@@ -44,7 +44,6 @@ async def test_list_capabilities_fields(mock_ctx, sample_capabilities):
     assert cap.type == "domain"
     assert cap.function_count == 25
     assert cap.stability == "stable"
-    assert isinstance(cap.doc_quality_dist, dict)
 
 
 # ---------- get_capability_detail ----------

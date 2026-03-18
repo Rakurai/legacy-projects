@@ -6,7 +6,7 @@ is wrong, we fail loudly rather than silently coercing.
 """
 
 from server.db_models import Capability, Entity
-from server.enums import DocQuality, DocState, Provenance
+from server.enums import Provenance
 from server.models import CapabilitySummary, EntityDetail, EntitySummary
 
 
@@ -20,8 +20,6 @@ def entity_to_summary(entity: Entity) -> EntitySummary:
         file_path=entity.file_path,
         capability=entity.capability,
         brief=entity.brief,
-        doc_state=entity.doc_state or DocState.EXTRACTED_SUMMARY,
-        doc_quality=entity.doc_quality or DocQuality.LOW,
         fan_in=entity.fan_in,
         fan_out=entity.fan_out,
         provenance=Provenance.PRECOMPUTED,
@@ -36,8 +34,6 @@ def entity_to_detail(
     """Convert Entity DB model to EntityDetail API model."""
     return EntityDetail(
         entity_id=entity.entity_id,
-        compound_id=entity.compound_id,
-        member_id=entity.member_id,
         signature=entity.signature,
         name=entity.name,
         kind=entity.kind,
@@ -48,10 +44,8 @@ def entity_to_detail(
         decl_file_path=entity.decl_file_path,
         decl_line=entity.decl_line,
         definition_text=entity.definition_text,
-        source_text=entity.source_text if include_code else None,
+        source_text=entity.source_text if include_code or entity.kind in ("enum", "group") else None,
         capability=entity.capability,
-        doc_state=entity.doc_state or DocState.EXTRACTED_SUMMARY,
-        doc_quality=entity.doc_quality or DocQuality.LOW,
         fan_in=entity.fan_in,
         fan_out=entity.fan_out,
         is_bridge=entity.is_bridge,
@@ -64,21 +58,17 @@ def entity_to_detail(
         usages=entity.usages,
         notes=entity.notes,
         side_effect_markers=entity.side_effect_markers,
-        provenance=Provenance.DOXYGEN_EXTRACTED if entity.doc_state == DocState.EXTRACTED_SUMMARY else Provenance.LLM_GENERATED,
+        provenance=Provenance.DOXYGEN_EXTRACTED,
     )
 
 
 def capability_to_summary(cap: Capability) -> CapabilitySummary:
     """Convert Capability DB model to CapabilitySummary API model."""
-    dqd = cap.doc_quality_dist
-    if not isinstance(dqd, dict):
-        dqd = {"high": 0, "medium": 0, "low": 0}
     return CapabilitySummary(
         name=cap.name,
         type=cap.type,
         description=cap.description,
         function_count=cap.function_count,
         stability=cap.stability,
-        doc_quality_dist=dqd,
         provenance=Provenance.PRECOMPUTED,
     )

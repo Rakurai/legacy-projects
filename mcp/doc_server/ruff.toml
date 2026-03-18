@@ -1,5 +1,6 @@
 # ruff.toml
 
+line-length = 120
 target-version = "py314"
 
 [lint]
@@ -48,6 +49,9 @@ exclude = [
     "_archive/**"
 ]
 
+[format]
+skip-magic-trailing-comma = false
+
 [lint.isort]
-known-first-party = ["src"]
+known-first-party = ["server", "build_helpers"]
 known-third-party = ["pydantic", "sqlmodel"]

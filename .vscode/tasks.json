@@ -18,6 +18,35 @@
         "panel": "dedicated",
         "clear": true
       }
+    },
+    {
+      "label": "MCP Inspector: legacy-docs",
+      "type": "shell",
+      "command": "npx",
+      "args": [
+        "@modelcontextprotocol/inspector",
+        "--",
+        "uv",
+        "run",
+        "--directory",
+        "${workspaceFolder}/mcp/doc_server",
+        "python",
+        "-m",
+        "server.server"
+      ],
+      "options": {
+        "env": {
+          "PYTHONUNBUFFERED": "1",
+          "MCP_AUTO_OPEN_ENABLED": "true"
+        }
+      },
+      "isBackground": true,
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "clear": false
+      },
+      "problemMatcher": []
     }
   ],
   "inputs": [

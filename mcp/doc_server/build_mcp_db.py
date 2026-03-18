@@ -136,7 +136,7 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             source_text=merged.source_text,
             brief=merged.doc.brief if merged.doc else None,
             details=merged.doc.details if merged.doc else None,
-            params=merged.doc.params if merged.doc else None,
+            params=merged.doc.params if merged.doc and merged.doc.params else None,
             returns=merged.doc.returns if merged.doc else None,
             notes=merged.doc.notes if merged.doc else None,
             rationale=merged.doc.rationale if merged.doc else None,

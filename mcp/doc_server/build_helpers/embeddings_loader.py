@@ -5,6 +5,7 @@ Supports config-aware artifact naming (embed_cache_{model}_{dim}.pkl).
 Can generate embeddings on demand via an EmbeddingProvider when no artifact exists.
 
 Generation iterates merged entities directly, using Document.to_doxygen() for text.
+Doc-less entities get minimal Doxygen-formatted text from kind + name + signature + file_path.
 """
 
 import pickle
@@ -15,6 +16,54 @@ from build_helpers.entity_processor import MergedEntity
 from server.config import ServerConfig
 from server.embedding import EmbeddingProvider
 from server.logging_config import log
+
+# Doxygen tag mapping — extends Document.to_doxygen() tag_map with structural compound tags
+_KIND_TAG_MAP: dict[str, str] = {
+    "function": "@fn",
+    "variable": "@var",
+    "class": "@class",
+    "struct": "@struct",
+    "file": "@file",
+    "dir": "@dir",
+    "namespace": "@namespace",
+    "define": "@def",
+    "group": "@defgroup",
+    "enum": "@enum",
+    "typedef": "@typedef",
+    "union": "@union",
+}
+
+
+def build_minimal_embed_text(merged: MergedEntity) -> str | None:
+    """Build a minimal Doxygen-formatted embedding text for a doc-less entity.
+
+    Returns None when name, signature, and kind are all empty — nothing
+    meaningful to embed.
+    """
+    kind = merged.entity.kind or ""
+    name = merged.entity.name or ""
+    sig = merged.signature or ""
+    file_path = (
+        merged.entity.body.fn if merged.entity.body
+        else merged.entity.decl.fn if merged.entity.decl
+        else None
+    )
+
+    if not kind and not name and not sig:
+        return None
+
+    tag = _KIND_TAG_MAP.get(kind, "@fn")
+    display = sig if sig else name
+
+    lines = ["/**"]
+    lines.append(f" * {tag} {display}")
+
+    if file_path:
+        lines.append(" *")
+        lines.append(f" * @file {file_path}")
+
+    lines.append(" */")
+    return "\n".join(lines)
 
 
 def get_embed_cache_path(artifacts_dir: Path, config: ServerConfig) -> Path:
@@ -77,27 +126,36 @@ def generate_embeddings(
     config: ServerConfig,
     merged_entities: list[MergedEntity],
 ) -> dict[str, list[float]]:
-    """Generate embeddings for every entity that has a document.
+    """Generate embeddings for all entities — doc-rich via to_doxygen(), doc-less via minimal text.
 
-    Uses Document.to_doxygen() for embedding text. Entity IDs are already
-    computed (deterministic) on the merged entities.
-
-    Args:
-        artifacts_dir: Directory for the artifact file.
-        provider: An active EmbeddingProvider instance.
-        config: Server config (for filename derivation).
-        merged_entities: Merged entities with deterministic IDs assigned.
-
-    Returns:
-        Dict mapping deterministic entity_id → embedding vector.
+    Entity IDs are already computed (deterministic) on the merged entities.
     """
     log.info("Generating embeddings from merged entities")
 
-    docs_to_embed = [(m.entity_id, m.doc) for m in merged_entities if m.doc is not None]
-    entity_ids = [eid for eid, _ in docs_to_embed]
-    texts = [doc.to_doxygen() for _, doc in docs_to_embed]
+    # Doc-rich entities: full Doxygen text
+    docs_to_embed = [(m.entity_id, m.doc.to_doxygen()) for m in merged_entities if m.doc is not None]
 
-    log.info("Docs to embed", count=len(texts))
+    # Doc-less entities: minimal Doxygen text
+    minimal_to_embed: list[tuple[str, str]] = []
+    for m in merged_entities:
+        if m.doc is None:
+            text = build_minimal_embed_text(m)
+            if text is not None:
+                minimal_to_embed.append((m.entity_id, text))
+
+    all_to_embed = docs_to_embed + minimal_to_embed
+    entity_ids = [eid for eid, _ in all_to_embed]
+    texts = [text for _, text in all_to_embed]
+
+    no_embed = len(merged_entities) - len(all_to_embed)
+    coverage = round(100.0 * len(all_to_embed) / len(merged_entities), 1) if merged_entities else 0.0
+    log.info(
+        "Embedding generation summary",
+        doc_embeds=len(docs_to_embed),
+        minimal_embeds=len(minimal_to_embed),
+        no_embed=no_embed,
+        coverage=f"{coverage}%",
+    )
 
     if not texts:
         log.warning("No docs found in entity set; no embeddings generated")

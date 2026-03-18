@@ -1,6 +1,6 @@
 # Data Model: MCP Documentation Server
 
-<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, and 006-legacy-common-integration. -->
+<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, 006-legacy-common-integration, and 007-data-completeness. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -207,7 +207,7 @@ class Entity(SQLModel, table=True):
     # Documentation
     brief: str | None = None
     details: str | None = None
-    params: dict | None = Field(default=None, sa_column=Column(JSONB))
+    params: dict | None = Field(default=None, sa_column=Column(JSONB(none_as_null=True)))  # <!-- spec 007: none_as_null=True; build normalizes {} → NULL -->
     returns: str | None = None
     notes: str | None = None
     rationale: str | None = None
@@ -531,13 +531,16 @@ class ContextBundle(BaseModel):
 3.  Compute signature map on-the-fly from EntityDatabase + DocumentDB (no longer loaded from signature_map.json)  <!-- spec 006: signature_map computed at build time -->
 4.  Compute deterministic entity IDs: {prefix}:{sha256(canonical_key)[:7]} from signature_map tuples  <!-- spec 005 -->
 5.  Merge entities ↔ docs using computed signature_map bridge; halt on any ID collision  <!-- spec 005 --> <!-- spec 006: sig_map is computed, not loaded -->
-6.  Extract source_text from disk using (file_path, start_line, end_line)
+6.  Extract source_text from disk using (file_path, start_line, end_line); BuildError on zero extraction or invalid line ranges  <!-- spec 007: fail-fast; narrows exceptions to OSError/UnicodeDecodeError -->
 7.  Load capability_graph.json → build name→capability mapping from members lists
 8.  Assign capabilities to merged entities (~848 assignments)
 9.  Load graph edges (translate to deterministic IDs), compute fan_in/fan_out, bridge flags (requires capabilities), side_effect_markers  <!-- spec 005: edge ID translation -->
 10. Compute is_entry_point  <!-- spec 005: doc_quality computation removed -->
 11. Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(...brief/details..., 'B') || setweight(...definition_text..., 'C') || setweight(...source_text..., 'D')
-12. Load or generate embeddings (embed text via Document.to_doxygen() from legacy_common.doc_db):  <!-- spec 006: build_embed_text() replaced by Document.to_doxygen() -->
+12. Load or generate embeddings:  <!-- spec 006: build_embed_text() replaced by Document.to_doxygen() --> <!-- spec 007: doc-less entities get minimal embeddings -->
+    - Doc-rich entities: embed text via Document.to_doxygen() from legacy_common.doc_db
+    - Doc-less entities: embed via build_minimal_embed_text() using kind + name + signature + file_path (Doxygen-formatted)
+    - Entities with no name, signature, or kind: skip (null embedding)
     - If matching artifact exists (embed_cache_{model}_{dim}.pkl) → load it
     - Else if embedding provider configured → generate via provider, save artifact
     - Else → skip (null embeddings), log warning
@@ -736,7 +739,7 @@ async def get_direct_callees(session: AsyncSession, entity_id: str, limit: int =
 - **In-memory**: NetworkX MultiDiGraph (~5300 nodes, ~25K edges) for BFS/traversal
 - **API Models**: Pydantic v2 (EntitySummary, EntityDetail, SearchResult, BehaviorSlice, etc.); ResolutionEnvelope removed <!-- spec 005 -->
 - **Embedding**: Configurable provider (local FastEmbed ONNX or hosted OpenAI-compatible); vector dimension configurable (default 768) <!-- Added per spec 004 -->
-- **Build Script**: Offline ETL (artifact parsing → on-the-fly sig_map computation → deterministic ID generation → capability assignment → metric computation → embedding load/generate → DB population via SQLModel session) <!-- Updated per specs 003/004/005/006 -->
+- **Build Script**: Offline ETL (artifact parsing → on-the-fly sig_map computation → deterministic ID generation → source extraction with fail-fast → capability assignment → metric computation → embedding load/generate with minimal-embed fallback for doc-less entities → params normalization → DB population via SQLModel session) <!-- Updated per specs 003/004/005/006/007 -->
 - **Server Runtime**: Async queries (SQLModel + SQLAlchemy async session) + in-memory graph algorithms (NetworkX) + async embedding (via `to_thread` for local) <!-- Updated per spec 004 -->
 
 All validation rules enforced at database constraints + Pydantic model validation. No runtime LLM inference; all data pre-computed.

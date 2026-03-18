@@ -14,3 +14,6 @@ ignore = [
 
 [lint.isort]
 known-first-party = ["server", "build_helpers", "legacy_common"]
+
+[lint.per-file-ignores]
+"tests/**" = ["PLR2004"]

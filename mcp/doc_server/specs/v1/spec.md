@@ -1,6 +1,6 @@
 # Feature Specification: MCP Documentation Server
 
-<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, and 006-legacy-common-integration. -->
+<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, 006-legacy-common-integration, and 007-data-completeness. -->
 **Feature Branch**: `001-mcp-doc-server`
 **Created**: 2026-03-14
 **Status**: Implemented (V1)
@@ -115,13 +115,13 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **Entity exists in database but source file deleted from disk**: Source code retrieval returns stored source_text from database (extracted at build time)
 - **Source code on disk has changed since database build**: Stored source_text becomes stale; documentation remains valid. Users must rebuild database after code changes.
 - **Graph traversal depth exceeds reasonable limit**: Depth is capped at maximum 5 for behavior analysis, 3 for general traversal to prevent performance degradation
-- **Entity has no documentation (brief is null)**: System returns entity with empty details/rationale fields; agents use `brief is not null` as the practical quality signal <!-- spec 005: doc_quality removed; null-brief check replaces quality bucket -->
+- **Entity has no documentation (brief is null)**: System returns entity with empty details/rationale fields; agents use `brief is not null` as the practical quality signal. Entity still receives a minimal embedding from kind+name+signature if doc-less. <!-- spec 005: doc_quality removed; null-brief check replaces quality bucket --> <!-- spec 007: doc-less entities get minimal embeddings -->
 - **Multiple files define entities with same compound_id**: Deterministic IDs from signature_map keys ensure unique identification <!-- spec 005: entity_id is deterministic, not Doxygen-format -->
 - **Database connection failure**: System returns MCP error (hard failure) rather than successful response; client must handle connection retry or alert user
 - **Invalid tool parameters** (e.g., depth=-1, invalid entity_id format): System returns MCP error with validation message rather than successful response with error indicator
 - **Build script encounters missing artifact file**: Build process fails with clear error message indicating which artifact is missing and expected path
 - **Build script encounters malformed artifact** (invalid JSON, corrupt pickle): Build process fails with validation error and line/byte position if applicable
-- **Build script encounters entity with invalid source location**: Entity is included in database with source_text=NULL; server returns entity documentation without source code when requested
+- **Build script encounters entity with invalid source location**: Build raises `BuildError` if line range exceeds file length (stale code graph). Entity with missing source file is logged as warning and proceeds with source_text=NULL. <!-- spec 007: invalid line range = build failure (stale graph); missing file = warning -->
 
 ## Requirements *(mandatory)*
 
@@ -178,7 +178,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 - **FR-030**: Build script MUST ingest all source artifacts from the configured artifacts directory: entity database (code_graph.json), dependency graph (code_graph.gml), per-compound documentation files (generated_docs/*.json), capability definitions (capability_defs.json), and capability graph (capability_graph.json). Embedding artifacts are optional — generated on demand when a provider is configured. `doc_db.json` and `signature_map.json` are no longer required. <!-- Updated per specs 003/004: added signature_map, removed embeddings_cache.pkl from required list, embeddings now optional/auto-generated --> <!-- spec 006: doc_db.json and signature_map.json removed from required artifacts; generated_docs/ is the document source -->
 - **FR-031**: Build script MUST merge entity metadata with documentation records. The signature map is computed on-the-fly from `EntityDatabase` and `DocumentDB` at build time — `signature_map.json` is no longer loaded as an artifact. Entity models, document models, and graph loader are imported from `legacy_common` (not reimplemented in `build_helpers/`). <!-- Updated per spec 003 FR-002: sig_map replaces compound_id+signature join --> <!-- spec 006: signature_map computed on-the-fly; build_helpers/artifact_models.py and embed_text.py deleted; models imported from legacy_common -->
-- **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column
+- **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column. Build MUST raise `BuildError` if body-located entities exist but zero source texts are extracted (indicates `PROJECT_ROOT` misconfiguration). Build MUST raise `BuildError` if a source file exists but the line range is invalid (indicates stale code graph). Individual file-not-found or encoding errors MUST be logged as warnings but MUST NOT fail the build. <!-- spec 007: fail-fast validation; narrowed exceptions to (OSError, UnicodeDecodeError) -->
 - **FR-033**: Build script MUST extract C++ definition lines and store in database definition_text column
 - **FR-034**: ~~Build script MUST compute doc_quality classification (high/medium/low)~~ <!-- spec 005: REMOVED — doc_quality and doc_state columns dropped -->
 - **FR-035**: Build script MUST compute fan_in and fan_out metrics by counting CALLS edges in dependency graph
@@ -233,12 +233,12 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-064**: The database build process MUST load embedding vectors from a cached artifact file if one matching the current model configuration exists. Artifact files are named `embed_cache_{model_slug}_{dim}.pkl` (pickle format).
 - **FR-065**: The database build process MUST generate embeddings on demand when no matching artifact file exists and an embedding provider is configured, then save the result as an artifact for future builds.
 - **FR-066**: The database schema MUST use a vector column dimension that matches the configured embedding provider's output dimension (via `EMBEDDING_DIMENSION` env var, default 768), not a hardcoded value.
-- **FR-067**: The text used for embedding each entity MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields (name, kind, brief, details, params, returns, notes, rationale).
+- **FR-067**: The text used for embedding each entity with documentation MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields via `Document.to_doxygen()` (name, kind, brief, details, params, returns, notes, rationale). <!-- spec 007: clarified "with documentation" vs doc-less entities -->
 - **FR-068**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency.
 - **FR-069**: The old hardcoded `embeddings_cache.pkl` artifact MUST NOT be required by build validation.
 - **FR-070**: The system MUST validate at startup that the configured vector dimension matches the embedding provider's actual output dimension and fail fast with a clear error if they disagree.
 - **FR-071**: The local embedding provider MUST NOT block the server's event loop during query-time embedding. Embedding computation MUST be offloaded to a background thread.
-- **FR-072**: Entities with no documentable content (no brief, details, params, or other documentation fields) MUST be skipped during embedding generation and receive a null embedding.
+- **FR-072**: Entities without a `Document` but with a name, signature, or kind MUST receive a minimal embedding generated from a Doxygen-formatted text combining `kind`, `name`, `signature`, and `file_path`. This includes structural compounds (file, dir, namespace). Only entities where all three of name, signature, and kind are empty/null may be skipped. <!-- spec 007: replaces "no documentable content" with explicit minimal embedding for doc-less entities -->
 
 <!-- FRs added per spec 005 (deterministic IDs, doc merge fix, tool simplification) -->
 #### Deterministic Entity IDs
@@ -258,6 +258,14 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-085**: Schema MUST remove column: `doc_quality_dist` from the capabilities table
 - **FR-086**: Build pipeline MUST carry all documentation fields (brief, details, params, returns, notes, rationale, usages) from doc_db through the merge without loss
 
+<!-- FRs added per spec 007 (data completeness fixes) -->
+#### Build Script: Data Completeness
+
+- **FR-087**: Build pipeline MUST store `params` as `NULL` when the value is `None`, `{}`, or absent — not as an empty JSON object. The `JSONB` column MUST use `none_as_null=True`.
+- **FR-088**: Build pipeline MUST generate embeddings for entities without a `Document` by constructing a minimal Doxygen-formatted text from `kind`, `name`, `signature`, and `file_path` — including structural compounds (file, dir, namespace). The tag mapping extends `Document.to_doxygen()` with structural compound tags (file, dir, typedef, union).
+- **FR-089**: Build pipeline MUST log a structured summary after source extraction: body_located, extracted, failed, skipped, success_rate
+- **FR-090**: Build pipeline MUST log a structured summary after embedding generation: doc_embeds, minimal_embeds, no_embed, coverage%
+
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
@@ -273,7 +281,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-009**: Build script processes all artifacts (5,293 entities, 25,000 edges, 30 capabilities) and populates database in under 5 minutes
 - **SC-010**: Build script produces identical database state on repeated runs from same input artifacts (idempotent operation)
 - **SC-011**: All derived metrics (fan_in, fan_out, is_bridge, side_effect_markers) are correctly computed from source artifacts and match validation samples <!-- spec 005: doc_quality removed from derived metrics -->
-- **SC-012**: Source code extraction captures 100% of entities with valid source locations, storing complete function/class definitions in database
+- **SC-012**: Source code extraction captures ≥90% of entities with valid body locations, storing complete function/class definitions in database. Build fails with `BuildError` on zero extraction or invalid line ranges. <!-- spec 007: ≥90% threshold; fail-fast on zero/invalid -->
 - **SC-013**: Full-text search tsvector enables relevant keyword matches for natural language queries against entity documentation and source code
 - **SC-014**: All server responses include structured provenance labels enabling consumers to assess data reliability (precomputed, inferred, heuristic, measured)
 
@@ -293,6 +301,13 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-025**: After a full build, at least 95% of doc_db.json entries with non-empty brief have non-null brief in the database
 - **SC-026**: An agent can complete search → get_entity → get_callers → get_behavior_slice using only entity_ids, with zero signature-based lookups
 - **SC-027**: No tool in the MCP catalog accepts a `signature` parameter for entity lookup (19 tools total)
+
+<!-- Success criteria added per spec 007 -->
+- **SC-028**: After a successful build, ≥95% of all entities have non-null `embedding` in the database (doc-less entities receive minimal embeddings)
+- **SC-029**: After a successful build, `params IS NOT NULL` count matches meaningful parameter content (~1,800–2,100, not ~5,055)
+- **SC-030**: Build with invalid `PROJECT_ROOT` exits with `BuildError` within the source extraction stage
+- **SC-031**: Build with valid `PROJECT_ROOT` logs a structured extraction summary (body_located, extracted, failed, skipped, success_rate)
+- **SC-032**: Build logs an embedding generation summary (doc_embeds, minimal_embeds, no_embed, coverage%)
 
 ### Assumptions
 

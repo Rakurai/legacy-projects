@@ -48,7 +48,7 @@ class Entity(SQLModel, table=True):
     # Documentation
     brief: str | None = Field(default=None, description="One-line summary")
     details: str | None = Field(default=None, description="Detailed documentation")
-    params: dict[str, str] | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {param_name: description}")
+    params: dict[str, str] | None = Field(default=None, sa_column=Column(JSONB(none_as_null=True)), description="JSON: {param_name: description}")
     returns: str | None = Field(default=None, description="Return value description")
     notes: str | None = Field(default=None, description="Implementation notes")
     rationale: str | None = Field(default=None, description="Design rationale")

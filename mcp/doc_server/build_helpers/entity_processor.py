@@ -13,11 +13,15 @@ ready for database insertion. Computes:
 from collections.abc import ItemsView
 from pathlib import Path
 
+from build_helpers.entity_ids import compute_entity_id
 from legacy_common.doc_db import Document, DocumentDB
 from legacy_common.doxygen_parse import DoxygenEntity, EntityDatabase
-
-from build_helpers.entity_ids import compute_entity_id
 from server.logging_config import log
+
+
+class BuildError(Exception):
+    """Raised when the build pipeline detects an unrecoverable data problem."""
+
 
 # Side-effect function markers (categorized)
 SIDE_EFFECT_FUNCTIONS = {
@@ -215,14 +219,16 @@ def extract_source_code(
     Reads from disk using entity.body.fn, entity.body.line, entity.body.end_line.
     Updates merged_entity.source_text and merged_entity.definition_text in place.
 
-    Args:
-        merged_entities: List of merged entity records
-        project_root: Repository root path
+    Raises:
+        BuildError: When body-located entities exist but none could be extracted
+            (indicates PROJECT_ROOT is misconfigured).
     """
     log.info("Extracting source code from disk", project_root=str(project_root))
 
     extracted_count = 0
     failed_count = 0
+    skipped_count = 0
+    body_located = 0
 
     for merged in merged_entities:
         entity = merged.entity
@@ -236,11 +242,14 @@ def extract_source_code(
                         lines = f.readlines()
                         if 0 < entity.decl.line <= len(lines):
                             merged.definition_text = lines[entity.decl.line - 1].strip()
-                except Exception as e:
-                    log.debug("Failed to extract definition", entity_id=merged.entity_id, error=str(e))
+                except (OSError, UnicodeDecodeError) as e:
+                    log.warning("Failed to extract definition", entity_id=merged.entity_id, path=str(decl_file), error=str(e))
+            else:
+                log.warning("Declaration file not found", entity_id=merged.entity_id, path=str(decl_file))
 
         # Extract full body source code
         if entity.body and entity.body.fn and entity.body.line and entity.body.end_line:
+            body_located += 1
             body_file = project_root / entity.body.fn
             if body_file.exists():
                 try:
@@ -249,18 +258,35 @@ def extract_source_code(
                         start_idx = entity.body.line - 1
                         end_idx = entity.body.end_line
 
-                        if 0 <= start_idx < len(lines) and start_idx < end_idx <= len(lines):
-                            merged.source_text = "".join(lines[start_idx:end_idx])
-                            extracted_count += 1
-                except Exception as e:
-                    log.debug("Failed to extract source", entity_id=merged.entity_id, error=str(e))
+                        if not (0 <= start_idx < len(lines) and start_idx < end_idx <= len(lines)):
+                            raise BuildError(
+                                f"Line range {entity.body.line}-{entity.body.end_line} invalid for "
+                                f"{body_file} ({len(lines)} lines) — code graph is stale or corrupt"
+                            )
+                        merged.source_text = "".join(lines[start_idx:end_idx])
+                        extracted_count += 1
+                except (OSError, UnicodeDecodeError) as e:
+                    log.warning("Failed to extract source", entity_id=merged.entity_id, path=str(body_file), error=str(e))
                     failed_count += 1
+            else:
+                log.warning("Source file not found", entity_id=merged.entity_id, path=str(body_file))
+                skipped_count += 1
 
+    success_rate = round(100.0 * extracted_count / body_located, 1) if body_located > 0 else 0.0
     log.info(
-        "Source code extracted",
+        "Source code extraction summary",
+        body_located=body_located,
         extracted=extracted_count,
-        failed=failed_count
+        failed=failed_count,
+        skipped=skipped_count,
+        success_rate=f"{success_rate}%",
     )
+
+    if body_located > 0 and extracted_count == 0:
+        raise BuildError(
+            f"Zero source files extracted from {body_located} body-located entities. "
+            f"PROJECT_ROOT may be misconfigured: {project_root}"
+        )
 
 
 def compute_is_entry_point(merged_entities: list[MergedEntity]) -> None:

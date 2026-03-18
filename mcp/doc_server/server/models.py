@@ -27,7 +27,7 @@ class EntitySummary(BaseModel):
 
     Used in search results, file listings, dependency lists, etc.
     """
-    entity_id: str = Field(description="Internal Doxygen ID (for passing to get_entity)")
+    entity_id: str = Field(description="Deterministic entity ID in {prefix}:{7 hex} format (for passing to get_entity)")
     signature: str = Field(description="Full human-readable signature")
     name: str = Field(description="Bare name")
     kind: EntityKind

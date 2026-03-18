@@ -14,8 +14,6 @@ Pipeline stages (fail-through):
 Returns ResolutionResult with match metadata and candidates.
 """
 
-from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
@@ -280,7 +278,7 @@ async def _resolve_by_semantic(
                 resolved_from=query,
             )
 
-    except Exception as e:
-        log.warning("Semantic search failed", error=str(e), query=query[:50])
+    except (OSError, RuntimeError, TimeoutError) as e:
+        log.warning("Semantic search failed (embedding provider error)", error=str(e), query=query[:50])
 
     return None

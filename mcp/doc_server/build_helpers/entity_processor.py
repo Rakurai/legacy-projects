@@ -54,7 +54,6 @@ class MergedEntity:
         self.doc = doc
         self._sig_key = sig_key  # (compound_id, second_element) from signature_map
 
-        # Deterministic ID (assigned by assign_deterministic_ids)
         self._deterministic_id: str | None = None
 
         # Derived fields (computed later)
@@ -65,6 +64,7 @@ class MergedEntity:
         self.is_bridge: bool = False
         self.is_entry_point: bool = False
         self.side_effect_markers: dict[str, list[str]] = {}
+        self.embedding: list[float] | None = None
         self._capability: str | None = None
 
     @property

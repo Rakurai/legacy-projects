@@ -106,11 +106,8 @@ async def drop_and_create_schema(engine: AsyncEngine) -> None:
     ]
 
     for idx_sql in indexes:
-        try:
-            async with engine.begin() as conn:
-                await conn.execute(text(idx_sql))
-        except Exception as e:
-            log.warning("Index creation failed", sql=idx_sql[:60], error=str(e))
+        async with engine.begin() as conn:
+            await conn.execute(text(idx_sql))
 
     log.info("Schema created with indexes")
 
@@ -151,7 +148,7 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             fan_out=merged.fan_out,
             is_bridge=merged.is_bridge,
             side_effect_markers=merged.side_effect_markers,
-            embedding=merged.embedding if hasattr(merged, 'embedding') else None,
+            embedding=merged.embedding,
             search_vector=None,
         )
         entities_batch.append(entity)

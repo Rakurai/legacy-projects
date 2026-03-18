@@ -16,8 +16,6 @@ Degrades to keyword-only mode if embedding service unavailable.
 All queries use SQLAlchemy ORM — no raw SQL.
 """
 
-from __future__ import annotations
-
 from typing import TYPE_CHECKING
 
 from sqlalchemy import Select, func, literal, or_
@@ -153,7 +151,7 @@ async def hybrid_search(
     if embedding_provider:
         try:
             query_embedding = await embedding_provider.embed_query(query)
-        except Exception as e:
+        except (OSError, RuntimeError, TimeoutError) as e:
             log.warning("Embedding generation failed; falling back to keyword-only", error=str(e))
             search_mode = SearchMode.KEYWORD_FALLBACK
     else:

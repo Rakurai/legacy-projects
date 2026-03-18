@@ -1,0 +1,48 @@
+{
+  "affect::fn_data_container_type": {
+    "brief": "A struct that encapsulates an affect type identifier used for categorizing and passing affect-related data within the system.",
+    "details": "The affect::fn_data_container_type struct acts as a lightweight container holding an affect::type enumeration value, which specifies the category or attribute of an effect or data element within the game system. Its primary purpose is to provide a standardized, type-safe way to identify and manage different affect types across various modules, such as effect application, data processing, and effect categorization. The struct contains a single member, type, which stores the specific affect type identifier. This design supports efficient data passing, especially when dealing with pointers or references, and promotes consistency in how affect types are referenced and processed throughout the codebase. Its simplicity and focus on performance make it suitable for high-frequency operations where minimal overhead is desired.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct is designed following a minimalistic pattern, emphasizing performance and clarity. It functions as a fundamental building block for effect categorization, enabling other components to easily identify and handle different affect types in a uniform manner.",
+    "rationale": "The affect::fn_data_container_type exists to provide a clear and consistent way to categorize affect data, facilitating effect management, effect application, and effect processing within the game system. By encapsulating the affect type in a dedicated struct, the system ensures type safety and simplifies data handling, supporting maintainability and scalability of effect-related features.",
+    "state": "refined_summary",
+    "cid": "structaffect_1_1fn__data__container__type",
+    "mid": "structaffect_1_1fn__data__container__type",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "affect::fn_data_container_type",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "type": {
+    "brief": "Stores the specific type identifier for the affect's data container, categorizing its effect or attribute type.",
+    "details": "This variable holds a value from the 'affect::type' enumeration, which defines various categories such as spell effects, weapon attributes, object naming conventions, and set identifiers within the game system. It serves to associate the data container with a particular effect or attribute type, facilitating type-specific logic and processing. The variable is initialized during affect creation based on context and is referenced in functions like 'affect::fn_fade_spell' to identify or compare the affect's category, enabling appropriate behavior and effect management.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The 'type' variable is typically stored as part of the affect's data structure and is used consistently across functions to determine effect handling based on category.",
+    "rationale": "This variable exists to provide a standardized way to categorize and identify different affect types, supporting consistent effect application, processing, and management throughout the game system.",
+    "state": "refined_summary",
+    "cid": "structaffect_1_1fn__data__container__type",
+    "mid": "structaffect_1_1fn__data__container__type_1aa33a03415466e7b7cf6bf2086570c8f7",
+    "etype": "member",
+    "kind": "variable",
+    "name": "type",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "namespaceaffect, int affect::fn_fade_spell(Affect *node, void *data)": "Determines whether the affect's 'type' matches the container's 'type' and influences whether the 'duration' and 'level' are decremented."
+    }
+  }
+}

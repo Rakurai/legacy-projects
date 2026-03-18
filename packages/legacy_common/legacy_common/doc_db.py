@@ -110,6 +110,7 @@ class DocumentDB(BaseModel):
     It provides methods for loading, saving, retrieving, and adding documents.
     """
     docs: Dict[str, Dict[str, Document]] = {}
+    docs_dir: Optional[Path] = None
     
     def __init__(self, **data):
         super().__init__(**data)
@@ -118,8 +119,9 @@ class DocumentDB(BaseModel):
     
     def load(self) -> Dict[str, Dict[str, Document]]:
         """Load documents from disk into the database."""
+        source_dir = self.docs_dir or GENERATED_DOCS_DIR
         doc_map = {}
-        for doc_path in GENERATED_DOCS_DIR.glob("*.json"):
+        for doc_path in source_dir.glob("*.json"):
             cid = doc_path.stem
             with open(doc_path, "r") as f:
                 try:
@@ -137,9 +139,10 @@ class DocumentDB(BaseModel):
     
     def save(self, cid: str = None):
         """Save documents from the database to disk."""
+        target_dir = self.docs_dir or GENERATED_DOCS_DIR
         cids = [cid] if cid else list(self.docs.keys())
         for cid in cids:
-            doc_path = GENERATED_DOCS_DIR / f"{cid}.json"
+            doc_path = target_dir / f"{cid}.json"
             with open(doc_path, "w") as f:
                 json.dump({k: v.model_dump() for k, v in self.docs[cid].items()}, f, indent=2)
     

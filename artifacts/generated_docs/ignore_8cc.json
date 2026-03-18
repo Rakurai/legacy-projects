@@ -1,0 +1,111 @@
+{
+  "bool is_ignoring(Character *ch, Character *victim)": {
+    "brief": "Checks if a character is ignoring another character based on ignore lists and character states.",
+    "details": "The function first validates that both characters are non-null and that the victim is not an immortal, as immortals are never ignored. It then determines the effective character \\\\u2018rch\\\\u2019, considering if \\\\u2018ch\\\\u2019 is controlled via a descriptor with an original character, which is relevant in cases of character switching or impersonation. If \\\\u2018rch\\\\u2019 is an NPC, the function returns false since NPCs do not maintain ignore lists. For player characters, it searches the \\\\u2018ignore\\\\u2019 list within \\\\u2018pcdata\\\\u2019 for the victim's name. If the victim's name is found in this list, it indicates that \\\\u2018ch\\\\u2019 is ignoring \\\\u2018victim\\\\u2019, and the function returns true; otherwise, it returns false. This mechanism supports gameplay features where players can selectively ignore others, affecting message delivery and social interactions.",
+    "params": {
+      "victim": "The character who may be ignored by \\\\u2018ch\\\\u2019.",
+      "ch": "The character who may be ignoring another character."
+    },
+    "returns": "True if \\\\u2018ch\\\\u2019 is ignoring \\\\u2018victim\\\\u2019; false otherwise.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function accounts for character switching by resolving the effective character through the descriptor's original pointer. It also ensures that NPCs and immortals are never considered as ignoring others, maintaining consistent social mechanics. The ignore list is based on character names, which implies that name changes could affect ignore behavior.",
+    "rationale": "This function is used in various social and communication contexts within the game to determine whether messages or actions should be visible to certain characters. It helps implement personalized social filtering, ensuring that ignored players do not receive unwanted messages or interactions, thereby enhancing user experience and social control.",
+    "state": "refined_summary",
+    "cid": "ignore_8cc",
+    "mid": "ignore_8cc_1ac5698f9bfe8aefc8395ef48a29472b73",
+    "etype": "member",
+    "kind": "function",
+    "name": "is_ignoring",
+    "qualified_name": null,
+    "definition": "bool is_ignoring",
+    "argsstring": "(Character *ch, Character *victim)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "channels_8cc, void do_globalsocial(Character *ch, String argument)": "Used within the loop to determine if the victim character is ignoring the social interaction from the sender, affecting whether the act is displayed to them.",
+      "channels_8cc, bool check_channel_social(Character *ch, Flags::Bit channel, int custom, const String &command, const String &argument)": "Called within a loop to determine if a character (vic) is ignoring the source character (ch), affecting whether messages are sent to vic.",
+      "channels_8cc, void channel(Character *ch, const String &argument, int channel)": "Used within the loop to determine if a victim character is ignoring the sender, thereby skipping message delivery to that victim.",
+      "channels_8cc, void do_tell(Character *ch, String argument)": "Called to check if the victim is ignoring the character, preventing the message from being sent if true.",
+      "channels_8cc, void do_reply(Character *ch, String argument)": "Called to check if the victim is ignoring the character, and if so, prevents the message from being sent.",
+      "channels_8cc, void do_page(Character *ch, String argument)": "Called to check if the victim is ignoring the character, used to prevent message delivery if true.",
+      "channels_8cc, void do_fyi(Character *ch, String argument)": "Used in a conditional to determine if the victim is ignoring the character, affecting whether the FYI message is sent.",
+      "channels_8cc, void do_yell(Character *ch, String argument)": "Used within a conditional to determine if the victim character is ignoring the speaker, affecting whether the yell message is sent to them.",
+      "channels_8cc, void send_to_query(Character *ch, const char *string)": "Function call to determine if the victim is ignoring the character, affecting whether the victim is processed."
+    }
+  },
+  "void do_ignore(Character *ch, String argument)": {
+    "brief": "Enables a character to ignore or unignore another player, or to list currently ignored players.",
+    "details": "The `do_ignore` function allows a character to manage their ignore list by adding or removing other players' names, or by displaying the current list of ignored players. It first determines the effective character context, considering possible control switches via descriptors. The function then performs validation checks to prevent ignoring NPCs, oneself, or immortal characters. If no argument is provided, it lists all players currently ignored by the character. When a target name is specified, it searches for the corresponding player in the game world, including offline players through `ignore_offline`. If the target is found and is a valid, non-immortal player, the function toggles their presence in the ignore list\u2014adding if not present, removing if already ignored\u2014and sends appropriate notifications to both parties. The ignore list is stored as a list of player names, and the function ensures proper validation, messaging, and consistency throughout the process.",
+    "params": {
+      "ch": "A pointer to the Character object that is issuing the ignore or unignore command.",
+      "argument": "A String containing the name of the player to ignore or unignore. If empty, the function lists all currently ignored players."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles both online and offline players, allowing users to manage their ignore list comprehensively. It enforces restrictions to prevent ignoring NPCs, oneself, or immortal characters, maintaining game integrity. The ignore list is managed as a list of player names, facilitating easy addition and removal. Proper messaging ensures players are informed of their ignore status changes.",
+    "rationale": "Players use this function to customize their communication experience by filtering out unwanted messages from specific players, including offline ones. It is particularly useful in social or competitive contexts where managing interactions enhances gameplay comfort and personalization.",
+    "state": "refined_summary",
+    "cid": "ignore_8cc",
+    "mid": "ignore_8cc_1a9a7c2f6c6f80fdcb43e77dccc47ca49e",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_ignore",
+    "qualified_name": null,
+    "definition": "void do_ignore",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "ignore.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "ignore_8cc",
+    "mid": "ignore_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "ignore.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void ignore_offline(Character *ch, const String &arg)": {
+    "brief": "Toggles ignoring or unignoring a specified offline player for a character.",
+    "details": "This function manages a character's ignore list by querying the database for the specified player name, handling both adding and removing the name from the list. It performs a database query to locate the player record matching the provided argument, escaping the input to prevent SQL injection. If the player exists and is not a system or admin entity (determined via column flags), the function checks whether the player is already ignored. If not ignored, it adds the player's name to the ignore list and notifies the character; if already ignored, it removes the name and sends a confirmation message. In cases where the database query fails or no matching player is found, it provides appropriate error messages. The function ensures robust handling of database interactions, including checking query results and managing the ignore list efficiently.",
+    "params": {
+      "ch": "Pointer to the Character object representing the player issuing the command.",
+      "arg": "The String argument specifying the name of the player to ignore or unignore."
+    },
+    "returns": "Void; the function performs side effects such as database queries and updating the ignore list, with no return value.",
+    "tparams": null,
+    "throws": "null",
+    "notes": "The function prevents ignoring system or admin characters by checking specific column flags. It also handles database failures gracefully, providing user feedback. The ignore list is maintained as a list of names, allowing dynamic toggling of ignore status.",
+    "rationale": "This function is used when players want to manage their ignore list for offline characters, enabling personalized message filtering and reducing unwanted interactions, as demonstrated in various gameplay contexts where players can ignore or unignore others by name.",
+    "state": "refined_summary",
+    "cid": "ignore_8cc",
+    "mid": "ignore_8cc_1adc75c677061a1e6c348ac1066172dd8a",
+    "etype": "member",
+    "kind": "function",
+    "name": "ignore_offline",
+    "qualified_name": null,
+    "definition": "void ignore_offline",
+    "argsstring": "(Character *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "ignore_8cc, void do_ignore(Character *ch, String argument)": "Called when the target player is not found in the game world to handle ignoring offline players."
+    }
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "Guild": {
+    "brief": "An enumeration representing the various character guilds or classes available in the game.",
+    "details": "The 'Guild' enum defines the different character classes or guilds that players can belong to, such as mage, cleric, thief, warrior, necromancer, paladin, bard, and ranger. It includes special values like 'none' to indicate no guild affiliation, 'tsize' to specify the total number of guilds, and 'tfirst' as an alias for the first valid guild index. This enum is used throughout the game code to categorize characters, determine skill applicability, and manage class-specific behaviors, ensuring consistent handling of guild-related logic across various systems.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The 'none' value is used to indicate characters without a guild, and 'tsize' helps in iterating over all guilds. When looping through guilds, ensure to use 'tfirst' and 'tsize' to avoid including 'none' or invalid values. The enum values are integral to class-specific logic, such as skill calculations and gameplay mechanics, and should be used consistently throughout the codebase.",
+    "rationale": "This enum provides a standardized way to categorize and manage character classes within the game, facilitating class-specific logic, skill management, and gameplay mechanics. By defining all guilds in a single enum, the system ensures consistency, simplifies iteration, and supports scalable class management as new guilds are added.",
+    "state": "refined_summary",
+    "cid": "_guild_8hh",
+    "mid": "_guild_8hh_1a1510faf427e9437b3eea56cab870b851",
+    "etype": "member",
+    "kind": "enum",
+    "name": "Guild",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "skills_8cc, int get_usable_level(skill::type sn, Guild guild)": "Used in a conditional statement to determine whether to find the highest skill level across all guilds or to return the level for a specific guild.",
+      "lookup_8cc, Guild guild_lookup(const String &name)": " Used to define the range of the for loop and to cast the returned integer to a Guild enum value, as well as to return a specific guild constant."
+    }
+  },
+  "Guild.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_guild_8hh",
+    "mid": "_guild_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "Guild.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

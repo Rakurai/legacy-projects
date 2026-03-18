@@ -1507,6 +1507,7 @@ dependencies = [
     { name = "asyncpg" },
     { name = "fastembed" },
     { name = "fastmcp" },
+    { name = "legacy-common" },
     { name = "loguru" },
     { name = "networkx" },
     { name = "openai" },
@@ -1527,8 +1528,10 @@ dev = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "mypy" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -1536,6 +1539,7 @@ requires-dist = [
     { name = "asyncpg", specifier = ">=0.29.0" },
     { name = "fastembed", specifier = ">=0.4.0" },
     { name = "fastmcp", specifier = ">=0.3.0" },
+    { name = "legacy-common", editable = "packages/legacy_common" },
     { name = "loguru", specifier = ">=0.7.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
     { name = "networkx", specifier = ">=3.2" },
@@ -1553,8 +1557,10 @@ provides-extras = ["dev"]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "mypy", specifier = ">=1.19.1" },
     { name = "pytest", specifier = ">=9.0.2" },
     { name = "pytest-asyncio", specifier = ">=1.3.0" },
+    { name = "ruff", specifier = ">=0.15.6" },
 ]
 
 [[package]]

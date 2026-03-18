@@ -1,0 +1,49 @@
+{
+  "case_insensitive_equal": {
+    "brief": "A functor that performs case-insensitive comparison between two characters.",
+    "details": "The `case_insensitive_equal` struct defines a callable object (functor) used for case-insensitive character comparisons. It overloads the function call operator to accept two characters and compares them by converting both to uppercase using `toupper`, ensuring that case differences do not affect the comparison outcome. This functor is commonly employed in algorithms, search routines, and container operations that require case-insensitive comparisons, such as in custom string algorithms, hash functions, or comparison predicates for associative containers. Its simple and lightweight design makes it suitable for use as a predicate in standard algorithms and data structures that need to ignore character case.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This functor is designed to be stateless and lightweight, making it efficient for use as a predicate in standard algorithms and container operations. It relies on the `toupper` function, which may have locale-specific behavior; users should ensure locale considerations are handled if necessary.",
+    "rationale": "The `case_insensitive_equal` struct exists to facilitate case-insensitive character comparisons within algorithms and data structures, supporting features like case-insensitive string matching and filtering. It provides a reusable, standardized way to perform such comparisons, promoting code clarity and consistency across the codebase.",
+    "state": "refined_summary",
+    "cid": "structcase__insensitive__equal",
+    "mid": "structcase__insensitive__equal",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "case_insensitive_equal",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "bool case_insensitive_equal::operator()(char lhs, char rhs)": {
+    "brief": "Performs a case-insensitive comparison between two characters.",
+    "details": "This function object compares two characters, 'lhs' and 'rhs', by converting both to their uppercase equivalents using the 'toupper' function and then checking for equality. It is useful for case-insensitive character comparisons in various contexts such as string processing, filtering, or searching operations. The implementation relies on the standard 'toupper' function, ensuring consistent behavior across different character inputs. Since it operates on individual characters, it can be efficiently used in algorithms that require case-insensitive comparisons, such as custom sorting or matching routines.",
+    "params": {
+      "rhs": "The second character to compare.",
+      "lhs": "The first character to compare."
+    },
+    "returns": "True if the uppercase versions of 'lhs' and 'rhs' are equal; otherwise, false.",
+    "tparams": null,
+    "throws": "This function does not throw exceptions.",
+    "notes": "The comparison is case-insensitive and relies on the standard 'toupper' function, which may have locale-dependent behavior. It is suitable for ASCII characters and may not handle locale-specific case mappings correctly.",
+    "rationale": "This operator is used in scenarios requiring case-insensitive character comparisons, such as in case-insensitive string algorithms or filtering routines where character case should not affect the comparison outcome.",
+    "state": "refined_summary",
+    "cid": "structcase__insensitive__equal",
+    "mid": "structcase__insensitive__equal_1a61faa86e8b27b0e1092a0d40c7a9420a",
+    "etype": "member",
+    "kind": "function",
+    "name": "operator()",
+    "qualified_name": null,
+    "definition": "bool case_insensitive_equal::operator()",
+    "argsstring": "(char lhs, char rhs)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

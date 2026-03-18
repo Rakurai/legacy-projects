@@ -1,0 +1,72 @@
+{
+  "Disabled.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_disabled_8hh",
+    "mid": "_disabled_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "Disabled.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "bool check_disabled(const struct cmd_type *command)": {
+    "brief": "Checks if the specified command is currently disabled.",
+    "details": "This function iterates through the linked list of disabled commands and compares the function pointers of each disabled command with the provided command. If a match is found, it indicates that the command is disabled and returns true; otherwise, it returns false. It is used to determine whether a particular command should be considered inactive based on the current disabled commands list.",
+    "params": {
+      "command": "Pointer to a cmd_type structure representing the command to check for disabled status."
+    },
+    "returns": "Returns true if the command is disabled; otherwise, returns false.",
+    "tparams": null,
+    "throws": "null",
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_disabled_8hh",
+    "mid": "_disabled_8hh_1a954210f3bad1f93bdb2692e2bb9814a0",
+    "etype": "member",
+    "kind": "function",
+    "name": "check_disabled",
+    "qualified_name": null,
+    "definition": "bool check_disabled",
+    "argsstring": "(const struct cmd_type *command)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void load_disabled()": {
+    "brief": "Loads disabled commands from the database into the application's data structures.",
+    "details": "The function initializes the linked list of disabled commands by querying the database for command, reason, and status information. It iterates through each row of the query result, matches the command name with existing command entries, and creates a new Disabled object for each valid command, linking them into a list. Commands not recognized are skipped with a bug report logged.",
+    "params": {
+      "": "No parameters; the function operates on global data structures."
+    },
+    "returns": "Void; the function modifies global variables to load and link disabled commands from the database.",
+    "tparams": null,
+    "throws": "null",
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_disabled_8hh",
+    "mid": "_disabled_8hh_1a8d770e1321bea2f3d67a76af78d0ddfd",
+    "etype": "member",
+    "kind": "function",
+    "name": "load_disabled",
+    "qualified_name": null,
+    "definition": "void load_disabled",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

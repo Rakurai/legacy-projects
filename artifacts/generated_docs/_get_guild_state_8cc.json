@@ -1,0 +1,24 @@
+{
+  "GetGuildState.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_get_guild_state_8cc",
+    "mid": "_get_guild_state_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "GetGuildState.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

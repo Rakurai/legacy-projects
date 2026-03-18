@@ -1,0 +1,49 @@
+{
+  "conn::ReadNewMOTDState": {
+    "brief": "Represents the connection state responsible for handling user input during the Message of the Day (MOTD) viewing phase.",
+    "details": "ReadNewMOTDState is a specialized state derived from the base State class, designed to manage user interactions when a player is viewing or acknowledging the Message of the Day (MOTD). It overrides the handleInput method to process input from the user, which typically involves proceeding past the MOTD screen. Once the user has responded appropriately, this state transitions the connection to the next phase, such as entering the main game. This struct is a key component of the connection's state machine, facilitating a seamless transition from initial connection setup to active gameplay. It interacts closely with the Descriptor class, which manages the network connection and user data, and relies on the String class for flexible input handling.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct follows the State design pattern, encapsulating behavior specific to the MOTD viewing phase and enabling clean state transitions within the connection lifecycle.",
+    "rationale": "ReadNewMOTDState exists to modularize the connection's behavior during the initial user interaction phase, ensuring that input handling and state transitions are managed in a dedicated, maintainable manner. It fits into the system architecture as a distinct state within the connection's state machine, supporting a clear and organized flow from connection establishment through user acknowledgment of the MOTD to active gameplay.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_read_new_m_o_t_d_state",
+    "mid": "structconn_1_1_read_new_m_o_t_d_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::ReadNewMOTDState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::ReadNewMOTDState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles input during the new MOTD state, initializes the character, and transitions them into the game world.",
+    "details": "This function manages the processing of input received while a character is in the ReadNewMOTDState. It begins by setting the character's text color to white and checks if the character's password is empty; if so, it issues a warning and instructions for correction. The character is then added to the game world's active character list. If the character is new (level 0), it initializes core attributes such as stats, experience, health, mana, stamina, training, and practice points, assigns a default title, equips basic gear via do_outfit, and places the character in the school room, providing a welcome message and help information. For existing characters, it restores their previous room or defaults to the chat or temple room based on their status (immortal or regular). If the email address is unset, it prompts the player to update it. The function then broadcasts a message to other players in the game, either personalized if the player has a game message or a generic notification, respecting their communication flags. It makes the character perform an initial look command, logs the login event via wiznet, and moves the character's pet into the game if present. It checks for unread messages and displays login details such as last site, last login time, and backup status, prompting backups if needed. The last login time and site are updated, and the player index is refreshed. If the player has VT100 support enabled, terminal window setup commands are issued. Finally, it transitions the character into the 'playing' state, ready for interaction.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the connection and associated character.",
+      "argument": "Input string received from the user, not directly used in this implementation."
+    },
+    "returns": "A pointer to the State object representing the 'playing' state, indicating the character is now active in the game.",
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "refined_summary",
+    "cid": "structconn_1_1_read_new_m_o_t_d_state",
+    "mid": "structconn_1_1_read_new_m_o_t_d_state_1a78aec19f723e6070aa0ffa4e9457cade",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::ReadNewMOTDState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

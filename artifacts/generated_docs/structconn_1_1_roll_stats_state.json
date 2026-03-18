@@ -1,0 +1,49 @@
+{
+  "conn::RollStatsState": {
+    "brief": "Represents the state responsible for managing user input during the character stat rolling phase in the connection workflow.",
+    "details": "The RollStatsState struct inherits from the State base class and specializes in handling user interactions during the character creation process, specifically the phase where players roll their character's statistics. It overrides the handleInput method to interpret commands such as re-rolling stats, setting character attributes, or proceeding to the next step. This struct maintains the logic necessary for interactive stat management, utilizing the Descriptor context to access connection-specific data and the String input to determine user intentions. It plays a crucial role in guiding players through a seamless and controlled character setup, ensuring that the stat rolling process is both flexible and integrated within the overall connection state machine.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct employs the State design pattern to manage different phases of character creation, allowing for clear separation of concerns and easy extension of the workflow. The handleInput method facilitates dynamic state transitions based on user input, supporting an interactive and user-friendly experience.",
+    "rationale": "The RollStatsState exists to encapsulate the logic specific to the character stat rolling phase, providing a dedicated state within the connection's state machine. It ensures that user input during this phase is handled appropriately, enabling re-rolling and customization before progressing. This struct helps modularize the character creation process, making the system more maintainable and adaptable to future enhancements or additional input handling requirements.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_roll_stats_state",
+    "mid": "structconn_1_1_roll_stats_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::RollStatsState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::RollStatsState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input during character stat rolling, managing state transitions, re-rolling, and prompts.",
+    "details": "This function processes the player's input during the character creation phase, specifically for rolling character stats. When the input starts with 'n' or 'N', it prompts the player to specify their character's sex and transitions to the sex selection state. If the input starts with 'y' or 'Y', it re-rolls all character stats by calling roll_stat for each attribute, updates the character's base attributes accordingly, displays the new stats to the player, and then asks if they want to re-roll. For any other input, it prompts the player to respond with 'Yes' or 'No'. The function manages input interpretation, updates character attributes when needed, and handles state transitions to facilitate an interactive character creation process.",
+    "params": {
+      "d": "Pointer to the Descriptor object associated with the current connection, providing context including the character being created.",
+      "argument": "The user's input string, used to determine the next action, including re-rolling stats, setting sex, or prompting for valid input."
+    },
+    "returns": "A pointer to the next State object, which could be the current state for re-prompting or a different state for further input handling.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function supports multiple re-rolls by prompting the user after displaying new stats, enabling iterative character customization during creation.",
+    "rationale": "This function is used during character creation to allow players to generate and re-generate character stats interactively, ensuring they can customize their character's attributes before proceeding to the next creation steps.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_roll_stats_state",
+    "mid": "structconn_1_1_roll_stats_state_1ad74adcb26727f050ac5420a16186e5e0",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::RollStatsState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

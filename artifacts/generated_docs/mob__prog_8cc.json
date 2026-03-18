@@ -1,0 +1,746 @@
+{
+  "MOBtrigger": {
+    "brief": "A boolean flag that indicates whether mobile triggers are currently active and should be processed.",
+    "details": "The MOBtrigger variable controls the activation of mobile-specific scripts and behaviors within the game environment. It is set to true when the game is in a state where mobile triggers should be processed, such as during active gameplay or after certain initialization routines, and set to false to temporarily disable trigger processing\u2014such as during sound emission or message formatting\u2014to prevent unintended script activation. This flag influences the execution of functions like 'mprog_act_trigger', ensuring that scripted interactions involving mobile entities occur only when appropriate. Its value is managed at various points in the game flow to maintain correct trigger handling across different contexts.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "Proper management of MOBtrigger is essential to prevent unintended script activation during non-interactive operations like sound emission or message formatting.",
+    "rationale": "This variable exists to provide fine-grained control over the activation of mobile entity scripts, ensuring that triggers are only processed when appropriate, thereby maintaining game stability and preventing unintended behaviors during complex interactions.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1adc70f27e677970869e301bff0ae8041e",
+    "etype": "member",
+    "kind": "variable",
+    "name": "MOBtrigger",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_game, void Game::boot()": "Set to true after loading notes and other data to enable mobile triggers during gameplay.",
+      "act_8cc, void act_parse(String format, Character *actor, Room *room, const Character *vch1, const Character *vch2, const String *str1, const String *str2, const Object *obj1, const Object *obj2, int type, int min_pos, bool censor)": " Set to true at the end of the function to enable or disable mobile program triggers after message broadcasting.",
+      "act_8cc, void act_format(const String &format, Character *actor, const Character *vch1, const Character *vch2, const String *str1, const String *str2, const Object *obj1, const Object *obj2, Character *observer, bool snooper, int vis)": "Controls whether the 'mprog_act_trigger' function is called to trigger in-game scripts based on the formatted message.",
+      "mob__commands_8cc, void do_mpasound(Character *ch, String argument)": "Temporarily disabled before calling act() to prevent triggering mobile-specific scripts or behaviors during the sound emission."
+    }
+  },
+  "void mprog_act_trigger(const char *buf, Character *mob, Character *ch, Object *obj, void *vo)": {
+    "brief": "Adds a new action trigger to an NPC's action list if it has the appropriate program flag set.",
+    "details": "The function first verifies if the specified character 'mob' is a non-player character (NPC) by checking its 'is_npc()' status. It then checks whether the NPC has the 'ACT_PROG' flag enabled in its 'progtype_flags', indicating it is configured to handle mobile action scripts. If both conditions are met, the function allocates a new 'MobProgActList' node, inserts it at the beginning of the NPC's 'mpact' linked list, and populates this node with the provided parameters: the action message buffer 'buf', involved characters 'ch', 'mob', the object 'obj', and the context-specific data 'vo'. This setup allows the NPC to respond to specific in-game events or triggers by executing associated scripts or behaviors. The linked list structure supports multiple actions, enabling complex and dynamic NPC behaviors. The function ensures that only NPCs with the correct program type flags are affected, maintaining proper control over NPC scripting capabilities.",
+    "params": {
+      "buf": "A constant character pointer to a buffer containing the action description or command.",
+      "mob": "A pointer to the Character object representing the mobile (NPC) that may trigger the action.",
+      "vo": "A generic pointer to additional context-specific data associated with the action.",
+      "obj": "A pointer to the Object involved in the action, if any.",
+      "ch": "A pointer to the Character object involved in the action, such as the actor or source."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": "None.",
+    "notes": "The function only adds triggers to NPCs that have the 'ACT_PROG' flag enabled, ensuring that only appropriately configured NPCs respond to scripted actions. The linked list approach allows multiple actions to be queued and processed sequentially, supporting complex behavior scripting.",
+    "rationale": "This function is used when scripting or dynamically assigning behaviors to NPCs in response to game events, enabling flexible and extensible NPC interactions within the game environment.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a028a0971d5ce215b30e80cf5926cac9c",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_act_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_act_trigger",
+    "argsstring": "(const char *buf, Character *mob, Character *ch, Object *obj, void *vo)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act_8cc, void act_format(const String &format, Character *actor, const Character *vch1, const Character *vch2, const String *str1, const String *str2, const Object *obj1, const Object *obj2, Character *observer, bool snooper, int vis)": "Called at the end of the function to trigger an action program for the observer, passing the formatted message and relevant object and character pointers."
+    }
+  },
+  "void mprog_bribe_trigger(Character *mob, Character *ch, int amount)": {
+    "brief": "Handles the bribe event for an NPC, triggering scripted responses based on the offered amount.",
+    "details": "This function initiates a bribe trigger for a mobile character (NPC). It first checks if the 'mob' is an NPC; if not, it exits immediately. For NPCs, it iterates through the 'mob's' associated mobile programs to locate a bribe-related trigger ('BRIBE_PROG'). When such a trigger is found, it creates a money object representing the offered amount and deducts this amount from the 'mob's' resources. It then compares the offered amount to the threshold specified in the trigger's argument list; if the amount meets or exceeds this threshold, it executes the corresponding scripted commands via 'mprog_driver'. This process allows NPCs to respond dynamically to bribery attempts, enabling complex interactions and behaviors based on the amount offered. The function performs side effects such as script execution and resource modification but does not return a value.",
+    "params": {
+      "mob": "Pointer to the NPC character being bribed.",
+      "ch": "Pointer to the character who is offering the bribe.",
+      "amount": "The amount of currency offered as a bribe."
+    },
+    "returns": "Void; the function executes scripts and modifies game state without returning a value.",
+    "tparams": null,
+    "throws": "None explicitly; potential failures include inability to create the money object, which causes early exit.",
+    "notes": "The function ensures that only NPCs process bribe triggers and that the scripted response is contingent on the offered amount meeting or exceeding a specified threshold. It encapsulates the bribery interaction, combining resource deduction, condition checking, and script execution seamlessly.",
+    "rationale": "This function is used in scenarios where NPCs need to respond to bribery attempts, such as in quest or interaction scripts, enabling dynamic and conditional behaviors based on the amount offered by players or other characters.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1ae3003a3ad2b51c9456af5bf83dcdd817",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_bribe_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_bribe_trigger",
+    "argsstring": "(Character *mob, Character *ch, int amount)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__obj_8cc, void do_give(Character *ch, String argument)": "Called when money is given, to trigger any associated mobile scripts related to bribery."
+    }
+  },
+  "void mprog_entry_trigger(Character *mob)": {
+    "brief": "Checks if a mobile character should trigger its entry scripts and executes them if conditions are met.",
+    "details": "This function verifies whether the specified character \\u0027mob\\u0027 is an NPC and has the ENTRY_PROG flag enabled in its program type flags. If both conditions are satisfied, it invokes \\u0027mprog_percent_check\\u0027 with the ENTRY_PROG type to probabilistically determine whether to activate the entry mob programs associated with the character. This mechanism ensures that only NPCs configured with entry triggers can activate their scripts upon entry events, enabling controlled and conditional behavior activation. The function itself does not return a value but may produce side effects through the execution of mob programs when triggered, facilitating dynamic and context-sensitive interactions in the game environment.",
+    "params": {
+      "mob": "Pointer to the Character object representing the mobile (mob) to evaluate for entry triggers."
+    },
+    "returns": "Void; the function does not return a value but may trigger side effects via mob programs.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the character's prototype data to determine if it has the ENTRY_PROG flag set, ensuring that only designated NPCs can trigger entry scripts. It uses a probabilistic check to add variability to script activation, preventing predictable behavior.",
+    "rationale": "This function is used during character entry events, such as when an NPC enters a room or area, to determine whether its entry scripts should be executed. It supports dynamic and immersive behaviors by conditionally triggering scripts based on character configuration and probabilistic factors, as demonstrated in various movement and interaction scenarios within the game.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a5ca88c6f1ec17d2405a40f1b1ae8160f",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_entry_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_entry_trigger",
+    "argsstring": "(Character *mob)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__move_8cc, void move_char(Character *ch, int door, bool follow)": "Triggers entry scripts for the character after movement.",
+      "act__move_8cc, void do_drag(Character *ch, String argument)": "Triggers entry mob programs for the characters involved after the move.",
+      "act__move_8cc, void do_push(Character *ch, String argument)": "Triggered after the push to activate any entry mob programs for the victim."
+    }
+  },
+  "void mprog_give_trigger(Character *mob, Character *ch, Object *obj)": {
+    "brief": "Handles 'give' trigger scripts for a mobile NPC when it receives an item from a character.",
+    "details": "This function first verifies that the specified mobile character (\\u00b7mob\\u00b7) is an NPC with 'give' program triggers enabled by checking its prototype data flags. If so, it iterates through the mobile's associated scripts (\\u00b7mobprogs\\u00b7) and examines each for 'give' type triggers. For each relevant script, it extracts the first argument from the script's argument list using \\u00b7one_argument\\u00b7 and compares it to the name of the object given or the keyword 'all'. When a match is found, it invokes \\u00b7mprog_driver\\u00b7 to execute the script's command list, passing the involved characters and object. The process stops after executing the first matching trigger, ensuring only one script runs per give event. This setup allows NPCs to respond dynamically when receiving specific items or any item ('all'), enabling customizable and context-sensitive behaviors triggered by item exchanges.",
+    "params": {
+      "obj": "Pointer to the object that was given to the NPC.",
+      "mob": "Pointer to the mobile character (NPC) that received the item.",
+      "ch": "Pointer to the character who gave the item to the NPC."
+    },
+    "returns": "Void; this function performs trigger processing without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function only processes the first matching 'give' trigger per invocation, preventing multiple scripts from executing simultaneously for a single give event. It relies on the 'give' program flag being set in the mobile's prototype data, ensuring triggers are only processed when explicitly enabled. The use of 'one_argument' allows flexible script argument parsing, supporting both specific item names and the generic 'all' keyword for broad triggers.",
+    "rationale": "This function is used in scenarios where NPCs need to react to items given by players, enabling customized behaviors such as quests, item acceptance, or special interactions based on the item received. It supports dynamic and scriptable NPC responses, contributing to a more immersive and interactive gameplay experience.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a82989823faacc998199f645c00044fb7",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_give_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_give_trigger",
+    "argsstring": "(Character *mob, Character *ch, Object *obj)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__obj_8cc, void do_give(Character *ch, String argument)": "Triggered after an object is given, to activate mobile scripts associated with the recipient."
+    }
+  },
+  "void mprog_fight_trigger(Character *mob, Character *ch)": {
+    "brief": "Checks if an NPC mob has fight-related scripts and triggers them based on a probabilistic condition during combat.",
+    "details": "This function first verifies whether the specified mob is an NPC by checking its \\u0027is_npc()\\u0027 status. If confirmed, it then examines the mob's prototype data to see if the \\u0027FIGHT_PROG\\u0027 flag is set within its program type flags, indicating that fight-related scripts are enabled for this NPC. If both conditions are satisfied, it calls \\u0027mprog_percent_check\\u0027 to probabilistically determine whether to execute the fight-related mob scripts, passing the involved characters and the relevant trigger type. This setup allows NPCs to respond dynamically during combat, executing scripted behaviors based on configurable triggers and chance, thereby enabling complex and immersive combat interactions within the game environment.",
+    "params": {
+      "mob": "Pointer to the Character object representing the mobile (NPC) that may trigger fight-related scripts.",
+      "ch": "Pointer to the Character object representing the character involved in the fight, used as context for the mob program check."
+    },
+    "returns": "Void; the function performs side effects by potentially executing fight scripts when conditions are met, with no return value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function only triggers scripts if the NPC has the \\u0027FIGHT_PROG\\u0027 flag set, ensuring that only designated NPCs respond to fight events. It uses a probabilistic check, allowing for varied and unpredictable NPC reactions during combat.",
+    "rationale": "This function is used during combat scenarios to enable NPCs with fight scripts to react dynamically, adding depth and variability to combat interactions based on configurable script triggers and chance.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1ae2fe1a7abb6c2748101feaf742c4e513",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_fight_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_fight_trigger",
+    "argsstring": "(Character *mob, Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "fight_8cc, void violence_update()": "Called to trigger mobile fight-related scripts when combat occurs between characters.\","
+    }
+  },
+  "void mprog_buy_trigger(Character *mob, Character *ch)": {
+    "brief": "Checks if an NPC has a buy trigger program enabled and executes it based on a probabilistic check.",
+    "details": "This function first verifies whether the 'mob' character is an NPC by calling 'is_npc()'. It then checks if the NPC has the 'BUY_PROG' flag set in its 'progtype_flags' using the 'Flags::has' method. If both conditions are satisfied, it invokes 'mprog_percent_check' to perform a probabilistic evaluation, which may trigger buy-related mob programs associated with the NPC. The check involves passing the 'mob' and 'ch' characters to 'mprog_percent_check', allowing the program to execute side effects such as initiating a purchase or related actions if the probabilistic condition is met. The function does not return a value but may cause in-game effects through mob program execution.",
+    "params": {
+      "mob": "Pointer to the Character object representing the mobile (NPC) to evaluate for buy triggers.",
+      "ch": "Pointer to the Character object representing the character interacting with the mob."
+    },
+    "returns": "Void; the function may trigger side effects through mob program execution.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the 'BUY_PROG' flag within the NPC's 'progtype_flags' to determine if buy triggers are enabled. It uses a probabilistic check to decide whether to execute the buy program, allowing for dynamic and unpredictable interactions. This setup supports flexible scripting of NPC behaviors related to purchasing activities.",
+    "rationale": "This function is used when an NPC with buy capabilities needs to react to player interactions, such as initiating a purchase or other buy-related behaviors, based on probabilistic conditions. It is typically invoked during interactions like shopping or trading scenarios to trigger appropriate scripted responses.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1ab08aa68161a62bd33f59b1eaccd8f9cb",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_buy_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_buy_trigger",
+    "argsstring": "(Character *mob, Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__obj_8cc, void do_buy(Character *ch, String argument)": "Triggered after a purchase to activate any buy-related mob programs associated with the shopkeeper.\","
+    }
+  },
+  "void mprog_hitprcnt_trigger(Character *mob, Character *ch)": {
+    "brief": "Checks if an NPC's hit point percentage falls below a specified threshold and triggers associated scripts.",
+    "details": "This function first verifies whether the given character (\\u201cmob\\u201d) is an NPC and has hit point percentage trigger programs enabled by checking its program type flags. If these conditions are met, it iterates through the NPC's list of scripts (\\u201cmobprogs\\u201d) to find the first program of type \\u201cHITPRCNT_PROG\\u201d where the current hit points (\\u201chit\\u201d) are below the threshold specified in the program's argument list. The threshold is parsed from the argument string using \\u201catoi\\u201d. When the condition is satisfied, it executes the script commands via \\u201cmprog_driver\\u201d, passing in the script, the NPC, and the character (\\u201cch\\u201d) who triggered the event. This setup enables dynamic, health-based scripted behaviors for NPCs during combat or other interactions, allowing for responsive and context-sensitive reactions based on their current health status.",
+    "params": {
+      "mob": "Pointer to the NPC character whose hit points are being monitored for trigger activation.",
+      "ch": "Pointer to the character who is the target or initiator of the trigger, often the attacker or the one causing damage."
+    },
+    "returns": "Void; the function executes scripts as side effects when the hit point percentage falls below the specified threshold.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the NPC's program type flags and script list to determine trigger activation. It processes only the first matching script per invocation, ensuring controlled and predictable behavior. The hit point percentage is calculated dynamically during combat, making this trigger suitable for health-based reactions such as special attacks or defensive behaviors.",
+    "rationale": "This function is used in combat scenarios to activate NPC scripts when their health drops below certain levels, enabling more engaging and responsive AI behaviors during gameplay, as exemplified in combat update routines like \\u201cviolence_update\\u201d.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a69018a417d49e446ce963bc32b921eda",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_hitprcnt_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_hitprcnt_trigger",
+    "argsstring": "(Character *mob, Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "fight_8cc, void violence_update()": "Used to trigger scripts based on the hit point percentage of characters during combat, such as for special effects or behaviors when health drops below thresholds."
+    }
+  },
+  "void mprog_death_trigger(Character *mob)": {
+    "brief": "Triggers death-related scripts and effects for a character upon its death.",
+    "details": "This function handles death-triggered behaviors for a character, primarily focusing on NPCs. It first verifies if the character is an NPC and if its prototype data has the DEATH_PROG flag set in its program type flags. If both conditions are true, it invokes a probabilistic check via mprog_percent_check to determine whether to execute associated death scripts, enabling customized death reactions such as special effects or events. After handling potential script execution, it calls death_cry to broadcast death messages, create related objects, and notify surrounding rooms, thereby simulating a realistic death event. This setup allows NPCs with death scripts to respond dynamically upon death while maintaining consistent death messaging and effects across the game environment.",
+    "params": {
+      "mob": "Pointer to the Character object representing the entity that has died and is being processed for death triggers."
+    },
+    "returns": "Void; the function performs side effects such as executing mob programs and messaging without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that death scripts are only triggered for NPCs with the appropriate program flag set, preventing unintended script executions for player characters or NPCs without death behaviors. It combines probabilistic script activation with standard death messaging to support flexible and immersive death events.",
+    "rationale": "This function is used during the death processing of NPCs to activate custom death behaviors and effects, enhancing gameplay immersion and enabling game designers to define unique death responses for different mob types.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1af37b649762a87e997ad1184c91c2d824",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_death_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_death_trigger",
+    "argsstring": "(Character *mob)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "fight_8cc, void raw_kill(Character *victim)": "Called at the start to trigger death-related scripts or effects for the victim.\","
+    }
+  },
+  "void mprog_random_trigger(Character *mob)": {
+    "brief": "Checks if a character's mobile program type includes random triggers and executes a probabilistic mob program if applicable.",
+    "details": "This function examines the specified character's prototype data to determine if the RAND_PROG flag is set within its program type flags. If the flag is active, it invokes mprog_percent_check to perform a probabilistic evaluation, potentially triggering a random mob program based on predefined chances. The check is performed without additional context, as null pointers are passed for actor, object, and extra data parameters. The function itself does not return a value but may cause side effects by executing mob scripts, thereby dynamically influencing the character's behavior during gameplay. This mechanism allows NPCs to exhibit randomized behaviors, enhancing game variability and realism.",
+    "params": {
+      "mob": "Pointer to the Character object representing the mobile (mob) to evaluate for potential program execution."
+    },
+    "returns": "Void; the function does not return a value but may trigger mob programs as side effects.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the presence of the RAND_PROG flag in the character's prototype data to determine whether to perform the probabilistic check. It serves as a trigger point for random behavioral scripts in NPCs, enabling more dynamic and unpredictable interactions.",
+    "rationale": "Used within NPC behavior updates to introduce randomness in mob actions, making encounters less predictable and more engaging for players.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a05c92dbcfba3309b8b4d689206922b31",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_random_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_random_trigger",
+    "argsstring": "(Character *mob)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_character, void Character::update()": "Called to trigger random mob programs for the character, influencing behavior during the update."
+    }
+  },
+  "void mprog_random_area_trigger(Character *mob)": {
+    "brief": "Triggers random area-based mob programs for a specified character (mob).",
+    "details": "This function first checks if the given mob has the RAND_AREA_PROG flag set in its program type flags, indicating it should perform area-wide random triggers. If so, it constructs a static set of all rooms within the same area as the mob that currently contain players, by iterating through all active network descriptors and collecting the rooms of their characters. It then temporarily moves the mob to each of these rooms in turn, executing a probabilistic mob program check via mprog_percent_check, which may trigger scripts or behaviors based on game logic. After processing all relevant rooms, the mob is returned to its original location unless it was killed during the process (detected via is_garbage). The set of rooms is cleared at the end to prevent residual data. This approach enables non-player characters to exhibit dynamic, area-wide behaviors triggered randomly, enhancing gameplay immersion and NPC interaction diversity.",
+    "params": {
+      "mob": "Pointer to the Character object representing the mob for which area-based triggers are to be processed."
+    },
+    "returns": "Void; the function performs side effects such as moving the mob and executing mob programs but does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The use of a static set for rooms ensures that the collection persists across calls but is cleared after each invocation to prevent data leakage. The function relies on the assumption that moving the mob between rooms and executing scripts does not cause side effects that conflict with other game systems. It also handles the possibility that the mob may be killed during script execution, aborting further processing if so.",
+    "rationale": "This function is used when NPCs need to perform behaviors or trigger scripts across an entire area based on random chance, such as area-wide patrols, ambient effects, or event triggers, as demonstrated in character update routines or scripted behaviors.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a4c8933f8f1399863947f749709e96db8",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_random_area_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_random_area_trigger",
+    "argsstring": "(Character *mob)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_character, void Character::update()": "Called to trigger area-based mob programs after the random trigger, affecting the character's behavior."
+    }
+  },
+  "void mprog_tick_trigger(Character *mob)": {
+    "brief": "Checks if the given mob has tick-based programs enabled and executes them probabilistically during each tick.",
+    "details": "This function inspects the specified mob's prototype data to determine if the TICK_PROG flag is set within its program type flags. If this flag is active, it invokes mprog_percent_check with the TICK_PROG type to probabilistically decide whether to trigger associated tick-based mob programs. The function itself does not return a value but may cause side effects by executing scripts linked to the mob when the probabilistic check passes. It is typically called periodically, such as once per game tick, to handle tick-specific behaviors for mobs that have registered tick programs.",
+    "params": {
+      "mob": "Pointer to the Character object representing the mobile (mob) whose tick-based programs are to be evaluated and potentially executed."
+    },
+    "returns": "Void; the function performs side effects by executing mob programs when conditions are met.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function relies on the mob's prototype data to determine if tick-based behaviors are enabled, ensuring that only mobs with the TICK_PROG flag set are processed. It is typically used within the game loop to manage periodic NPC behaviors.",
+    "rationale": "Used in game tick processing to trigger NPC behaviors that are scheduled to occur periodically, enabling dynamic and responsive mob actions based on probabilistic scripting conditions.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a024f32183d5a93e01bf006c1b72dbe91",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_tick_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_tick_trigger",
+    "argsstring": "(Character *mob)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void char_update()": "Triggered for NPC characters to execute mob programs on each tick, potentially affecting NPC behavior."
+    }
+  },
+  "void mprog_boot_trigger(Character *mob)": {
+    "brief": "Checks if a character has boot-time scripts and triggers them based on probabilistic conditions.",
+    "details": "This function examines the specified character's prototype data to determine if the BOOT_PROG flag is set within its program type flags. If the flag is present, it calls mprog_percent_check with the character and the BOOT_PROG type to probabilistically decide whether to execute associated boot scripts. This mechanism allows for dynamic and conditional initialization behaviors during the character's startup or respawn process. The function does not return a value but may cause side effects by executing scripts linked to the character during boot time, facilitating customized initialization routines or behaviors.",
+    "params": {
+      "mob": "Pointer to the Character object representing the mobile (mob) whose boot scripts may be triggered."
+    },
+    "returns": "Void; side effects may occur through script execution if conditions are met.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the character's prototype data to determine script triggers, enabling flexible and configurable boot-time behaviors. It uses a probabilistic check, so scripts may not always execute even if the flag is set, allowing for variability in startup behaviors.",
+    "rationale": "This function is used during the initialization phase of NPCs to trigger any designated boot scripts, ensuring that specific behaviors or setups occur automatically when the character is loaded or respawned in the game world.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a67b8cc1b6cd38262f26d5acfe09904b8",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_boot_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_boot_trigger",
+    "argsstring": "(Character *mob)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "comm_8cc, int main(int argc, char **argv)": "Invoked for each NPC character in the world's character list after booting to trigger their mob programs."
+    }
+  },
+  "void mprog_speech_trigger(const String &txt, Character *mob)": {
+    "brief": "Checks for and executes speech-related trigger scripts for NPCs in the same room based on input text.",
+    "details": "This function iterates through all characters present in the same room as the specified mobile character ('mob'). For each character, it first verifies that the 'mob' is not marked as garbage to prevent invalid memory access. It then filters for NPC characters that have speech trigger programs enabled by checking their 'progtype_flags' for the 'SPEECH_PROG' flag. When such NPCs are found, it calls 'mprog_wordlist_check' with the input text to determine if any trigger conditions are met, leading to the execution of associated scripts. This process allows NPCs to respond dynamically to speech input within their environment, facilitating interactive behaviors based on player or other character speech. The function ensures that only valid, NPC characters with speech triggers enabled are processed, supporting immersive and responsive game interactions.",
+    "params": {
+      "mob": "Pointer to the character (NPC) who is speaking and whose room is being evaluated.",
+      "txt": "The input text string representing speech to be checked against NPC triggers."
+    },
+    "returns": "Void; the function performs trigger checks and script executions without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function skips processing if the 'mob' is marked as garbage, preventing potential invalid memory access. It specifically targets NPC characters with speech trigger programs enabled, ensuring efficient and relevant trigger activation. This design supports dynamic, context-sensitive NPC responses to speech within the game environment.",
+    "rationale": "Used in scenarios where NPCs need to respond to player or environmental speech dynamically, such as during dialogue or emote actions, enabling immersive and reactive gameplay interactions.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1afe5c0dd75a9bea971af1da61253f744f",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_speech_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_speech_trigger",
+    "argsstring": "(const String &txt, Character *mob)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "channels_8cc, void do_emote(Character *ch, String argument)": "Called with the argument and character to process speech triggers based on the emote message.",
+      "channels_8cc, void do_say(Character *ch, String argument)": "Invoked at the end to process any speech triggers associated with the character and the speech argument."
+    }
+  },
+  "char * mprog_next_command(char *clist)": {
+    "brief": "Advances the command list pointer to the start of the next command or line.",
+    "details": "This function iterates through the input string until it encounters either a newline character ('\\\\n') or the null terminator ('\\\\0'). If a newline is found, it replaces it with a null terminator to effectively end the current command string, then returns a pointer to the character immediately following the replaced newline, which marks the beginning of the next command. If no newline is encountered, it returns a pointer to the end of the string. The function modifies the input string in-place, enabling sequential parsing of multiple commands or lines within a single string, which is useful in command processing, scripting, and automation contexts where commands are stored as concatenated strings separated by newlines.",
+    "params": {
+      "clist": "A pointer to the command list string, which will be modified in-place to separate individual commands."
+    },
+    "returns": "A pointer to the start of the next command or line in the string, or to the null terminator if there are no further commands.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function directly modifies the input string by inserting a null terminator at the newline character, which means the original string is altered. This behavior facilitates in-place command parsing without additional memory allocation.",
+    "rationale": "Used in command processing routines such as 'mprog_driver' and 'mprog_process_if' to sequentially traverse and parse multiple commands stored within a single string, enabling efficient scripting and automation workflows.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1ac9d3bc0940d671d6b8b9314b40296a6e",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_next_command",
+    "qualified_name": null,
+    "definition": "char * mprog_next_command",
+    "argsstring": "(char *clist)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, char * mprog_process_if(const char *ifchck, char *com_list, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": "Called to advance to the next command in the command list during iteration over command sequences.",
+      "mob__prog_8cc, void mprog_driver(const String &com_list, Character *mob, Character *actor, Object *obj, void *vo)": "Called to advance to the next command in the command list after processing the current command or control structure."
+    }
+  },
+  "String mprog_translate(char ch, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": {
+    "brief": "Generates a context-sensitive string representation based on a single character code for mobile scripting.",
+    "details": "The function mprog_translate interprets a specific character code and produces a corresponding string that reflects the current game context, including references to characters, objects, and descriptive pronouns. It handles various codes to dynamically generate names, descriptions, pronouns, and titles, considering visibility and character attributes such as gender and NPC status. The implementation uses static arrays for pronouns and performs visibility checks through functions like can_see_char and can_see_obj to ensure accurate and appropriate output. It also manages case formatting for proper grammatical structure and distinguishes between NPCs and players to produce meaningful references, supporting dynamic message generation in mobile scripts and enhancing immersive gameplay interactions.",
+    "params": {
+      "actor": "A pointer to the Character object representing the actor involved in the context.",
+      "mob": "A pointer to the Character object representing the mobile executing the program.",
+      "vo": "A void pointer that can point to either a Character or an Object, used as a secondary target.",
+      "obj": "A pointer to the Object involved in the context.",
+      "rndm": "A pointer to a random Character object used in the context.",
+      "ch": "The character code that determines the type of translation to perform."
+    },
+    "returns": "A String object containing the translated text based on the character code and context.",
+    "tparams": null,
+    "throws": "None explicitly thrown; potential bugs are logged via Logging::bugf in case of invalid codes.",
+    "notes": "The function uses static arrays for pronouns to optimize repeated access and ensures proper case formatting for names and titles. It relies on visibility checks to produce contextually appropriate references, which is crucial for maintaining immersion and correctness in dynamic messaging.",
+    "rationale": "This function is used within mobile scripts to convert placeholder codes into meaningful, context-aware strings, enabling dynamic and immersive messaging during gameplay interactions, such as combat, dialogue, or narrative descriptions.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a4555fa4eeddd4089b1307eb269daf1b9",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_translate",
+    "qualified_name": null,
+    "definition": "String mprog_translate",
+    "argsstring": "(char ch, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, void mprog_process_cmnd(const String &cmnd, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": "Called repeatedly to translate special codes within the command string into their string representations based on the context of the mob, actor, object, and other characters."
+    }
+  },
+  "void mprog_process_cmnd(const String &cmnd, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": {
+    "brief": "Processes a command string by expanding variable placeholders and executing the resulting command within the game context.",
+    "details": "This function iterates through the input command string, identifying variable placeholders marked by '$'. When such a placeholder is encountered, it calls mprog_translate with the current context parameters to obtain a context-sensitive string replacement, which is then appended to a buffer. Non-variable characters are directly appended to the buffer. After processing the entire command string, the resulting expanded command is passed to interpret, which executes the command in the context of the specified mobile character (mob). This mechanism enables dynamic command generation based on game state, character attributes, and object interactions, supporting flexible scripting and reactive behaviors in mobile programs.",
+    "params": {
+      "actor": "Pointer to the Character object representing the actor involved in the command context.",
+      "mob": "Pointer to the Character object representing the mobile executing the command.",
+      "cmnd": "The command string containing text and variable placeholders to be processed.",
+      "vo": "A void pointer that can point to either a Character or an Object, used as a secondary target in translation.",
+      "obj": "Pointer to the Object involved in the command context.",
+      "rndm": "Pointer to a random Character object used within the translation context."
+    },
+    "returns": "Void; the function performs command processing and execution with no return value.",
+    "tparams": null,
+    "throws": "None explicitly thrown; errors may arise from interpret or mprog_translate if invalid inputs are provided.",
+    "notes": "The function supports dynamic command generation by translating context-sensitive placeholders, enabling flexible scripting in mobile programs. It assumes that mprog_translate and interpret handle their respective error cases internally.",
+    "rationale": "This function is used within mobile scripting to process and execute commands that include dynamic, context-dependent variables, allowing scripts to react to game state changes and character attributes seamlessly.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1af0f550379e88ba71179a3ed44b0e3116",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_process_cmnd",
+    "qualified_name": null,
+    "definition": "void mprog_process_cmnd",
+    "argsstring": "(const String &cmnd, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, char * mprog_process_if(const char *ifchck, char *com_list, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": "Invoked to execute or process a command string within the command list, expanding variables and performing actions.",
+      "mob__prog_8cc, void mprog_driver(const String &com_list, Character *mob, Character *actor, Object *obj, void *vo)": "Executes a command in the command list, passing relevant context parameters including mob, actor, object, vo, and rndm."
+    }
+  },
+  "void mprog_driver(const String &com_list, Character *mob, Character *actor, Object *obj, void *vo)": {
+    "brief": "Processes and executes a list of scripted commands for a mobile entity, handling conditionals and command flow control.",
+    "details": "The mprog_driver function interprets and executes a sequence of commands defined in a script, typically triggered by in-game events. It begins by selecting a random visible non-immortal player character in the same room as the mobile (mob) to serve as a secondary target for conditional commands. The command list string is copied into a local buffer to prevent modification of the original. The function then iterates through each command, parsing individual commands and evaluating 'if' conditionals via mprog_process_if, which may alter the flow based on condition outcomes. Regular commands are processed through mprog_process_cmnd, which handles variable substitution and executes the commands within the game context. If the mobile object becomes garbage (e.g., is destroyed during execution), the process terminates early to prevent invalid operations. The loop continues until all commands are processed or execution is halted due to a condition or object state change, ensuring dynamic and conditional scripting behavior for NPCs.",
+    "params": {
+      "com_list": "The string containing the list of commands to be processed.",
+      "actor": "The character who initiated the trigger, if applicable.",
+      "mob": "The mobile character (NPC) that triggers the script.",
+      "vo": "A void pointer to a secondary target, which can be a character or object.",
+      "obj": "The object associated with the trigger, if any."
+    },
+    "returns": "Void; the function performs command processing and execution with no return value.",
+    "tparams": null,
+    "throws": "None explicitly thrown; however, the function may terminate early if the mobile becomes garbage during execution.",
+    "notes": "The function includes a random selection of a visible player character in the room to serve as a context for certain script conditions. It also ensures early termination if the mobile object is destroyed mid-execution, preventing invalid memory access or logic errors.",
+    "rationale": "This function is used when an NPC needs to execute complex scripted behaviors, including conditional actions and dynamic interactions, often triggered by specific in-game events or states, enabling rich and responsive NPC scripting.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a4bc9d808a332bac95db6396cd62a3870",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_driver",
+    "qualified_name": null,
+    "definition": "void mprog_driver",
+    "argsstring": "(const String &com_list, Character *mob, Character *actor, Object *obj, void *vo)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, void mprog_bribe_trigger(Character *mob, Character *ch, int amount)": "Executed to process the command list associated with the bribe mobprog when the amount meets or exceeds the threshold, passing relevant parameters.",
+      "mob__prog_8cc, void mprog_give_trigger(Character *mob, Character *ch, Object *obj)": "Invoked to execute the command list ('comlist') of a matching mob program when trigger conditions are met, passing relevant characters and objects.",
+      "mob__prog_8cc, void mprog_hitprcnt_trigger(Character *mob, Character *ch)": "Invoked to execute the command list of the matched mobprog when the hit percentage condition is met, passing relevant characters and context.",
+      "mob__prog_8cc, void mprog_wordlist_check(const String &arg, Character *mob, Character *actor, Object *object, void *vo, Flags::Bit type)": "Called to execute the script commands ('comlist') of a matching mobprog when pattern conditions are met.",
+      "mob__prog_8cc, void mprog_percent_check(Character *mob, Character *actor, Object *object, void *vo, Flags::Bit type)": "Invoked to execute the commands associated with a specific mobprog when conditions are met."
+    }
+  },
+  "bool mprog_seval(const String &lhs, const char *opr, const char *rhs)": {
+    "brief": "Performs a comparison between two strings based on a specified operator, supporting equality, inequality, and substring checks.",
+    "details": "The function evaluates the relationship between the left-hand side string (lhs) and the right-hand side string (rhs) using the provided operator (opr). It supports equality (\"==\"), inequality (\"!=\"), substring check (\"/\") where lhs is checked as an infix of rhs, and negated substring check (\"!/\"). For substring operations, it utilizes the String::has_infix method to determine if lhs appears within rhs. If an unsupported operator is supplied, the function logs a bug message indicating an improper operator usage and returns false. This design allows flexible string comparisons, including exact matches and substring presence checks, which are useful in condition evaluations within scripting or pattern-matching contexts.",
+    "params": {
+      "rhs": "The right-hand side C-style string to compare against.",
+      "opr": "A C-style string representing the comparison operator. Supported operators are \"==\", \"!=\", \"/\" (substring), and \"!/\" (not substring).",
+      "lhs": "The left-hand side String object to be compared."
+    },
+    "returns": "A boolean indicating the result of the comparison based on the specified operator.",
+    "tparams": null,
+    "throws": "None explicitly thrown; logs a bug message if an unsupported operator is provided.",
+    "notes": "The function uses String::has_infix for substring checks, which considers the presence of 'lhs' within 'rhs' with a minimum length constraint. If an invalid operator is provided, it logs a bug for debugging purposes. The function ensures consistent comparison behavior across different string operations within the system.",
+    "rationale": "This function is used in conditional evaluations within scripts or pattern-matching logic, such as checking character or object attributes, command parsing, or message filtering, where flexible string comparisons are necessary.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1aabbdf7f0d973686a817e8ab5d9a10c7c",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_seval",
+    "qualified_name": null,
+    "definition": "bool mprog_seval",
+    "argsstring": "(const String &lhs, const char *opr, const char *rhs)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, bool mprog_do_ifchck(const char *ifchck, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": "Function used to evaluate string-based conditions such as name comparisons."
+    }
+  },
+  "bool mprog_veval(int lhs, const char *opr, int rhs)": {
+    "brief": "Evaluates a comparison or bitwise operation between two integers based on a specified operator.",
+    "details": "The function mprog_veval takes two integer operands, lhs and rhs, along with an operator string opr, to perform the corresponding comparison or bitwise operation. It supports standard comparison operators such as '==', '!=', '>', '<', '<=', '>=' and bitwise operators '&' and '|'. The function compares or combines the operands according to the operator, returning true if the condition holds. If an unrecognized operator is provided, it logs a bug message using Logging::bug for debugging purposes and returns false, preventing undefined behavior. This function is commonly used within mob program condition checks to evaluate numerical or bitwise expressions dynamically based on script conditions.",
+    "params": {
+      "rhs": "The right-hand side integer operand for the operation.",
+      "opr": "A string representing the operator to apply between lhs and rhs.",
+      "lhs": "The left-hand side integer operand for the operation."
+    },
+    "returns": "A boolean indicating whether the specified operation evaluates to true.",
+    "tparams": null,
+    "throws": "None explicitly; logs a bug message via Logging::bug if an invalid operator is encountered.",
+    "notes": "The function relies on string comparisons to determine the operation, which may impact performance if called frequently with dynamic operators. It ensures robustness by logging bugs for invalid operators instead of failing silently or crashing.",
+    "rationale": "Used in conditional evaluations within mob scripts, this function allows dynamic comparison or bitwise checks between integer values, facilitating flexible and scriptable behavior conditions in the game logic.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1ad341ebdcb4cc90549cafa14c09ce2dec",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_veval",
+    "qualified_name": null,
+    "definition": "bool mprog_veval",
+    "argsstring": "(int lhs, const char *opr, int rhs)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, bool mprog_do_ifchck(const char *ifchck, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": "Function used to evaluate numerical or bitwise conditions between two values."
+    }
+  },
+  "bool mprog_do_ifchck(const char *ifchck, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": {
+    "brief": "Evaluates conditional checks expressed as strings within the game scripting system, returning boolean results or error codes.",
+    "details": "This function parses and evaluates 'if' condition checks provided as strings, which specify various game state conditions involving characters, objects, and environment attributes. It extracts the condition name, optional operator, and value from the input string, then performs the appropriate comparison or check based on the current game context. Supported conditions include random chance, time of day, character attributes (such as NPC status, alignment, fight status, immortality, killer or thief flags, charm effects, group relationships), room properties, and object attributes. The function utilizes helper evaluation functions like 'mprog_veval' for numerical comparisons and 'mprog_seval' for string comparisons, ensuring modularity and clarity. It returns 1 for true, 0 for false, or -1 if an error occurs due to syntax issues, invalid arguments, or unknown condition types. This evaluation is primarily used in MOB scripting to determine whether specific conditions are met for executing subsequent actions or behaviors, enabling dynamic and context-sensitive scripting logic.",
+    "params": {
+      "ifchck": "The string containing the conditional check to evaluate, formatted as 'ifchck ( arg ) [opr val]'.",
+      "actor": "Pointer to the Character object representing the actor involved in the check.",
+      "mob": "Pointer to the Character object representing the mobile (NPC or player) performing the check.",
+      "vo": "Void pointer that can point to either a Character or Object, depending on context.",
+      "obj": "Pointer to the Object involved in the check.",
+      "rndm": "Pointer to a randomly selected Character object for random comparisons."
+    },
+    "returns": "Returns 1 if the condition evaluates to true, 0 if false, and -1 if an error occurs such as syntax errors or invalid arguments.",
+    "tparams": null,
+    "throws": "This function does not explicitly throw exceptions but returns -1 to indicate errors such as syntax issues, invalid arguments, or unknown condition types.",
+    "notes": "The function handles a wide variety of condition checks, including random chance ('rand'), time ('mudtime'), character attributes ('ispc', 'isnpc', 'isgood', 'isevil', etc.), combat status ('isfight'), and object properties ('objtype', 'objval0'-'objval3', etc.). It uses string comparison functions like 'strcmp' and numeric evaluation functions like 'mprog_veval' and 'mprog_seval' to perform flexible condition assessments. Proper parsing of the input string is critical, and syntax errors are logged via 'Logging::bugf'. The function supports complex conditional logic within MOB scripts, enabling sophisticated behavior control based on game state.",
+    "rationale": null,
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1ab4b4391db6d81dbac7917b909a9bb351",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_do_ifchck",
+    "qualified_name": null,
+    "definition": "bool mprog_do_ifchck",
+    "argsstring": "(const char *ifchck, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, char * mprog_process_if(const char *ifchck, char *com_list, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": "Used to evaluate the conditional expression in the 'if' check, determining control flow based on its boolean result."
+    }
+  },
+  "char * mprog_process_if(const char *ifchck, char *com_list, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": {
+    "brief": "Evaluates 'if' conditions within MOBprogram command lists and manages control flow based on their outcomes.",
+    "details": "This function processes conditional 'if' statements in MOBprogram scripts, determining whether to execute or skip subsequent commands based on the evaluation of the specified condition. It supports nested 'if' statements through recursion, handles 'else' and 'endif' directives to control execution blocks, and respects 'break' commands to exit processing early. The function parses commands sequentially, executing commands when conditions are true, and skipping or jumping over blocks when false. It also manages error scenarios such as missing 'endif' or malformed commands by logging bugs and terminating execution. The command list pointer is updated to reflect the position after the processed control flow, ensuring robust handling of complex script structures and maintaining script integrity even in malformed scenarios.",
+    "params": {
+      "ifchck": "The condition string to evaluate for the 'if' statement.",
+      "com_list": "Pointer to the current position in the command list string; gets advanced as commands are processed.",
+      "actor": "Pointer to the Character object representing the actor involved in the script context.",
+      "mob": "Pointer to the Character object representing the mobile entity executing the script.",
+      "vo": "Void pointer to either a Character or Object, used as a secondary target in command processing.",
+      "obj": "Pointer to the Object involved in the script context.",
+      "rndm": "Pointer to a random Character object used within command execution context."
+    },
+    "returns": "A pointer to the position in the command list after processing the 'if' block, or nullptr if execution should terminate or an error occurs.",
+    "tparams": null,
+    "throws": "None explicitly; errors and syntax issues are handled internally with bug logging and control flow termination.",
+    "notes": "Supports nested 'if' statements through recursion, ensuring complex conditional logic can be handled within scripts. Proper handling of 'else' and 'endif' ensures script flow remains consistent even in malformed scripts. The function updates the command list pointer to facilitate sequential command processing after control flow blocks.",
+    "rationale": "Used in MOBprogram scripting to evaluate conditions and control execution flow dynamically, enabling complex, conditional behaviors for NPCs and game events.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a3622b6637ef10641631d97792cfc14d4",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_process_if",
+    "qualified_name": null,
+    "definition": "char * mprog_process_if",
+    "argsstring": "(const char *ifchck, char *com_list, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, char * mprog_process_if(const char *ifchck, char *com_list, Character *mob, Character *actor, Object *obj, void *vo, Character *rndm)": "Called recursively to handle nested 'if' statements within the command list, managing complex control flow.",
+      "mob__prog_8cc, void mprog_driver(const String &com_list, Character *mob, Character *actor, Object *obj, void *vo)": "Handles 'if' control flow commands, determining the execution path based on conditions evaluated within the function."
+    }
+  },
+  "void mprog_wordlist_check(const String &arg, Character *mob, Character *actor, Object *object, void *vo, Flags::Bit type)": {
+    "brief": "Checks a character's mobile programs for keyword or phrase triggers within a given argument string and executes matching scripts.",
+    "details": "This function iterates through all mobile programs associated with the specified 'mob' character, filtering by the provided 'type'. For each relevant program, it converts both the program's argument list and the input argument string to lowercase to ensure case-insensitive matching. If the argument list begins with 'p ', it searches for the entire phrase within the input string, verifying word boundaries to prevent partial matches. Otherwise, it tokenizes the argument list into individual words and searches for each within the input string, again respecting word boundaries. When a match is found, it invokes 'mprog_driver' to execute the associated command list. The process terminates early if the 'mob' object is marked as garbage, preventing further processing. This approach allows flexible and efficient trigger detection based on keywords or phrases, supporting complex scripting behaviors for mobile entities in the game. The function handles both phrase and individual word matching, ensuring accurate trigger activation based on the input context.",
+    "params": {
+      "actor": "Pointer to the character who initiated the trigger, if applicable.",
+      "mob": "Pointer to the character (mobile) whose triggers are being evaluated.",
+      "arg": "The input argument string to be checked against trigger conditions.",
+      "vo": "Void pointer to a secondary target, such as a character or object, involved in the trigger.",
+      "type": "Bit flag indicating the type of trigger to match against (e.g., speech, command).",
+      "obj": "Pointer to the object associated with the trigger, if any."
+    },
+    "returns": "Void; the function performs trigger matching and executes associated scripts without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs case-insensitive matching by converting strings to lowercase. It distinguishes between phrase triggers (starting with 'p ') and word triggers, handling word boundaries to prevent partial matches. Early termination occurs if the 'mob' object is marked as garbage, ensuring stability during iteration. This design supports flexible scripting triggers based on complex input patterns.",
+    "rationale": "This function is used when an NPC needs to respond to specific keywords or phrases within speech or commands, enabling dynamic and context-sensitive behaviors. It is essential for implementing responsive scripts that react to player input or environmental cues, facilitating immersive interactions and complex AI behaviors.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a77916d3a7a5e43f5803bace1f2b951cf",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_wordlist_check",
+    "qualified_name": null,
+    "definition": "void mprog_wordlist_check",
+    "argsstring": "(const String &arg, Character *mob, Character *actor, Object *object, void *vo, Flags::Bit type)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void aggr_update()": "Used to evaluate and execute scripts related to aggregated mob actions, such as quest mobs or scripted behaviors.",
+      "mob__prog_8cc, void mprog_speech_trigger(const String &txt, Character *mob)": "Called for each NPC in the room that has speech programs enabled, to check if the speech text triggers any scripts."
+    }
+  },
+  "void mprog_percent_check(Character *mob, Character *actor, Object *object, void *vo, Flags::Bit type)": {
+    "brief": "Performs a probabilistic check to trigger and execute matching mobile (mob) programs based on specified event types.",
+    "details": "This function iterates through all mob programs associated with the given mobile entity (mob). For each program, it first checks if the mob is marked as garbage; if so, it terminates early to avoid processing invalid data. It then verifies whether the program's type matches the specified trigger type. If it does, it performs a percentage roll using number_percent() and compares the result to the threshold specified in the program's argument list (converted to an integer). If the roll is below this threshold, it executes the program's command list via mprog_driver, passing relevant context objects such as the actor, object, and additional data. For certain program types like GREET_PROG and ALL_GREET_PROG, it continues checking subsequent scripts; otherwise, it stops after executing one matching script. This mechanism allows for probabilistic and type-specific triggering of scripted behaviors on mobile entities within the game environment.",
+    "params": {
+      "actor": "Pointer to the Character object representing the actor involved in the trigger.",
+      "mob": "Pointer to the Character object representing the mobile (NPC) to evaluate.",
+      "obj": "Pointer to the Object involved in the trigger, if any.",
+      "vo": "Void pointer to additional data passed to the program driver, providing context for script execution.",
+      "type": "Flags::Bit value indicating the specific type of mob program trigger to check (e.g., greeting, death, etc.)."
+    },
+    "returns": "Void; the function triggers side effects by executing mob scripts when conditions are met.",
+    "tparams": null,
+    "throws": "None explicitly; relies on internal checks such as is_garbage() to prevent invalid processing.",
+    "notes": "The function respects the special handling of greeting-related programs (GREET_PROG and ALL_GREET_PROG), allowing multiple greeting scripts to execute in sequence. It uses a percentage-based probabilistic check to determine script activation, enabling dynamic and unpredictable NPC behaviors.",
+    "rationale": "This function is used in scenarios where NPCs need to react probabilistically to game events, such as greeting players, reacting to death, or other context-specific triggers, providing a flexible scripting mechanism for immersive interactions.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a990dd5f42daa38ce6b3925ca6fb05834",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_percent_check",
+    "qualified_name": null,
+    "definition": "void mprog_percent_check",
+    "argsstring": "(Character *mob, Character *actor, Object *object, void *vo, Flags::Bit type)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "mob__prog_8cc, void mprog_fight_trigger(Character *mob, Character *ch)": "Called to probabilistically check and execute fight-related mobile program commands if the relevant flag is set.",
+      "mob__prog_8cc, void mprog_boot_trigger(Character *mob)": "Called when BOOT_PROG is set to probabilistically execute mobile program commands during the boot trigger.",
+      "mob__prog_8cc, void mprog_death_trigger(Character *mob)": "Invoked to probabilistically execute the death program based on the presence of the DEATH_PROG flag, potentially triggering scripted behavior.",
+      "mob__prog_8cc, void mprog_buy_trigger(Character *mob, Character *ch)": "Called to probabilistically execute the buy trigger logic if the NPC's 'BUY_PROG' flag is set, passing 'mob' and 'ch' as arguments.",
+      "mob__prog_8cc, void mprog_random_trigger(Character *mob)": "Called to perform a probabilistic check and execute mobile program commands if the 'RAND_PROG' flag is active.",
+      "mob__prog_8cc, void mprog_tick_trigger(Character *mob)": "Called to probabilistically execute mobile program commands if the TICK_PROG flag is set, passing 'mob' and other parameters as nullptrs.",
+      "mob__prog_8cc, void mprog_random_area_trigger(Character *mob)": "Called within the loop to probabilistically execute mobile program commands in each room the character is moved to.",
+      "mob__prog_8cc, void mprog_entry_trigger(Character *mob)": "Called to probabilistically execute the mobile program trigger if the NPC and flag conditions are met.",
+      "mob__prog_8cc, void mprog_greet_trigger(Character *ch)": "Called to potentially execute greeting scripts for NPCs that meet the specified conditions, passing the NPC, the character 'ch', and the relevant greeting flag."
+    }
+  },
+  "void mprog_greet_trigger(Character *ch)": {
+    "brief": "Triggers greeting scripts for NPCs in the same room when a character enters or interacts.",
+    "details": "This function iterates through all characters present in the same room as the specified character 'ch'. For each NPC (non-player character) that is not the character itself, it checks if the NPC can see 'ch', is not currently engaged in combat, and is awake. If these conditions are satisfied, it then verifies whether the NPC has the 'GREET_PROG' or 'ALL_GREET_PROG' program type flags set in its prototype data. When the appropriate flags are present, a probabilistic check is performed to determine if the greeting script should be executed, which may involve triggering specific behaviors or dialogues defined in the NPC's mob programs. The function terminates early if the 'ch' object is marked as garbage, ensuring no further processing occurs on invalid objects. This mechanism enables NPCs to greet or acknowledge the presence of a character, fostering immersive and dynamic interactions within the game environment.",
+    "params": {
+      "ch": "Pointer to the Character object representing the character who has entered or interacted, triggering greeting checks."
+    },
+    "returns": "Void; the function performs side effects by potentially executing greeting scripts on NPCs in the room.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function prioritizes checking for 'GREET_PROG' and 'ALL_GREET_PROG' flags to determine which greeting behaviors to trigger. It also ensures that only NPCs that are awake, can see the character, and are not fighting will execute greeting scripts. Early termination occurs if the 'ch' object is marked as garbage, preventing invalid processing.",
+    "rationale": "This function is used in scenarios where NPCs need to respond to a character's presence or interaction, such as upon entering a room or performing an action, thereby enhancing the realism and interactivity of the game environment.",
+    "state": "refined_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc_1a46c3658150daf2a81b73c9f493db6d63",
+    "etype": "member",
+    "kind": "function",
+    "name": "mprog_greet_trigger",
+    "qualified_name": null,
+    "definition": "void mprog_greet_trigger",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__move_8cc, void move_char(Character *ch, int door, bool follow)": "Triggers greeting scripts for the character after movement, if the character is not garbage.",
+      "act__move_8cc, void do_drag(Character *ch, String argument)": "Triggers greeting mob programs for NPCs in the room after the characters arrive.",
+      "act__move_8cc, void do_push(Character *ch, String argument)": "Triggered if the victim is garbage after the push, to activate greeting mob programs."
+    }
+  },
+  "mob_prog.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "mob__prog_8cc",
+    "mid": "mob__prog_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "mob_prog.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "War.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_war_8hh",
+    "mid": "_war_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "War.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

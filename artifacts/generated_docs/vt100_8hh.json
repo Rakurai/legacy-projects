@@ -1,0 +1,24 @@
+{
+  "vt100.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "vt100_8hh",
+    "mid": "vt100_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "vt100.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

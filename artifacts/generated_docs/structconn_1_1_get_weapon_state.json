@@ -1,0 +1,49 @@
+{
+  "conn::GetWeaponState": {
+    "brief": "Represents a state in the connection's state machine responsible for processing user input related to weapon selection.",
+    "details": "The GetWeaponState struct inherits from the State class and manages the handling of user input during the weapon selection phase in a networked application. Its primary function is to interpret input strings, typically representing weapon names, validate them, and update the character's state accordingly. The handleInput method processes the input, determines if it corresponds to a valid weapon, and transitions the connection to the Message of the Day state upon success. If the input is invalid, it remains in the current state to prompt for correct input. This struct is integral to the user interaction flow during character setup, ensuring proper validation and seamless progression through the connection's state machine.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct relies on the handleInput method to perform input validation and state transitions. It exemplifies the State design pattern, encapsulating behavior for a specific phase in the connection process.",
+    "rationale": "GetWeaponState exists to manage the user interaction during weapon selection, a crucial step in character customization. It fits into the connection architecture by encapsulating the logic for processing weapon input and controlling state transitions, thereby supporting a modular and maintainable connection handling system.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_weapon_state",
+    "mid": "structconn_1_1_get_weapon_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetWeaponState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetWeaponState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input for weapon selection, updates the character's skill level, and transitions to the Message of the Day state upon successful selection.",
+    "details": "This function processes the input string provided by the user to select a weapon. It performs a lookup to find the weapon index in the weapon table, then checks if the character associated with the descriptor has learned the corresponding skill with a level greater than zero. If the input is invalid or the skill level is insufficient, it prompts the user to make another selection and remains in the current state. If valid, it sets the character's skill level for that weapon to 40, displays a prompt, and transitions the connection state to read the Message of the Day (readMOTD). The function also manages output formatting by setting text colors and styles, and provides help information to guide the user through the process.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the user's connection and associated character.",
+      "argument": "String containing the name of the weapon selected by the user."
+    },
+    "returns": "Pointer to the next State object, either 'readMOTD' upon successful selection or the current state if the input is invalid.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that only valid and learned weapons can be selected, updating the character's skill level accordingly. It also manages user interface elements such as color formatting and help prompts to enhance user experience.",
+    "rationale": "This function is used during the weapon selection phase, typically during character creation or customization, to validate user input, update skill levels, and proceed to the next step in the setup process.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_weapon_state",
+    "mid": "structconn_1_1_get_weapon_state_1a8272c43b9cdf99cb5b3c5eb1cab02bcd",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetWeaponState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "src/include/gem": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "dir_1f5ef0dbc3555222c9e1262e058d8011",
+    "mid": "dir_1f5ef0dbc3555222c9e1262e058d8011",
+    "etype": "compound",
+    "kind": "dir",
+    "name": "src/include/gem",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

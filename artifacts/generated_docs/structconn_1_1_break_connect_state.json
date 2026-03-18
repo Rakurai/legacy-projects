@@ -1,0 +1,49 @@
+{
+  "conn::BreakConnectState": {
+    "brief": "A state struct responsible for managing the disconnection process within the network connection lifecycle.",
+    "details": "The conn::BreakConnectState struct extends the State base class to represent a specific phase in the network connection management system, focusing on breaking or terminating a connection. It provides an implementation of the handleInput method to process user inputs or network events that pertain to disconnecting, reconnection attempts, or cleanup procedures. This struct plays a crucial role in ensuring that disconnection sequences are handled smoothly, maintaining system stability and consistency. It interacts with other connection states and utilizes the Descriptor class to manage connection-specific data during the disconnection process, facilitating orderly transitions to subsequent states such as reconnection or termination.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct employs the State design pattern, encapsulating disconnection behavior and enabling flexible state transitions based on user input or network events. Its handleInput method returns a pointer to the next appropriate State object, supporting a modular and extendable connection state machine.",
+    "rationale": "The conn::BreakConnectState exists to modularize and encapsulate the disconnection logic within the connection management system. By isolating disconnection procedures into a dedicated state, the architecture promotes clarity, maintainability, and scalability. It ensures that disconnection handling is consistent across different scenarios and simplifies the integration of additional connection states or behaviors in the future.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_break_connect_state",
+    "mid": "structconn_1_1_break_connect_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::BreakConnectState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::BreakConnectState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input during the login process to confirm reconnection or disconnection of a character.",
+    "details": "This function interprets the player's input to determine whether to attempt reconnection to an existing character or to prompt for a new name. When the input is 'Y' or 'y', it iterates through all active network descriptors to close any connections associated with the same character, then attempts to reconnect the character to the current descriptor using 'conn::attempt_reconnect'. If the reconnection is successful, it transitions the connection state to 'playing', allowing gameplay to resume. If reconnection fails, it notifies the player and resets the character data, prompting for a new name. When the input is 'N' or 'n', it prompts the player to enter a new name, clears any existing character data, and transitions to the name input state. For any other input, it prompts the player to respond with 'Y' or 'N' and remains in the current state, awaiting valid input. This process ensures proper handling of reconnection attempts and character creation during login, maintaining consistent connection state management.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the current network connection.",
+      "argument": "A constant reference to a String object containing the user's input."
+    },
+    "returns": "A pointer to the next State object based on the user's input, which could be the current state, the playing state, or the getName state.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that only one active connection per character exists by closing other descriptors linked to the same character during reconnection. It also handles cleanup of character data when the user opts to start anew, preventing memory leaks or inconsistent states.",
+    "rationale": "This function is used during the login process to manage reconnection attempts and character creation, providing a controlled flow for players to either resume their previous session or start fresh, based on their input.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_break_connect_state",
+    "mid": "structconn_1_1_break_connect_state_1ab571fc4ede3d9ea3eb54ad294ba35ac2",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::BreakConnectState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

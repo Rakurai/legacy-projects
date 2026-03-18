@@ -1,0 +1,51 @@
+{
+  "conn::ReadIMOTDState": {
+    "brief": "A struct representing the connection state responsible for handling the initial message of the day (IMOTD) during network connection setup.",
+    "details": "ReadIMOTDState is a specialized state within the connection management system, inheriting from the base State struct. Its primary role is to manage the initial phase where the system reads and processes the message of the day (IMOTD) that is presented to users upon connection. The handleInput method, overridden in this struct, handles user input during this phase, typically to display help information or proceed to the next state, such as reading the full MOTD or login prompts. This struct ensures a smooth transition from connection establishment to user interaction, facilitating user onboarding and system messaging protocols. It interacts closely with Descriptor objects, which encapsulate connection-specific data, and integrates into the overall state machine controlling connection flow.",
+    "params": {},
+    "returns": null,
+    "tparams": {
+      "": "No template parameters."
+    },
+    "throws": null,
+    "notes": "This struct employs the State design pattern, encapsulating behavior for a specific phase in the connection lifecycle. Its handleInput method manages state transitions based on user input or system events, enabling flexible and maintainable connection flow management.",
+    "rationale": "ReadIMOTDState exists to modularize the connection initialization process, separating the handling of the initial message of the day from other connection phases. By encapsulating this behavior, the system can easily manage different connection states, facilitate debugging, and extend functionality, such as adding new prompts or handling additional input during the IMOTD phase.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_read_i_m_o_t_d_state",
+    "mid": "structconn_1_1_read_i_m_o_t_d_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::ReadIMOTDState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::ReadIMOTDState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input in the ReadIMOTDState by displaying the automated MOTD help message and transitioning to the readMOTD state.",
+    "details": "This function retrieves the Character associated with the provided Descriptor and sends a newline message to it. It then sets the output color to cyan with no bold styling, displays the 'automotd' help entry to inform the user about the automated message of the day, and resets the text color to white. These output operations are performed to guide the user through the MOTD process visually. After displaying the help message, the function transitions the connection state to readMOTD, preparing to handle the display of the actual Message of the Day content. The input argument is not utilized within this function, serving primarily as a placeholder for potential future input processing or extensions.",
+    "params": {
+      "d": "A pointer to a Descriptor object that provides context for the current network connection and contains the character to interact with.",
+      "argument": "A constant reference to a String object representing the input argument, although it is not used in this function."
+    },
+    "returns": "A pointer to the State object representing the readMOTD state, indicating the next phase of the connection process.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function intentionally ignores the input argument, focusing solely on displaying help information and transitioning states. The use of color constants ensures consistent visual styling during user interaction.",
+    "rationale": "This function is used during the initial connection phase to inform users about the automated MOTD system, providing guidance before displaying the full message. It simplifies user onboarding by immediately offering help context and setting the appropriate connection state for subsequent MOTD display.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_read_i_m_o_t_d_state",
+    "mid": "structconn_1_1_read_i_m_o_t_d_state_1a6b9c588765dab9f44e26aab03b0eb22e",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::ReadIMOTDState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

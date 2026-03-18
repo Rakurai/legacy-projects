@@ -1,0 +1,49 @@
+{
+  "conn::GetSexState": {
+    "brief": "Represents the state during character creation where the user selects their character's gender.",
+    "details": "The GetSexState struct extends the State base class to handle user input related to gender selection in the character creation process. It overrides the handleInput method to interpret the input string, which should indicate the chosen sex ('M'/'m' or 'F'/'f'), and then transitions the connection to the class selection state if the input is valid. If the input is invalid, it remains in the current state, prompting the user for correct input. This struct facilitates an interactive, step-by-step character customization workflow within a networked environment, ensuring smooth user experience and proper state management during character setup.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct employs a state pattern to manage different stages of character creation, allowing for clear separation of concerns and easy extension of the character setup process.",
+    "rationale": "GetSexState exists to encapsulate the specific logic for handling gender selection input during character creation, serving as a dedicated state within the broader connection state machine. It ensures modularity and clarity in the flow of user interactions, supporting the system's architecture for flexible and maintainable character setup workflows.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_sex_state",
+    "mid": "structconn_1_1_get_sex_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetSexState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetSexState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input to set the character's sex and transitions to class selection.",
+    "details": "This function processes the input string to determine and set the character's sex attribute. It interprets the first character of the input in a case-insensitive manner: if it is 'm' or 'M', it assigns the male sex constant; if 'f' or 'F', it assigns the female sex constant. If the input does not start with either of these characters, it sends an error message to the character and remains in the current state, prompting for valid input. Upon valid input, it displays a list of available classes retrieved from the guild table, prompting the user to select a class, and then transitions the connection state to handle class selection. This approach ensures case-insensitive handling, immediate user feedback, and a smooth progression through the character creation process.",
+    "params": {
+      "d": "Pointer to the Descriptor object associated with the character, providing context and connection details.",
+      "argument": "The user\u2019s input string indicating the selected sex, expected to start with 'M'/'m' or 'F'/'f'."
+    },
+    "returns": "Pointer to the next connection State; either the current state if input is invalid or the class selection state upon valid input.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses case-insensitive comparison for input handling and provides immediate feedback for invalid entries. It also constructs a dynamic class selection prompt based on the guild table, facilitating flexible class options.",
+    "rationale": "This function is used during character creation to set the character's sex attribute based on user input and to transition smoothly to class selection, ensuring an interactive and user-friendly setup process.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_sex_state",
+    "mid": "structconn_1_1_get_sex_state_1a6ffcac08dad68d334a58440985707f06",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetSexState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

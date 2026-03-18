@@ -1,0 +1,49 @@
+{
+  "void do_heal(Character *ch, String argument)": {
+    "brief": "Processes the 'heal' command, enabling a character to receive various healing or restorative services from an in-room healer NPC.",
+    "details": "This function handles the 'heal' command issued by a character, first verifying the presence of a healer NPC in the same room. If no argument is provided, it displays a list of available healing services and their associated costs. When a specific healing type is requested, it maps the argument to the corresponding spell, skill, words, and cost, then checks if the character has enough gold. It deducts the cost, performs language skill checks for each character in the room to simulate understanding, and then either casts the appropriate spell on the target or applies a direct effect (such as mana restoration). The function manages in-game messaging to inform characters of actions and outcomes, updates character states like mana or hit points, and handles skill improvements based on success or failure of language comprehension. It ensures that only characters in the same room as a healer NPC can access these services and manages the transaction and spellcasting processes seamlessly within the game environment.",
+    "params": {
+      "ch": "Pointer to the Character issuing the 'heal' command.",
+      "argument": "String specifying the type of healing service or spell requested."
+    },
+    "returns": "Void; the function performs in-game actions, messaging, and state updates without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "refined_usage",
+    "cid": "mobiles_8cc",
+    "mid": "mobiles_8cc_1ad6719579d0916309203c8e034d91ac1b",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_heal",
+    "qualified_name": null,
+    "definition": "void do_heal",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "mobiles.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "mobiles_8cc",
+    "mid": "mobiles_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "mobiles.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

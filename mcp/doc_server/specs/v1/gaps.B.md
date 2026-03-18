@@ -3,11 +3,15 @@
 > Ensure every field the DB schema declares actually gets populated from the richest available source.
 > Depends on Phase A (legacy_common imports in place).
 >
+> **Phase A dependency resolved** — spec 006-legacy-common-integration completed. Build pipeline now imports from `legacy_common` and reads `generated_docs/` via `DocumentDB`.
+>
 > Items: gaps.md §15, §12, §9, §13, §14
 
 ---
 
 ## 1. `doc_db.json` Is a Stale Snapshot — Switch to `generated_docs/` (gaps §15)
+
+> **Status: RESOLVED** by spec 006-legacy-common-integration. Build pipeline now reads from `generated_docs/*.json` via `legacy_common.doc_db.DocumentDB`. `doc_db.json` removed from required artifacts.
 
 **The single most impactful data issue** — half the documentation is being dropped.
 
@@ -81,6 +85,8 @@ Among the 4,528 overlapping entries:
 ---
 
 ## 2. `notes`, `rationale`, `usages` — Fix Data Source (gaps §12)
+
+> **Status: RESOLVED** by spec 006-legacy-common-integration. Data source switched to `generated_docs/`; these fields are now populated from `legacy_common.doc_db.Document`.
 
 **Upgraded from P2 to P0** — core documentation fields exist in source but were dropped during serialization.
 

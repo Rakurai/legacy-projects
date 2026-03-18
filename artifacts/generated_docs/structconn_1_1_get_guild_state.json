@@ -1,0 +1,49 @@
+{
+  "conn::GetGuildState": {
+    "brief": "Encapsulates the state responsible for processing guild selection input during the connection setup process.",
+    "details": "The GetGuildState struct is a specialized state within the connection's state machine, dedicated to managing user input related to guild selection during character creation or configuration. It inherits from the base State class and overrides the handleInput method to interpret the player's input string, which may include guild choices or help requests. This struct validates the input, provides guidance if needed, and determines the appropriate transition to subsequent states, such as alignment selection. Its design promotes modularity by isolating guild-related input handling, thereby simplifying the overall connection flow and ensuring consistent user experience during character setup.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct employs the State design pattern, encapsulating behavior for a specific phase in the connection process. The handleInput method manages input validation, state transitions, and user guidance, facilitating a clear and maintainable flow within the connection state machine.",
+    "rationale": "GetGuildState exists to modularize the handling of guild selection input, separating concerns from other connection phases. It enables flexible and maintainable management of user interactions during character creation, ensuring that input processing, validation, and state transitions are encapsulated within a dedicated component, thereby supporting the system's scalable and organized architecture.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_guild_state",
+    "mid": "structconn_1_1_get_guild_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetGuildState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetGuildState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles player input during guild selection, providing help, validating choices, logging new players, and transitioning to alignment selection.",
+    "details": "This function processes the input received from a player during the guild selection phase. If the input starts with 'help', it displays context-specific help information\u2014either general class help or topic-specific\u2014then prompts the player for their class again. If the input is a guild name, it attempts to look up the corresponding guild; if the lookup fails, it informs the player and prompts for re-entry. Upon successful guild selection, it logs the new player's details, broadcasts login and newbie alerts to administrators via wiznet, and then prompts the player to choose an alignment, transitioning to the alignment state. The function manages invalid inputs gracefully, providing appropriate feedback and ensuring smooth progression through the character creation process.",
+    "params": {
+      "d": "The Descriptor object representing the player's connection and associated character.",
+      "argument": "The input string from the player indicating their guild choice or help request."
+    },
+    "returns": "A pointer to the next connection State; either remaining in the current state for invalid input or advancing to the alignment selection state upon successful guild choice.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function integrates logging and notification mechanisms to monitor new player activity and uses string prefix checks to handle help requests efficiently. It ensures that only valid guilds are accepted, prompting the user otherwise, and transitions the connection state appropriately after successful input.",
+    "rationale": "This function is used during the character creation process to facilitate guild selection, providing helpful guidance and ensuring valid input before proceeding to alignment choices. It is essential for onboarding new players and maintaining consistent game state transitions.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_guild_state",
+    "mid": "structconn_1_1_get_guild_state_1aedeeedabd998b58fa71cbb392f9fab24",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetGuildState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

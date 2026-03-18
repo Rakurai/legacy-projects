@@ -14,9 +14,9 @@ Pipeline stages (fail-through):
 Returns ResolutionResult with match metadata and candidates.
 """
 
-from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -34,9 +34,11 @@ if TYPE_CHECKING:
 _MAX_ENTITY_ID_LENGTH = 15
 
 
-@dataclass
-class ResolutionResult:
+class ResolutionResult(BaseModel):
     """Resolution result with metadata."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
     status: ResolutionStatus
     match_type: MatchType
     candidates: list[Entity]

@@ -1,0 +1,24 @@
+{
+  "DepartedPlayer.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_departed_player_8hh",
+    "mid": "_departed_player_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "DepartedPlayer.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

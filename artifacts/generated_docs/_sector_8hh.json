@@ -1,0 +1,51 @@
+{
+  "Sector": {
+    "brief": "An enumeration representing various types of sectors or areas within the environment.",
+    "details": "The Sector enum defines a comprehensive set of environment categories used within the system, including natural terrains such as forests, hills, mountains, and water bodies, as well as urban and specialized zones like roads, arenas, and entrances. It facilitates the identification, rendering, interaction, and behavior customization of different location types. The enum includes specific values for unknown or undefined sectors, ensuring robustness when environment data is incomplete or uncertain. These categories are utilized throughout the codebase to determine sector-specific logic and visual representation.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "Use the enum values to categorize and handle different environment types consistently. Be aware of sentinel values like 'unknown' and 'none' for error handling or default cases. When casting from raw data (e.g., from map colors or coordinates), ensure proper validation to avoid misclassification.",
+    "rationale": "This enum exists to standardize the classification of environment sectors, enabling consistent handling of diverse location types across the system. It supports features such as rendering, interaction logic, and environment-specific behaviors, while also providing mechanisms to handle undefined or unknown sectors gracefully.",
+    "state": "refined_summary",
+    "cid": "_sector_8hh",
+    "mid": "_sector_8hh_1a1ab5f7b220236e085a7c7fc7f20ef21e",
+    "etype": "member",
+    "kind": "enum",
+    "name": "Sector",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "classworldmap_1_1_worldmap, const Sector worldmap::Worldmap::color_to_sector(const MapColor &color) const": " Returned as the default value when the color is not found in the map, indicating an unknown sector.",
+      "classworldmap_1_1_worldmap, const Sector worldmap::Worldmap::get_sector(const Coordinate &coord) const": " Used to cast the retrieved unsigned char value into the Sector enumeration type for return.",
+      "lookup_8cc, String sector_lookup(Sector type)": "Used in a conditional check to compare each sector's type with the input parameter to find a matching sector.",
+      "class_room, Sector Room::sector_type() const": "Not directly used within the function body; it is only referenced as part of the enumeration type for the return value."
+    }
+  },
+  "Sector.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_sector_8hh",
+    "mid": "_sector_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "Sector.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

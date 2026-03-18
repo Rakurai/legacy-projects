@@ -1,0 +1,24 @@
+{
+  "World.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_world_8hh",
+    "mid": "_world_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "World.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

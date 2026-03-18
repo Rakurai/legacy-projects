@@ -1,10 +1,9 @@
 """
 Artifact Loaders - Validation and parsing of pre-computed artifacts.
 
-Reuses existing parsers from projects/gen_docs/clustering/ to load:
-- code_graph.json (entity database via doxygen_parse)
-- doc_db.json (documentation database via doc_db)
-- signature_map.json (repr'd tuple key → old entity_id mapping)
+Loads:
+- code_graph.json (entity database via legacy_common.doxygen_parse)
+- generated_docs/ (documentation database via legacy_common.doc_db)
 - capability_defs.json (capability group definitions)
 - capability_graph.json (capability dependencies)
 
@@ -15,11 +14,9 @@ import json
 from pathlib import Path
 from typing import Any
 
-from build_helpers.artifact_models import (
-    DocumentDB,
-    EntityDatabase,
-    load_entity_db,
-)
+from legacy_common.doc_db import DocumentDB
+from legacy_common.doxygen_parse import EntityDatabase
+
 from server.logging_config import log
 
 
@@ -35,8 +32,7 @@ def validate_artifacts(artifacts_dir: Path) -> None:
     Required files:
         - code_graph.json (entity database)
         - code_graph.gml (dependency graph)
-        - doc_db.json (documentation database)
-        - embeddings_cache.pkl (embeddings)
+        - generated_docs/ (documentation directory, must be non-empty)
         - capability_defs.json (capability definitions)
         - capability_graph.json (capability dependencies)
 
@@ -51,8 +47,6 @@ def validate_artifacts(artifacts_dir: Path) -> None:
     required_files = [
         "code_graph.json",
         "code_graph.gml",
-        "doc_db.json",
-        "signature_map.json",
         "capability_defs.json",
         "capability_graph.json",
     ]
@@ -64,6 +58,13 @@ def validate_artifacts(artifacts_dir: Path) -> None:
             missing_files.append(filename)
         elif file_path.stat().st_size == 0:
             missing_files.append(f"{filename} (empty)")
+
+    # Validate generated_docs/ directory exists and has JSON files
+    generated_docs = artifacts_dir / "generated_docs"
+    if not generated_docs.exists() or not generated_docs.is_dir():
+        missing_files.append("generated_docs/ (directory)")
+    elif not any(generated_docs.glob("*.json")):
+        missing_files.append("generated_docs/ (empty — no JSON files)")
 
     if missing_files:
         raise ArtifactValidationError(
@@ -77,7 +78,7 @@ def load_entities(artifacts_dir: Path) -> EntityDatabase:
     """
     Load entity database from code_graph.json.
 
-    Uses doxygen_parse.load_db() to parse the flat JSON array.
+    Uses legacy_common.doxygen_parse.EntityDatabase.from_json().
 
     Args:
         artifacts_dir: Path to artifacts directory
@@ -92,7 +93,8 @@ def load_entities(artifacts_dir: Path) -> EntityDatabase:
     code_graph_path = artifacts_dir / "code_graph.json"
     log.info("Loading entity database", path=str(code_graph_path))
 
-    entity_db = load_entity_db(code_graph_path)
+    with code_graph_path.open("r", encoding="utf-8") as f:
+        entity_db = EntityDatabase.from_json(f.read())
 
     log.info("Entity database loaded", entity_count=len(entity_db.entities))
     return entity_db
@@ -100,37 +102,28 @@ def load_entities(artifacts_dir: Path) -> EntityDatabase:
 
 def load_documents(artifacts_dir: Path) -> DocumentDB:
     """
-    Load documentation database from doc_db.json.
+    Load documentation database from generated_docs/*.json files.
 
-    Uses DocumentDB.load() to parse the flat JSON with string-tuple keys.
+    Uses legacy_common.doc_db.DocumentDB with an explicit path so the build
+    pipeline is not coupled to legacy_common's hardcoded GENERATED_DOCS_DIR.
 
     Args:
         artifacts_dir: Path to artifacts directory
 
     Returns:
-        DocumentDB with ~5293 documents
+        DocumentDB loaded from per-compound generated_docs JSON files
 
     Raises:
-        FileNotFoundError: If doc_db.json doesn't exist
-        json.JSONDecodeError: If doc_db.json is malformed
+        FileNotFoundError: If generated_docs/ directory doesn't exist
     """
-    doc_db_path = artifacts_dir / "doc_db.json"
-    log.info("Loading documentation database", path=str(doc_db_path))
+    generated_docs_dir = artifacts_dir / "generated_docs"
+    log.info("Loading documentation database", path=str(generated_docs_dir))
 
-    doc_db = DocumentDB().load(doc_db_path)
+    doc_db = DocumentDB(docs_dir=generated_docs_dir)
 
-    log.info("Documentation database loaded", document_count=doc_db.count())
+    doc_count = sum(len(sigs) for sigs in doc_db.docs.values())
+    log.info("Documentation database loaded", document_count=doc_count)
     return doc_db
-
-
-def load_signature_map(artifacts_dir: Path) -> dict[str, str]:
-    """Load raw signature_map.json as a dict (repr'd tuple key → old entity_id)."""
-    path = artifacts_dir / "signature_map.json"
-    log.info("Loading signature map", path=str(path))
-    with path.open("r", encoding="utf-8") as f:
-        data: dict[str, str] = json.load(f)
-    log.info("Signature map loaded", entries=len(data))
-    return data
 
 
 def load_capability_defs(artifacts_dir: Path) -> dict[str, Any]:

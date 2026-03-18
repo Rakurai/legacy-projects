@@ -1,0 +1,24 @@
+{
+  "src/include/worldmap": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "dir_3a8e4bc018b11b77769f2fa3d070efdc",
+    "mid": "dir_3a8e4bc018b11b77769f2fa3d070efdc",
+    "etype": "compound",
+    "kind": "dir",
+    "name": "src/include/worldmap",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

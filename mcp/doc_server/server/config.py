@@ -50,6 +50,10 @@ class ServerConfig(BaseSettings):
         default="BAAI/bge-base-en-v1.5",
         description="FastEmbed model name for local provider",
     )
+    embedding_onnx_provider: str = Field(
+        default="CPUExecutionProvider",
+        description="ONNX Runtime execution provider (e.g. CoreMLExecutionProvider, CUDAExecutionProvider)",
+    )
     embedding_dimension: int = Field(
         default=768,
         ge=1,

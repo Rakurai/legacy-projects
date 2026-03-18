@@ -1,0 +1,52 @@
+{
+  "conn::GetOldPassState": {
+    "brief": "A state within the connection's state machine responsible for handling user input when verifying the user's old password during authentication or password change processes.",
+    "details": "GetOldPassState is a specialized struct derived from the base State class, encapsulating the logic required to verify a user's existing password during login or password update procedures. Its primary method, handleInput, processes the input string provided by the user, which should contain the old password. This method validates the password against stored credentials, manages connection and user session states, and transitions to subsequent states such as prompting for a new password, completing authentication, or disconnecting if verification fails. As part of the connection's state machine, GetOldPassState ensures secure, orderly handling of password verification, integrating seamlessly with the overall connection management system to support secure user authentication workflows.",
+    "params": {},
+    "returns": null,
+    "tparams": {
+      "Descriptor": "Represents the current network connection and associated user session.",
+      "String": "The input string provided by the user, expected to be the old password for verification."
+    },
+    "throws": null,
+    "notes": "This struct employs the State design pattern, allowing flexible and modular management of connection states. The handleInput method facilitates state transitions based on password validation outcomes, ensuring a clear separation of concerns within the connection's authentication workflow.",
+    "rationale": "GetOldPassState exists to modularize the password verification process within the connection's authentication workflow. By encapsulating this functionality as a distinct state, the system maintains a clean, maintainable architecture that simplifies handling user input, enhances security through dedicated verification logic, and supports seamless transitions between different connection states during login or password change procedures.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_old_pass_state",
+    "mid": "structconn_1_1_get_old_pass_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetOldPassState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetOldPassState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input during the login process by validating the password and managing subsequent connection states.",
+    "details": "This function processes the password input received from a user attempting to log in. It compares the provided argument with the stored password of the associated character. If the passwords do not match, it notifies the user of the incorrect password, closes the connection, and transitions to the closed state. If the password is correct, it re-enables input echoing, checks for existing active or link-dead connections to prevent duplicate logins or attempt reconnection, and performs cleanup of any ongoing quests or quest-related objects. It then logs the connection event, updates the character's last site information in the database, and broadcasts login notifications to administrators and immortal characters via wiznet. Depending on whether the character is an immortal, it displays the appropriate message of the day (motd) with color formatting and transitions to the corresponding reading state, either for immortals or regular players.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the current connection and associated character.",
+      "argument": "The input string provided by the user, expected to be the password attempt."
+    },
+    "returns": "A pointer to the next connection State object after processing the input, such as closed, breakConnect, playing, readIMOTD, or readMOTD.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures secure handling of password validation, proper cleanup of quest data, and consistent logging and notification of login events. It also manages connection state transitions based on user privileges and connection status.",
+    "rationale": "This function is used during the login sequence to authenticate users, prevent multiple simultaneous logins, and set up the connection environment, including logging and messaging, before entering the main game or admin interface.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_old_pass_state",
+    "mid": "structconn_1_1_get_old_pass_state_1a6a79c7055b4838d5b2c444bec95c194c",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetOldPassState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

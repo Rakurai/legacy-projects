@@ -1,6 +1,6 @@
 # Data Model: MCP Documentation Server
 
-<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, and 005-mcp-key-issue. -->
+<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, and 006-legacy-common-integration. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -524,20 +524,20 @@ class ContextBundle(BaseModel):
 
 ### Build Time (Offline ETL)
 
-<!-- Updated per specs 003/004/005: pipeline reordered for capability assignment before bridge detection; sig_map merge; embedding generation; deterministic IDs -->
+<!-- Updated per specs 003/004/005/006: pipeline reordered for capability assignment before bridge detection; sig_map merge; embedding generation; deterministic IDs; legacy_common integration -->
 ```
-1.  Parse code_graph.json → DoxygenEntity objects
-2.  Parse doc_db.json → Document objects
-3.  Load signature_map.json → bridge entity IDs to doc_db keys (compound_id, signature)
+1.  Parse code_graph.json → DoxygenEntity objects (imported from legacy_common.doxygen_parse)  <!-- spec 006: models from legacy_common -->
+2.  Load documents from generated_docs/*.json → Document objects via legacy_common.doc_db.DocumentDB  <!-- spec 006: replaces doc_db.json flat file -->
+3.  Compute signature map on-the-fly from EntityDatabase + DocumentDB (no longer loaded from signature_map.json)  <!-- spec 006: signature_map computed at build time -->
 4.  Compute deterministic entity IDs: {prefix}:{sha256(canonical_key)[:7]} from signature_map tuples  <!-- spec 005 -->
-5.  Merge entities ↔ docs using signature_map bridge; halt on any ID collision  <!-- spec 005 -->
+5.  Merge entities ↔ docs using computed signature_map bridge; halt on any ID collision  <!-- spec 005 --> <!-- spec 006: sig_map is computed, not loaded -->
 6.  Extract source_text from disk using (file_path, start_line, end_line)
 7.  Load capability_graph.json → build name→capability mapping from members lists
 8.  Assign capabilities to merged entities (~848 assignments)
 9.  Load graph edges (translate to deterministic IDs), compute fan_in/fan_out, bridge flags (requires capabilities), side_effect_markers  <!-- spec 005: edge ID translation -->
 10. Compute is_entry_point  <!-- spec 005: doc_quality computation removed -->
 11. Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(...brief/details..., 'B') || setweight(...definition_text..., 'C') || setweight(...source_text..., 'D')
-12. Load or generate embeddings:
+12. Load or generate embeddings (embed text via Document.to_doxygen() from legacy_common.doc_db):  <!-- spec 006: build_embed_text() replaced by Document.to_doxygen() -->
     - If matching artifact exists (embed_cache_{model}_{dim}.pkl) → load it
     - Else if embedding provider configured → generate via provider, save artifact
     - Else → skip (null embeddings), log warning
@@ -736,7 +736,7 @@ async def get_direct_callees(session: AsyncSession, entity_id: str, limit: int =
 - **In-memory**: NetworkX MultiDiGraph (~5300 nodes, ~25K edges) for BFS/traversal
 - **API Models**: Pydantic v2 (EntitySummary, EntityDetail, SearchResult, BehaviorSlice, etc.); ResolutionEnvelope removed <!-- spec 005 -->
 - **Embedding**: Configurable provider (local FastEmbed ONNX or hosted OpenAI-compatible); vector dimension configurable (default 768) <!-- Added per spec 004 -->
-- **Build Script**: Offline ETL (artifact parsing → sig_map merge → deterministic ID generation → capability assignment → metric computation → embedding load/generate → DB population via SQLModel session) <!-- Updated per specs 003/004/005 -->
+- **Build Script**: Offline ETL (artifact parsing → on-the-fly sig_map computation → deterministic ID generation → capability assignment → metric computation → embedding load/generate → DB population via SQLModel session) <!-- Updated per specs 003/004/005/006 -->
 - **Server Runtime**: Async queries (SQLModel + SQLAlchemy async session) + in-memory graph algorithms (NetworkX) + async embedding (via `to_thread` for local) <!-- Updated per spec 004 -->
 
 All validation rules enforced at database constraints + Pydantic model validation. No runtime LLM inference; all data pre-computed.
@@ -799,6 +799,8 @@ Key notes: Entity-to-capability mapping from `capabilities[name].members[].name`
 
 ### signature_map.json
 
+~~Loaded from artifact file.~~ As of spec 006, the signature map is **computed on-the-fly** at build time from `EntityDatabase` + `DocumentDB`. The `signature_map.json` artifact is no longer required by the build pipeline. The format below documents the historical artifact for reference.
+
 ```json
 {
   "<entity_id>": {
@@ -808,12 +810,12 @@ Key notes: Entity-to-capability mapping from `capabilities[name].members[].name`
 }
 ```
 
-Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`. The value is the `(compound_id, signature)` tuple that serves as the doc_db key. This file is **derived** — regenerated from `code_graph.json` + `doc_db.json` via `projects/doc_gen/build_signature_map.py`.
+Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`. The value is the `(compound_id, signature)` tuple that serves as the doc_db key. This file was a **derived** artifact — regenerated from `code_graph.json` + `doc_db.json` via `projects/doc_gen/build_signature_map.py`. <!-- spec 006: no longer loaded; computed on-the-fly from EntityDatabase + DocumentDB -->
 
 <!-- spec 005: The signature_map tuple (compound_id, signature_or_name) is also the canonical key
      used to compute deterministic entity IDs: {prefix}:{sha256(str(tuple))[:7]} -->
 
-**Regeneration lifecycle**: `signature_map.json` must be regenerated any time `code_graph.json` is refreshed from new Doxygen output, because Doxygen member hashes (the `member` part of entity IDs) change across runs. The doc_db key `(compound_id, signature)` is stable because `compound_id` derives from C++ qualified names and `signature` is the entity's definition text or name. See `artifacts/artifacts.md` §4-5 for full details.
+**Regeneration lifecycle**: ~~`signature_map.json` must be regenerated any time `code_graph.json` is refreshed from new Doxygen output, because Doxygen member hashes (the `member` part of entity IDs) change across runs.~~ The signature map is now computed at build time — no separate regeneration step. The doc_db key `(compound_id, signature)` is stable because `compound_id` derives from C++ qualified names and `signature` is the entity's definition text or name. See `artifacts/artifacts.md` §4-5 for full details. <!-- spec 006: computed on-the-fly; no regeneration step needed -->
 
 **Phantom references**: `code_graph.json` contains ~506 entity IDs in `detailed_refs` and `codeline_refs` that don't appear as entities in the `id` fields. These are `enumvalue` IDs (~479, individual enum constants) and `friend` memberdefs (~27, filtered out during parsing). They are expected and should be silently skipped when translating edge endpoints during the build.
 

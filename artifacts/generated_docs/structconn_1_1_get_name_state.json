@@ -1,0 +1,49 @@
+{
+  "conn::GetNameState": {
+    "brief": "Represents the connection state responsible for handling user input related to character naming during the connection process.",
+    "details": "The GetNameState struct inherits from the State class and manages user interactions specifically during the phase where a player provides or confirms a character name. Its core functionality is encapsulated in the handleInput method, which processes the user's input string, performing validation checks such as ensuring the name's acceptability, uniqueness, and adherence to naming conventions. Depending on the validation results, handleInput transitions the connection to subsequent states, such as password entry, name confirmation, or disconnecting the session if the input is invalid or the connection is terminated. This struct is essential for maintaining the integrity of character creation and ensuring a smooth, secure user experience during the initial connection phase.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct employs a state pattern to manage different phases of the connection process, enabling modular and maintainable handling of user input and connection flow.",
+    "rationale": "GetNameState exists to encapsulate the logic for processing character name input within the connection workflow, facilitating validation and state transitions. It fits into the system architecture as a specialized state within the connection management system, ensuring that name-related input is handled consistently and securely before proceeding to subsequent steps such as authentication or gameplay.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_name_state",
+    "mid": "structconn_1_1_get_name_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetNameState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetNameState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input during the login or character creation process, performing validation, checks, and state transitions.",
+    "details": "This function processes input received from a user attempting to log in or create a character. It first checks if the input is empty, closing the connection if so. It detects lurk mode by examining if the input starts with a hyphen ('-'), setting a lurk flag and removing the hyphen from the name. The name is then standardized with an uppercase initial letter. The function validates the name format using check_parse_name, and checks for existing players or mobs with that name via check_player_exist and mob_exists. It also verifies if the name is denied through check_deny. If the name belongs to a link-dead player, it attempts reconnection with check_reconnect. The function enforces system-wide locks such as wizlock and newlock, disconnecting unauthorized users accordingly. If all checks pass, it prompts the user to confirm their chosen name, transitioning to a confirmation state. Throughout, it logs relevant events and manages connection states, closing sockets when access is denied or restrictions apply.",
+    "params": {
+      "args": "Constant reference to a String containing the user's input, typically a name or command.",
+      "d": "Pointer to the Descriptor object representing the current connection, providing context, buffers, and associated character data."
+    },
+    "returns": "Pointer to the next connection State object, such as awaiting password, name confirmation, or the closed state if the connection is terminated.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles special lurk mode detection, name validation, and reconnection logic, integrating multiple system checks to ensure proper access control during login. It also manages connection state transitions and logs key events for auditing and debugging.",
+    "rationale": "This function is used during user login and character creation to validate input, enforce bans and restrictions, and guide the connection through appropriate states based on the user's input and system status, ensuring secure and orderly access to the game.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_name_state",
+    "mid": "structconn_1_1_get_name_state_1a2b9748a0d005346cfcd94906881b62cd",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetNameState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

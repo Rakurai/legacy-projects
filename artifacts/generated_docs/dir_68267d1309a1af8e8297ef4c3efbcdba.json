@@ -1,0 +1,24 @@
+{
+  "src": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "dir_68267d1309a1af8e8297ef4c3efbcdba",
+    "mid": "dir_68267d1309a1af8e8297ef4c3efbcdba",
+    "etype": "compound",
+    "kind": "dir",
+    "name": "src",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

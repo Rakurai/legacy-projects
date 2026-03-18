@@ -10,14 +10,12 @@ ready for database insertion. Computes:
 - search vectors (weighted tsvector composition)
 """
 
+from collections.abc import ItemsView
 from pathlib import Path
 
-from build_helpers.artifact_models import (
-    Document,
-    DocumentDB,
-    DoxygenEntity,
-    EntityDatabase,
-)
+from legacy_common.doc_db import Document, DocumentDB
+from legacy_common.doxygen_parse import DoxygenEntity, EntityDatabase
+
 from build_helpers.entity_ids import compute_entity_id
 from server.logging_config import log
 
@@ -40,6 +38,39 @@ SIDE_EFFECT_FUNCTIONS = {
         "event_create", "add_event", "schedule", "WAIT_STATE", "delay_event",
     ],
 }
+
+
+class SignatureMap:
+    """
+    Mapping from repr((compound_id, second_element)) → old Doxygen entity ID.
+
+    Computed on-the-fly from EntityDatabase. Replaces the pre-computed
+    signature_map.json artifact. Every entity in the database gets an entry:
+    - Members: second_element = member hash
+    - Compounds: second_element = compound ID
+    """
+
+    def __init__(self, entity_db: EntityDatabase) -> None:
+        self._map: dict[str, str] = {}
+        for entity in entity_db.entities.values():
+            compound_id = entity.id.compound
+            second_element = entity.id.member if entity.id.member else compound_id
+            old_entity_id = str(entity.id)
+            self._map[repr((compound_id, second_element))] = old_entity_id
+
+        log.info("SignatureMap built", entries=len(self._map))
+
+    def __getitem__(self, key: str) -> str:
+        return self._map[key]
+
+    def get(self, key: str, default: str | None = None) -> str | None:
+        return self._map.get(key, default)
+
+    def items(self) -> ItemsView[str, str]:
+        return self._map.items()
+
+    def __len__(self) -> int:
+        return len(self._map)
 
 
 class MergedEntity:
@@ -87,48 +118,39 @@ class MergedEntity:
 
     @property
     def capability(self) -> str | None:
-        """Capability group (from cap_graph assignment, fallback to doc.system)."""
-        if self._capability is not None:
-            return self._capability
-        return self.doc.system if self.doc else None
+        """Capability group (from cap_graph assignment)."""
+        return self._capability
 
 
 def merge_entities(
     entity_db: EntityDatabase,
     doc_db: DocumentDB,
-    signature_map_data: dict[str, str],
 ) -> list[MergedEntity]:
     """
-    Merge entity database and documentation database via signature_map lookup.
+    Merge entity database and documentation database.
+
+    For each entity, derives (compound_id, second_element) from its EntityID
+    and looks up the corresponding Document in DocumentDB. No signature_map.json
+    required — the mapping is computed on-the-fly from entity IDs.
 
     Args:
-        entity_db: Entity database from code_graph.json
-        doc_db: Documentation database from doc_db.json
-        signature_map_data: Raw signature_map.json dict (repr'd tuple key → old entity_id)
+        entity_db: Entity database from code_graph.json (legacy_common)
+        doc_db: Documentation database from generated_docs/ (legacy_common)
 
     Returns:
         List of merged entity records
     """
-    import ast
-
     log.info("Merging entities and documentation")
-
-    # Build reverse mapping: old_entity_id → parsed (compound_id, second_element)
-    reverse: dict[str, tuple[str, str]] = {}
-    for key_str, old_entity_id in signature_map_data.items():
-        reverse[old_entity_id] = ast.literal_eval(key_str)
 
     merged: list[MergedEntity] = []
     unmatched_entities = 0
 
     for entity in entity_db.entities.values():
-        entity_id = str(entity.id)
+        compound_id = entity.id.compound
+        second_element = entity.id.member if entity.id.member else compound_id
+        sig_key = (compound_id, second_element)
 
-        sig_key = reverse.get(entity_id)
-        assert sig_key is not None, f"Entity {entity_id} has no signature_map entry"
-
-        compound_id, second_element = sig_key
-        doc = doc_db.get_doc(compound_id, second_element)
+        doc = doc_db.get_doc(compound_id, entity.signature)
 
         if doc is None:
             unmatched_entities += 1

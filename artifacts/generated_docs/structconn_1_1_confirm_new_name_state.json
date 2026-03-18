@@ -1,0 +1,49 @@
+{
+  "conn::ConfirmNewNameState": {
+    "brief": "Represents a specific state in the connection's state machine responsible for confirming a new character name during setup.",
+    "details": "The ConfirmNewNameState struct is a specialized state within the connection's overall state management system, dedicated to handling user confirmation of a proposed new character name. It inherits from the base State class and overrides the handleInput method to process user responses, such as confirming or rejecting the name. This struct plays a crucial role in the character creation workflow by validating user input, managing state transitions based on responses, and ensuring a smooth and controlled process for name confirmation. Its design supports interactive user engagement and maintains the integrity of the character setup sequence, integrating seamlessly with other connection states and system components.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct follows the State design pattern, encapsulating behavior for a specific phase in the connection process. The handleInput method returns a pointer to the next State, enabling flexible and modular state transitions within the connection's workflow.",
+    "rationale": "The ConfirmNewNameState exists to modularize and streamline the character creation process, isolating the logic for name confirmation. By encapsulating this behavior in a dedicated state, the system achieves better maintainability, clarity, and extensibility in managing different phases of user interaction during connection setup.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_confirm_new_name_state",
+    "mid": "structconn_1_1_confirm_new_name_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::ConfirmNewNameState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::ConfirmNewNameState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input during the character name confirmation process in the game setup.",
+    "details": "This function processes the player's response to the name confirmation prompt. If the input begins with 'y' or 'Y', it welcomes the player to the game world with a descriptive scene, displays a personalized greeting, and transitions to the experience level selection state. If the input begins with 'n' or 'N', it prompts the player to enter a new name, deletes the current character object, and transitions back to the name input state. For any other input, it requests a clear 'Yes' or 'No' response and remains in the current state until valid input is provided. The function uses color-coded messaging functions to communicate effectively with the player and manages state transitions based on the input, ensuring a smooth setup process.",
+    "params": {
+      "d": "The Descriptor object managing the network connection and associated character data.",
+      "argument": "The player's input string, representing their response to the name confirmation prompt."
+    },
+    "returns": "A pointer to the next connection State object, either advancing to experience selection, returning to name input, or remaining in the current state for invalid input.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses color formatting functions 'stc' and 'ptc' to enhance message clarity and immersion. It ensures proper cleanup of the character object when renaming is initiated, preventing memory leaks. State transitions are handled via static instances for consistency across the connection workflow.",
+    "rationale": "This function is used during the initial character creation or renaming process to confirm the player's chosen name, providing a clear and interactive way to proceed or revise their input based on their response.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_confirm_new_name_state",
+    "mid": "structconn_1_1_confirm_new_name_state_1a61381545dd6c2308b542d8348663a866",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::ConfirmNewNameState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

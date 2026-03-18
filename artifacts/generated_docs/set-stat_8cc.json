@@ -1,0 +1,374 @@
+{
+  "void do_set(Character *ch, String argument)": {
+    "brief": "Handles the 'set' command to modify various game entities such as mobs, objects, rooms, players, skills, evolutions, remort affects, and extraclass skills based on user input.",
+    "details": "The function starts by parsing the first argument from the input to identify the category of entity to modify. If no argument is provided, it displays a help message with syntax and options, with additional options shown to head-level characters. It then checks the prefix of the first argument to delegate the command to specific functions: 'do_mset' for mobs and players, 'do_rset' for rooms, 'do_oset' for objects, 'do_sset' for skills/spells, 'do_evoset' for evolutions, 'do_raffset' for remort affects, and 'do_extraset' for extraclass skills. Non-head characters are restricted to modifying mobs, objects, and rooms, while head characters have full access to all options. The function ensures proper delegation based on the command input and user permissions, supporting a modular, permission-aware command structure that facilitates in-game management and customization.",
+    "params": {
+      "ch": "A pointer to the Character issuing the command, used for permission checks and message output.",
+      "argument": "A String containing the command arguments, including the target entity, field, and value."
+    },
+    "returns": "Void; the function performs command parsing, displays help messages, or delegates to other functions without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces permission restrictions based on character rank, allowing only head-level characters to access certain advanced setting options such as player, skill, evolution, remort affect, and extraclass modifications. It provides a user-friendly help message when invoked without arguments, guiding users on proper command usage. Delegation to specialized functions promotes modularity and simplifies maintenance.",
+    "rationale": "This function is used in administrative and development contexts to modify game entities dynamically, facilitating testing, debugging, balancing, and customization by authorized personnel. Its permission checks and delegation structure ensure secure and organized management of game data.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1aa2dd0fe6361e212bcbd0ba9c362e228b",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_set",
+    "qualified_name": null,
+    "definition": "void do_set",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_set(Character *ch, String argument)": "The main function itself, orchestrating command parsing and delegating to specific setting functions based on argument prefixes.\","
+    }
+  },
+  "void do_sset(Character *ch, String argument)": {
+    "brief": "Modifies the skill or spell level for a specified player character, either individually or all at once.",
+    "details": "The function 'do_sset' allows game administrators to set or update the skill or spell levels of player characters. It begins by parsing the input arguments to extract the target character's name, the skill or 'all' keyword, and the desired level value. It then searches for the target character in the game world, ensuring the target exists and is a player (not an NPC). The function validates that the skill name provided is recognized or that the 'all' option is used. It also checks that the specified level is a numeric value within the range of 0 to 100. If 'all' is specified, it iterates through the entire skill table, setting each skill to the given level. Otherwise, it updates only the specified skill. Throughout the process, the function provides feedback messages to the administrator, confirming successful updates or reporting errors as needed.",
+    "params": {
+      "ch": "A pointer to the Character object representing the administrator issuing the command.",
+      "argument": "A String object containing the command arguments, including target player name, skill name or 'all', and the desired skill level."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function prevents setting skills on NPCs and ensures skill names are valid before modification. When 'all' is used, it updates every skill in the skill table, which can significantly alter a player's capabilities. The validation of input arguments helps maintain data integrity and prevents invalid modifications.",
+    "rationale": "This function is used in administrative contexts to manually adjust player skill levels, such as during testing, debugging, or correcting skill data. It provides a flexible way to set individual skills or reset all skills at once, facilitating efficient management of player character attributes during game moderation or development.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1ae759216e60817602bfd908c31f0d5b43",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_sset",
+    "qualified_name": null,
+    "definition": "void do_sset",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_set(Character *ch, String argument)": "Called when the argument indicates a skill or spell setting command, passing remaining arguments for processing.\","
+    }
+  },
+  "void do_evoset(Character *ch, String argument)": {
+    "brief": "Handles listing and setting the evolution levels of skills or spells for player characters.",
+    "details": "The function 'do_evoset' allows game administrators to either display all evolved skills and spells of a specified player or set the evolution level of a specific skill or spell for that player. When called with only a player name, it compiles a detailed list of all skills and spells the player has evolved, including their current levels and the skill points needed for further evolution. If additional arguments are provided\u2014namely a skill or spell name and a numeric value\u2014it validates the input, checks the target's eligibility based on guild and current evolution constraints, and then updates the evolution level accordingly. The function performs multiple validation steps: confirming the target exists and is a player (not NPC), belongs to a guild, and that the skill or spell is eligible for evolution. It also ensures the specified evolution level is within the allowed range and compatible with the character's class and status (e.g., immortal). Feedback messages are sent to inform the administrator of the operation's success or failure, and the character's evolution data is modified directly through 'set_evolution'. This process ensures controlled, consistent management of skill progression for players within the game.",
+    "params": {
+      "ch": "Pointer to the Character object representing the administrator executing the command.",
+      "argument": "A String containing the command arguments, including target player name, optional skill/spell name, and optional evolution level."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces class and level restrictions on skill evolution, preventing secondary classes from exceeding evolution level 2 unless the character is immortal. It also provides a detailed listing of all skills and spells that can be evolved, aiding administrators in managing player progress.",
+    "rationale": "Used primarily by game administrators or moderators to manage player skill development, ensuring balanced progression and adherence to game rules. It facilitates both oversight and direct modification of player abilities, supporting game balance and player customization.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1a674a654cbca9268b62b232702f25c348",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_evoset",
+    "qualified_name": null,
+    "definition": "void do_evoset",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_set(Character *ch, String argument)": "Invoked when the argument specifies an evolution setting, passing remaining arguments for execution.\","
+    }
+  },
+  "void do_raffset(Character *ch, String argument)": {
+    "brief": "Manages listing, viewing, adding, removing, and rerolling remort affects for characters in the game.",
+    "details": "The function 'do_raffset' handles various subcommands related to remort affects for player characters. It begins by parsing the input arguments to determine the specific operation requested, such as listing all remort affects, displaying a particular player's current affects, clearing all affects, rerolling affects, or toggling a specific affect by its ID. The function performs validation checks to ensure the target character exists in the game world, is a player (not an NPC or immortal), and is eligible for remort affects. It interacts with auxiliary functions like 'fix_blank_raff' to correct gaps in the affect array, 'raff_lookup' to find affect indices, and 'rem_raff_affect' to remove affects. Depending on the command, it may invoke 'roll_raffects' or 'roll_one_raff' to assign random affects, or modify the character's 'raffect' array directly. The function provides feedback messages to the command issuer and target, ensuring proper syntax, preventing duplicate or conflicting affects based on group membership, and handling maximum affect limits. Special cases such as rerolling or clearing affects are managed with appropriate messaging and effect adjustments, maintaining consistency and integrity of the character's remort affect state.",
+    "params": {
+      "ch": "A pointer to the Character object executing the command.",
+      "argument": "A String containing the command arguments, specifying the operation and target character or affect ID."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that only remort characters can have affects modified, and prevents conflicts by checking group memberships. It also maintains the integrity of the 'raffect' array by fixing gaps after removals or additions. The command supports multiple subcommands, including listing, viewing, clearing, rerolling, and toggling affects, making it a versatile tool for remort affect management.",
+    "rationale": "This function is used primarily by game administrators or immortal players to manage remort affects on characters, facilitating gameplay balancing, effect customization, and character progression control. It is invoked through command inputs during gameplay or administrative sessions to modify remort effects dynamically, ensuring that effects are correctly assigned, removed, or rerolled according to game rules and player status.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1aa5ed5179fcc4afe8cdff04356a833497",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_raffset",
+    "qualified_name": null,
+    "definition": "void do_raffset",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_set(Character *ch, String argument)": "Triggered if the command argument matches 'raffect', passing remaining arguments to manage remort affects.\","
+    }
+  },
+  "void do_extraset(Character *ch, String argument)": {
+    "brief": "Manages viewing, assigning, removing, and clearing extraclass skills for player characters in the game.",
+    "details": "The function 'do_extraset' serves as an administrative command handler that allows game administrators to view, modify, or reset extraclass skills for player characters. It supports multiple subcommands: listing remort skills available for extraclass assignment, displaying current extraclass skills of a specified player, clearing all extraclass skills, or toggling a specific skill on or off. The function performs comprehensive validation to ensure the target is a player with a guild and remort status, and that the specified skill is valid, remort-related, and appropriate for the player's guild. When adding a skill, it checks for available extraclass slots based on the player's remort count and updates the extraclass array accordingly, also setting the skill as learned if necessary. Removing a skill clears it from the extraclass array. Throughout, it provides feedback messages to both the administrator and the affected player, ensuring clarity of the performed actions and maintaining game integrity.",
+    "params": {
+      "ch": "Pointer to the Character object representing the administrator executing the command.",
+      "argument": "A String containing command arguments specifying the action, target player, and skill."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles multiple subcommands based on the first argument, including 'list', 'none', or specific skill names. It enforces strict validation to prevent invalid modifications, ensuring only remort players with appropriate guilds can have extraclass skills assigned or removed. The extraclass array is limited to a number of slots determined by the remort level, based on the constant EXTRACLASS_SLOT_LEVELS. Skill addition involves setting the skill as learned if not already, and removal clears the skill from the array. Feedback is provided via in-game messaging functions to both the administrator and the target player, maintaining transparency and consistency.",
+    "rationale": "This function is used in administrative contexts where game moderators or builders need to manage extraclass skills for players, particularly during remort or character customization processes. It ensures that only valid, remort-eligible skills are assigned, and provides clear feedback to maintain transparency. Its validation and feedback mechanisms help uphold game balance and prevent misuse or errors in skill assignment.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1a79e89d87dd99cfac8eae08fdd7953f50",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_extraset",
+    "qualified_name": null,
+    "definition": "void do_extraset",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_set(Character *ch, String argument)": "Called when the argument matches 'extraclass', passing remaining arguments to handle extraclass skill settings.\","
+    }
+  },
+  "void do_mset(Character *ch, String argument)": {
+    "brief": "Allows authorized characters to modify a wide range of attributes, stats, and states of a specified character in the game.",
+    "details": "The do_mset function provides a comprehensive interface for modifying various properties of a target character, including stats, conditions, possessions, and game-specific flags. It begins by parsing the input argument into three parts: the target character's name, the field to change, and the new value. It then searches for the target character either in the game world or within the same area, respecting visibility and access permissions. Permission checks ensure that only high-privilege characters or the target themselves can be modified, especially when dealing with player characters. Once the target is identified, the function matches the specified field against a set of known attributes, such as strength, intelligence, level, race, gold, experience, hunting target, or flags like thief and killer. It validates the new value against acceptable ranges or options, then updates the target's attributes accordingly. Special cases handle fields like 'sex', 'class', 'remort_count', and 'hunt', with appropriate validation and feedback messages. If the input is invalid or incomplete, the function outputs a detailed usage message. Throughout, it enforces game rules and maintains data integrity by validating inputs and permissions, providing immediate feedback to the executor.",
+    "params": {
+      "ch": "Pointer to the character executing the command, used for permission checks and message output.",
+      "argument": "String containing the command arguments, which specify the target character, the field to modify, and the new value."
+    },
+    "returns": "Void; the function performs modifications and outputs status messages directly to the character's output buffer.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function includes special handling for fields like 'sex', 'race', 'class', and various flags, ensuring proper validation and permission enforcement. It also supports prefix matching for field names, allowing flexible command input. The function's design emphasizes game integrity by validating ranges and permissions before applying changes.",
+    "rationale": "This function is used primarily by game administrators or high-level characters to modify player or NPC attributes for testing, moderation, or gameplay adjustments. Its comprehensive validation and permission checks help maintain game balance and prevent unauthorized modifications, making it essential for in-game management and debugging.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1addaf15f6dfcf885cab461adc67cf2019",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_mset",
+    "qualified_name": null,
+    "definition": "void do_mset",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_set(Character *ch, String argument)": "Used for setting mobile or player attributes, called when command specifies 'mob', 'character', 'plr', or 'player' prefixes, or as a fallback.\",",
+      "set-stat_8cc, void do_mset(Character *ch, String argument)": "Recursively called to reset or display usage instructions when input is invalid or incomplete."
+    }
+  },
+  "void do_oset(Character *ch, String argument)": {
+    "brief": "Modifies specific attributes or properties of an in-game object based on provided input.",
+    "details": "The function 'do_oset' allows a character to modify various attributes of an object within the game world. It begins by parsing the input argument into three parts: the object identifier, the field to be modified, and the new value. It then searches for the specified object in the game environment; if the object cannot be found, it notifies the character. Upon locating the object, the function interprets the field name, supporting prefix matches for flexibility, and updates the corresponding attribute such as object values, condition, level, weight, cost, timer, or gem settings. For certain fields, additional validation is performed to prevent invalid states\u2014for example, limiting 'value2' for drink containers and fountains, or 'value3' for weapons and portals. When setting portal locations, it verifies the existence of the target room. Feedback messages are sent to confirm successful changes or report errors. If the input is incomplete or invalid, the function displays usage instructions. The function handles special cases and object types with tailored logic, ensuring safe and consistent modifications within the game environment.",
+    "params": {
+      "ch": "Pointer to the Character performing the operation, used to access context and send messages.",
+      "argument": "String containing the command arguments, specifying the object, field, and value to set."
+    },
+    "returns": "This function does not return a value; it performs side effects such as modifying object attributes and communicating with the character.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function supports flexible field name matching via prefix checks, allowing partial input like 'cond' for 'condition'. It performs validation for object-specific fields to prevent invalid states, such as limiting 'value2' for drink-related objects and 'value3' for portals. When setting portal locations, it verifies the existence of the target room before assignment. The function provides user feedback for both successful modifications and errors, ensuring clarity during object management.",
+    "rationale": "This function is used in administrative or debugging contexts where game objects need to be dynamically adjusted, such as during testing, event setup, or troubleshooting. Its flexible argument parsing and validation help maintain game integrity while allowing detailed customization of object properties.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1a9b8cff2fc208e89378dcb8be99dbf4ea",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_oset",
+    "qualified_name": null,
+    "definition": "void do_oset",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_set(Character *ch, String argument)": "Invoked to modify object attributes when the command argument indicates 'obj' or 'object'.\",",
+      "set-stat_8cc, void do_oset(Character *ch, String argument)": "Not used within the function itself; it is the function being documented."
+    }
+  },
+  "void do_rset(Character *ch, String argument)": {
+    "brief": "Handles the 'rset' command to modify properties of a specified room in the game world.",
+    "details": "The function 'do_rset' enables authorized characters to modify certain attributes of a room, primarily focusing on the 'sector' type. It begins by parsing the input argument into three parts: location, field, and value. It then validates the existence of the specified location using 'find_location', and checks whether the character has permission to modify it through ownership, privacy status, or administrative privileges (via 'is_room_owner' and 'IS_IMP'). If no specific field is provided, it displays available options, such as the list of sector types. When a field and value are specified, the function verifies that the value is numeric using 'is_number'. Currently, setting the 'sector' type is disabled, but the structure allows for future extension. Throughout, the function provides feedback messages to inform the character of success, errors, or restrictions, maintaining proper access control and user guidance. The function also handles invalid inputs gracefully and ensures only authorized modifications are permitted.",
+    "params": {
+      "ch": "Pointer to the Character issuing the command, representing the command issuer.",
+      "argument": "String containing the command arguments, specifying the target location, field, and value."
+    },
+    "returns": "Void; the function performs modifications and outputs messages directly to the character's output buffer.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function currently disables setting the 'sector' property, but the code structure supports future implementation. It emphasizes permission checks to prevent unauthorized modifications, especially in private rooms or by non-privileged characters.",
+    "rationale": "This function is used in administrative or game moderation contexts where authorized users need to modify room attributes, such as changing the environment type or other properties, ensuring controlled and permission-based modifications within the game world.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1ac7e7c0afe7559b6b9c51d63410d77b9e",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_rset",
+    "qualified_name": null,
+    "definition": "void do_rset",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_set(Character *ch, String argument)": "Called to modify room attributes when the argument indicates 'room'.\",",
+      "set-stat_8cc, void do_rset(Character *ch, String argument)": "Recursively called to display usage information when arguments are missing or invalid."
+    }
+  },
+  "void format_mstat(Character *ch, Character *victim)": {
+    "brief": "Constructs and outputs a detailed status report of a specified character to another character.",
+    "details": "The function format_mstat generates a comprehensive and formatted status report for the given victim character, including key attributes such as location, group, count, kill count, level, race, sex, guild, size, health, mana, stamina, experience, and various condition states. It differentiates between NPCs and player characters, displaying additional information like remort count, email, and flags specific to players. The report also covers combat status, hunting target, special functions, effects, defense modifiers, positional data, and relationships like master, leader, and pet. It leverages multiple helper functions and data tables to convert internal codes into human-readable strings, and conditionally displays information based on character type and current states. Effects and flags are presented with descriptive names, and special effects such as remort affects are detailed when applicable. The output is sent directly to the recipient character, providing an in-depth snapshot of the victim's current state within the game environment, supporting debugging, administrative oversight, and detailed character inspection.",
+    "params": {
+      "victim": "A pointer to the Character object whose status information is being generated.",
+      "ch": "A pointer to the Character object that will receive the status report."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function conditionally displays information based on whether the victim is an NPC or a player, including sensitive data like email and remort effects only for players. It also summarizes active effects and defense modifiers, providing a detailed overview suitable for debugging or character assessment. The use of helper functions ensures consistent translation of internal codes to user-friendly strings, and the output formatting supports clear readability in the game interface.",
+    "rationale": "This function is used primarily in administrative or debugging contexts, such as when a game master or developer needs a detailed snapshot of a character's current status, attributes, effects, and relationships. It is also useful for players or administrators inspecting character details during gameplay or troubleshooting, ensuring comprehensive visibility into character states and effects.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1a59f23736144bd6fcbae1d36188068cb1",
+    "etype": "member",
+    "kind": "function",
+    "name": "format_mstat",
+    "qualified_name": null,
+    "definition": "void format_mstat",
+    "argsstring": "(Character *ch, Character *victim)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_stat(Character *ch, String argument)": "Called to display detailed status information about a character or mobile after successful character lookups."
+    }
+  },
+  "void format_ostat(Character *ch, Object *obj)": {
+    "brief": "Constructs and sends a detailed, formatted description of an in-game object to a character.",
+    "details": "The function 'format_ostat' generates a comprehensive report of an object's attributes and state, sending this information to a specified character. It begins by displaying fundamental identifiers such as the object's vnum, level, name, short description, and long description. If the object has extra descriptions or associated prototypes with extra descriptions, it lists their keywords for both the object and its prototype. The report continues with key properties including values, cost, location, ownership, weight, wear location, and active flags, along with any guild restrictions. It then provides type-specific details: for scrolls, potions, and pills, it lists spell levels and names; for wands and staves, charges and associated spells; for drink containers, liquid color and name; for containers, capacity, weight multiplier, and flags; for weapons, damage and type; for armor, armor class values; and for materials, skill modifiers. The function also enumerates all active effects ('affects') on the object, displaying their properties and effects via 'show_affect_to_char'. If the object has gem settings or embedded gems, it lists their details and effects. Special handling is included for objects of portal type, displaying location information. The function ensures a thorough and formatted overview suitable for debugging, inspection, or detailed object analysis.",
+    "params": {
+      "obj": "Pointer to the Object whose details are to be formatted and displayed.",
+      "ch": "Pointer to the Character object that will receive the formatted object information."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles various object types with specific detail sections, ensuring relevant information is displayed contextually. It also includes optional sections for effects and embedded gems, providing a complete overview of the object's current state and properties.",
+    "rationale": "Used primarily in debugging, inspection, or detailed status commands (such as 'stat' or 'look'), this function provides a thorough and formatted overview of an object\u2019s attributes, effects, and embedded items, aiding developers and players in understanding object details during gameplay or development.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1a5dd249edfd5b08dd84be96df0e25101e",
+    "etype": "member",
+    "kind": "function",
+    "name": "format_ostat",
+    "qualified_name": null,
+    "definition": "void format_ostat",
+    "argsstring": "(Character *ch, Object *obj)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_stat(Character *ch, String argument)": "Called to display detailed status information about an object after object lookups."
+    }
+  },
+  "void format_rstat(Character *ch, Room *location)": {
+    "brief": "Outputs a comprehensive, formatted overview of a room's attributes, occupants, objects, exits, and active effects to a character.",
+    "details": "This function generates a detailed report of the specified room's properties, including its name, area, sector type, lighting, healing and mana rates, clan and guild affiliations, description, extra descriptions, and flags. It lists all characters present in the room, considering visibility, and enumerates all objects contained within the room. Additionally, it details each exit, including destination, key, flags, keyword, and description if available. The function also traverses the list of active effects affecting the room, displaying their type, affected location, modifier, remaining duration, bitflags, level, and evolution status. All information is outputted to the character's buffer with formatted text, ensuring clarity and readability. The implementation includes null checks and conditionals to handle optional data gracefully, providing a robust and user-friendly output suitable for inspection, debugging, or administrative purposes.",
+    "params": {
+      "location": "Pointer to the Room object representing the room to be described.",
+      "ch": "Pointer to the Character object who will receive the room information."
+    },
+    "returns": "Void; outputs the formatted room details directly to the character's output buffer.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function respects visibility rules, displaying only characters that the viewer can see, and handles optional data such as extra descriptions and exit descriptions gracefully. It provides a structured and comprehensive snapshot of the room's current state, useful for debugging, administration, or detailed inspection.",
+    "rationale": "This function is typically used when a player or administrator requests a detailed view of a room's current state, such as in commands like 'stat' or 'examine', facilitating in-depth understanding of the environment, its occupants, objects, and effects for gameplay, debugging, or moderation purposes.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1a6366739d0afaa12f173f9e7c1a06fdc1",
+    "etype": "member",
+    "kind": "function",
+    "name": "format_rstat",
+    "qualified_name": null,
+    "definition": "void format_rstat",
+    "argsstring": "(Character *ch, Room *location)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_stat(Character *ch, String argument)": "Called to display detailed status information about a room, either current or specified, after room validation."
+    }
+  },
+  "void do_stat(Character *ch, String argument)": {
+    "brief": "Displays detailed status information about characters, objects, or rooms based on the provided argument.",
+    "details": "The `do_stat` function interprets the input argument to identify the specific entity\u2014such as a character, mobile, player, object, or room\u2014for which detailed statistics should be displayed. It supports explicit keywords like 'char', 'mob', 'player', 'obj', and 'room', as well as ambiguous or unspecified inputs, attempting to resolve them to the most relevant entity. For character and mobile targets, it searches first in the current room and then in the broader game world, respecting visibility constraints and ownership permissions, including private room restrictions. For objects, it similarly searches locally and globally. When a specific room is targeted, it verifies access permissions, especially for private rooms, unless the character has implementor privileges. Once the target is identified, it calls the appropriate formatting function (`format_mstat`, `format_ostat`, or `format_rstat`) to generate a detailed report sent directly to the command initiator. If the target cannot be found or access is denied, it outputs an appropriate error message. The function handles various input patterns, including prefixes and numeric identifiers, to accurately resolve the intended entity, ensuring robust and flexible inspection capabilities within the game environment.",
+    "params": {
+      "ch": "Pointer to the Character object initiating the command, used for context, visibility checks, and output.",
+      "argument": "A String containing the command arguments, specifying what entity to display stats for."
+    },
+    "returns": "Void; outputs the status information or error messages directly to the character's output buffer.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces access restrictions based on room privacy and character privileges, ensuring that private rooms are protected unless the character has high-level permissions. It also supports flexible input parsing, including prefixes and numeric identifiers, to facilitate precise entity targeting.",
+    "rationale": "This function is used primarily by game administrators, developers, or players seeking detailed information about game entities for debugging, moderation, or gameplay inspection. Its flexible search and permission checks make it suitable for comprehensive environment and entity analysis during gameplay or development.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1a4091a7f755b902f7009475e526b8876d",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_stat",
+    "qualified_name": null,
+    "definition": "void do_stat",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_pstat(Character *ch, String argument)": {
+    "brief": "Displays detailed statistics and status information for a specified player character.",
+    "details": "The function `do_pstat` locates a player character in the game world based on the provided argument, respecting visibility constraints. If the character is found and has valid player data (`pcdata`), it constructs a comprehensive report including the player's name, title, level, remort count, race, sex, guild, clan affiliation, email, core attributes (Strength, Intelligence, Wisdom, Dexterity, Constitution, Charisma), alignment, health points, mana, stamina, experience points, quest points, skill points, role points, and experience needed for the next level. It also displays various status flags such as link-dead, AFK, invisibility, lurking, charm, and combat status, with color-coded formatting for clarity. The output includes current room location and combat information if applicable. The information is sent directly to the requesting character's output buffer, providing a detailed snapshot of the target player's current state and attributes, facilitating monitoring and debugging or administrative oversight.",
+    "params": {
+      "ch": "A pointer to the Character object that is requesting the player statistics.",
+      "argument": "A String object containing the name of the player character whose statistics are to be displayed."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": "None",
+    "notes": "The function uses color-coding to enhance readability, applying different color slots for names, stats, and status indicators. It handles cases where the target player is not found or lacks player data, logging bugs and informing the requester accordingly. The function also displays dynamic information such as current room location and combat status, making it useful for administrative or debugging purposes.",
+    "rationale": "This function is used when an administrator or game moderator needs a comprehensive overview of a player's current state, attributes, and status flags, often for monitoring, debugging, or moderation purposes. It provides a quick, detailed snapshot that can assist in diagnosing issues or verifying player conditions during gameplay.",
+    "state": "refined_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc_1a0cd5b3ed6328d0e8e2728ecf720ec1db",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_pstat",
+    "qualified_name": null,
+    "definition": "void do_pstat",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "set-stat.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "set-stat_8cc",
+    "mid": "set-stat_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "set-stat.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

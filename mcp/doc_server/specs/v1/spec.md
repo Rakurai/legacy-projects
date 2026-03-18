@@ -1,6 +1,6 @@
 # Feature Specification: MCP Documentation Server
 
-<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, and 005-mcp-key-issue. -->
+<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, and 006-legacy-common-integration. -->
 **Feature Branch**: `001-mcp-doc-server`
 **Created**: 2026-03-14
 **Status**: Implemented (V1)
@@ -14,7 +14,7 @@ An AI assistant needs to understand what a specific function, class, or variable
 
 **Why this priority**: Entity lookup is the foundational capability. Without reliable entity resolution and documentation retrieval, no other analysis can proceed. This is the MVP that makes the pre-computed documentation artifacts accessible to AI assistants.
 
-**Independent Test**: Can be fully tested by querying known entities (e.g., `damage` function, `Character` class, `game_loop_unix` function) and verifying that returned documentation matches the pre-computed artifacts in `artifacts/doc_db.json`. Entity IDs are deterministic and stable across rebuilds. Success means an assistant can explore the codebase without parsing raw JSON files. <!-- spec 005: deterministic IDs -->
+**Independent Test**: Can be fully tested by querying known entities (e.g., `damage` function, `Character` class, `game_loop_unix` function) and verifying that returned documentation matches the pre-computed artifacts in `artifacts/generated_docs/`. Entity IDs are deterministic and stable across rebuilds. Success means an assistant can explore the codebase without parsing raw JSON files. <!-- spec 005: deterministic IDs --> <!-- spec 006: doc source is generated_docs/, not doc_db.json -->
 
 **Acceptance Scenarios**:
 
@@ -176,8 +176,8 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Build Script & Data Pipeline
 
-- **FR-030**: Build script MUST ingest all source artifacts from the configured artifacts directory: entity database (code_graph.json), dependency graph (code_graph.gml), document database (doc_db.json), signature map (signature_map.json), capability definitions (capability_defs.json), and capability graph (capability_graph.json). Embedding artifacts are optional — generated on demand when a provider is configured. <!-- Updated per specs 003/004: added signature_map, removed embeddings_cache.pkl from required list, embeddings now optional/auto-generated -->
-- **FR-031**: Build script MUST merge entity metadata with documentation records using the signature map (`signature_map.json`) to bridge entity IDs to doc_db keys, producing complete entity records <!-- Updated per spec 003 FR-002: sig_map replaces compound_id+signature join -->
+- **FR-030**: Build script MUST ingest all source artifacts from the configured artifacts directory: entity database (code_graph.json), dependency graph (code_graph.gml), per-compound documentation files (generated_docs/*.json), capability definitions (capability_defs.json), and capability graph (capability_graph.json). Embedding artifacts are optional — generated on demand when a provider is configured. `doc_db.json` and `signature_map.json` are no longer required. <!-- Updated per specs 003/004: added signature_map, removed embeddings_cache.pkl from required list, embeddings now optional/auto-generated --> <!-- spec 006: doc_db.json and signature_map.json removed from required artifacts; generated_docs/ is the document source -->
+- **FR-031**: Build script MUST merge entity metadata with documentation records. The signature map is computed on-the-fly from `EntityDatabase` and `DocumentDB` at build time — `signature_map.json` is no longer loaded as an artifact. Entity models, document models, and graph loader are imported from `legacy_common` (not reimplemented in `build_helpers/`). <!-- Updated per spec 003 FR-002: sig_map replaces compound_id+signature join --> <!-- spec 006: signature_map computed on-the-fly; build_helpers/artifact_models.py and embed_text.py deleted; models imported from legacy_common -->
 - **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column
 - **FR-033**: Build script MUST extract C++ definition lines and store in database definition_text column
 - **FR-034**: ~~Build script MUST compute doc_quality classification (high/medium/low)~~ <!-- spec 005: REMOVED — doc_quality and doc_state columns dropped -->
@@ -302,7 +302,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **A-004**: NetworkX in-memory graph constructed from ~25,000 edges fits in available memory (estimated ~100-200 MB) and is read-only after initial load (no thread safety concerns for concurrent reads)
 - **A-005**: MCP client (VS Code, Claude Desktop) supports stdio transport and can invoke MCP tools/resources/prompts
 - **A-006**: Source code files on disk match artifacts at database build time; users rebuild database after code changes
-- **A-007**: The signature map (`signature_map.json`) bridges entity IDs from `code_graph.json` to `(compound_id, signature)` documentation keys in `doc_db.json`. It is a **derived artifact** — regenerated from `code_graph.json` + `doc_db.json` via `build_signature_map.py`. It must be regenerated any time `code_graph.json` is refreshed, because Doxygen member hashes change across runs while `(compound_id, signature)` keys are stable. <!-- Updated per spec 003: replaces compound_id+signature assumption -->
+- **A-007**: ~~The signature map (`signature_map.json`) bridges entity IDs from `code_graph.json` to `(compound_id, signature)` documentation keys in `doc_db.json`. It is a **derived artifact** — regenerated from `code_graph.json` + `doc_db.json` via `build_signature_map.py`.~~ The signature map is now computed on-the-fly at build time from the loaded `EntityDatabase` and `DocumentDB`. `signature_map.json` is no longer a required artifact. <!-- Updated per spec 003: replaces compound_id+signature assumption --> <!-- spec 006: signature_map computed on-the-fly; json artifact no longer required -->
 - **A-008**: Capability definitions, dependency edges, and function membership lists in `capability_defs.json` and `capability_graph.json` are authoritative
 - **A-009**: Full-text search weighted tsvector composition (name=A, brief/details=B, definition=C, source_text=D) provides reasonable ranking for prose queries
 - **A-010**: BFS traversal with visited set and configurable depth limits prevents performance degradation from circular dependencies or deep call chains

@@ -1,0 +1,246 @@
+{
+  "int stat_to_attr(int stat)": {
+    "brief": "Converts a character stat identifier to its corresponding attribute or effect identifier.",
+    "details": "The function maps a given stat identifier to its associated attribute or effect constant used within the game's systems. It employs a switch statement to match the input stat against predefined constants such as STAT_STR, STAT_DEX, STAT_CON, STAT_WIS, STAT_INT, and STAT_CHR, returning the respective APPLY_* constant for each case. If the input stat does not match any recognized identifier, it logs a bug message using Logging::bugf to aid debugging and defaults to returning APPLY_STR. This mapping ensures consistent translation from character stats to effect attributes across various game mechanics, including character creation, training, spell effects, and attribute management, thereby maintaining system integrity and ease of maintenance.",
+    "params": {
+      "stat": "An integer representing the stat identifier to be converted."
+    },
+    "returns": "An integer representing the corresponding attribute or effect identifier, defaulting to APPLY_STR for invalid inputs.",
+    "tparams": null,
+    "throws": "None explicitly thrown; logs a bug message if an invalid stat is provided.",
+    "notes": "The default fallback to APPLY_STR ensures that the function always returns a valid attribute identifier, preventing potential null or invalid references in calling code.",
+    "rationale": "This function is used whenever character stats need to be translated into effect or attribute identifiers, such as during character creation, training, or spell effects, facilitating consistent and maintainable code across the game's systems.",
+    "state": "refined_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc_1af997df1c8eb4ca4e415b45818815122e",
+    "etype": "member",
+    "kind": "function",
+    "name": "stat_to_attr",
+    "qualified_name": null,
+    "definition": "int stat_to_attr",
+    "argsstring": "(int stat)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_read_new_m_o_t_d_state, State * conn::ReadNewMOTDState::handleInput(Descriptor *, const String &)": "Converts a stat identifier to an attribute, used in setting initial character stats.",
+      "wiz__gen_8cc, void do_wizify(Character *ch, String argument)": "Converts stat indices to attribute indices, used to reset all stats to 25.",
+      "save_8cc, bool load_char_obj(Descriptor *d, const String &name)": "Converts stat indices to attribute indices for initializing base attributes.",
+      "structconn_1_1_get_race_state, State * conn::GetRaceState::handleInput(Descriptor *, const String &)": "Converts a stat index to the corresponding attribute for setting base stats.\",",
+      "magic_8cc, void spell_resurrect(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": "Used to convert stat indices to attribute indices for setting base attributes on the zombie.",
+      "remort_8cc, void do_remort(Character *ch, String argument)": "Converts stat indices to attribute indices for resetting character stats.",
+      "area__handler_8cc, Character * create_mobile(MobilePrototype *pMobIndex)": "Converts stat indices to attribute identifiers for setting base attributes during character creation.",
+      "structconn_1_1_roll_stats_state, State * conn::RollStatsState::handleInput(Descriptor *, const String &)": "Converts a stat index to the corresponding attribute identifier, used in attribute assignment during stat rolling.",
+      "act__move_8cc, void do_train(Character *ch, String argument)": "Used to convert a stat identifier to its corresponding attribute identifier for attribute incrementing.\","
+    }
+  },
+  "int get_max_stat(const Character *ch, int stat)": {
+    "brief": "Calculates the maximum attainable value for a specific character stat based on character attributes, race, guild, and pet status.",
+    "details": "This function determines the maximum stat value a character can achieve by evaluating several factors. For NPCs, the maximum is based on their base attribute plus a small fixed bonus. For player characters, it starts with the race-specific maximum stat plus an additional bonus, with further increments if the character's guild has the stat as its prime or if the character has a familiar with a pet. In the case of humans, an extra bonus is added. The resulting maximum is constrained within the range of 3 to 25 to maintain game balance. The calculation dynamically incorporates race, guild, and pet-related conditions, providing a tailored maximum stat limit for each character based on their unique attributes and status.",
+    "params": {
+      "stat": "Identifier of the specific stat to evaluate.",
+      "ch": "Pointer to the character whose maximum stat is being calculated."
+    },
+    "returns": "The maximum possible value for the specified stat, constrained between 3 and 25.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function accounts for various character conditions, including race, guild affiliation, and pet familiarity, to determine the maximum stat. It ensures that the maximum value remains within a balanced range, preventing overpowered stats.",
+    "rationale": "This function is used whenever the game needs to determine the upper limit of a character's stat, such as during character creation, training, or equipment upgrades, ensuring that stats remain within balanced bounds tailored to each character's attributes and status.",
+    "state": "refined_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc_1a21a7c999cf42583ca5decf946d95d222",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_max_stat",
+    "qualified_name": null,
+    "definition": "int get_max_stat",
+    "argsstring": "(const Character *ch, int stat)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "int get_age(Character *ch)": {
+    "brief": "Calculates the current age of a character in in-game years based on race, playtime, and attribute modifications.",
+    "details": "This function initializes the character's age to a default value of 17. If the character is a player (not an NPC), it assigns the base age according to the character's race from the race table. It then adds additional years derived from the total playtime, converting seconds into in-game years using predefined constants for months, days, and hours per year. Finally, it incorporates any age-related attribute modifications through cached attribute effects, ensuring that temporary or permanent effects are reflected in the final age. This comprehensive calculation accounts for both static race-based ages and dynamic gameplay factors, providing an accurate current age in in-game years.",
+    "params": {
+      "ch": "Pointer to the Character object whose age is to be calculated."
+    },
+    "returns": "The character's age in in-game years as an integer.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function treats NPCs with a default age of 17, while player characters' ages are based on race and playtime. Attribute modifications affecting age are retrieved via a macro, allowing for flexible effects such as temporary boosts or reductions. The calculation assumes consistent in-game time units defined by constants, ensuring uniformity across age-related mechanics.",
+    "rationale": "This function is used whenever the game needs to determine a character's current age, such as for display purposes, age-dependent mechanics, or narrative elements. It combines static race data with dynamic gameplay factors to produce an accurate and context-sensitive age value.",
+    "state": "refined_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc_1af0b531a610769f0b68662f1ac6acdef1",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_age",
+    "qualified_name": null,
+    "definition": "int get_age",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Called to display the victim's age in game years."
+    }
+  },
+  "String print_defense_modifiers(Character *ch, int where)": {
+    "brief": "Generates a descriptive string of a character's defense modifiers for a specified category.",
+    "details": "This function examines a character's defense_mod array and constructs a human-readable string listing damage types that match the specified category, such as absorption, immunity, resistance, or vulnerability. It iterates through all damage types, evaluates each modifier value against the criteria for the given category, and appends the damage type name along with its corresponding modifier percentage to the output string. The formatting of the percentage varies depending on the category\u2014for example, resistances are displayed as negative values, while absorbances are shown as percentages beyond immunity. If an unknown category is provided, the function logs a bug message for debugging purposes. The resulting string may be empty if no relevant modifiers are found, providing a clear summary of the character's defenses in the specified category.",
+    "params": {
+      "where": "An integer representing the category of defense modifiers to display, such as TO_ABSORB, TO_IMMUNE, TO_RESIST, or TO_VULN.",
+      "ch": "A pointer to the Character object whose defense modifiers are being evaluated."
+    },
+    "returns": "A String containing a space-separated list of damage types and their corresponding modifier percentages for the specified category, or an empty string if none are applicable.",
+    "tparams": null,
+    "throws": "None",
+    "notes": "The function handles different defense categories by checking specific value ranges and formats the output accordingly. It uses the 'dam_type_name' function to convert damage type indices into human-readable names, ensuring clarity in the output. The function also logs a bug if an unrecognized 'where' category is passed, aiding debugging efforts.",
+    "rationale": "This function is useful for displaying or logging a character's defense profile in various contexts, such as combat summaries, character sheets, or debugging. It provides a flexible way to generate readable summaries of complex defense modifiers, supporting game mechanics that depend on understanding a character's resistances, immunities, vulnerabilities, or absorption effects.",
+    "state": "refined_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc_1a0a3469c18e9dd420d4d519fa63d2eb35",
+    "etype": "member",
+    "kind": "function",
+    "name": "print_defense_modifiers",
+    "qualified_name": null,
+    "definition": "String print_defense_modifiers",
+    "argsstring": "(Character *ch, int where)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "wiz__gen_8cc, void do_check(Character *ch, String argument)": "Generates descriptive strings of a victim's defense modifiers for absorb, immune, resistance, and vulnerability categories.",
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Called to generate strings describing the victim's defense modifiers for various affect categories.",
+      "act__info_8cc, void do_showflags(Character *ch, String argument)": "Called to generate descriptions of the victim's defense modifiers for different categories.",
+      "act__info_8cc, void do_consider(Character *ch, String argument)": "Called multiple times to generate strings describing victim's defense modifiers for various affect types.",
+      "act__info_8cc, void do_scon(Character *ch, String argument)": "Generates a string describing the victim's defense modifiers for different affect types, used to display resistances, immunities, etc."
+    }
+  },
+  "int get_unspelled_hitroll(Character *ch)": {
+    "brief": "Calculates the character's base and equipment-based hitroll, excluding spell effects and temporary modifiers.",
+    "details": "This function computes the unspelled hitroll for a character by starting with the character's total hitroll attribute, then subtracting any temporary modifiers applied via spells or effects using GET_ATTR_MOD. It proceeds to iterate through all objects the character is carrying, checking for those that are currently equipped (wear location not equal to WEAR_NONE). For each equipped object, it retrieves the list of effects applied to the object via affect::list_obj and sums any modifiers affecting hitroll (APPLY_HITROLL) from these effects. The final sum combines the character's inherent attributes and equipment-based effects, providing a measure of the character's base combat capability unaffected by spell effects or temporary buffs.",
+    "params": {
+      "ch": "Pointer to the Character whose unspelled hitroll is to be calculated."
+    },
+    "returns": "The unspelled hitroll value, representing the character's base and equipment-based hitroll without spell effects.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function explicitly excludes spell effects and temporary modifiers, focusing solely on inherent and equipment-based hitroll contributions. It accounts for multiple effects on each object, summing all relevant modifiers to ensure an accurate calculation of the character's baseline hitroll.",
+    "rationale": "This function is useful in scenarios where the game needs to determine a character's fundamental hitroll, unaffected by spell effects or temporary buffs, such as for baseline calculations, effect stacking, or effect removal processes.",
+    "state": "refined_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc_1adf8099817515190bcba2073c2f0e2341",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_unspelled_hitroll",
+    "qualified_name": null,
+    "definition": "int get_unspelled_hitroll",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "namespaceaffect, void affect::add_type_to_char(Character *ch, ::affect::type type, int level, int duration, int evolution, bool permanent)": "Called to obtain the character's hitroll excluding spell effects, used for the hammerstrike affect's modifier."
+    }
+  },
+  "int get_unspelled_damroll(Character *ch)": {
+    "brief": "Calculates the character's damage roll excluding spell effects, considering equipment and item affects.",
+    "details": "This function determines the unspelled damage roll for a character by starting with the character's base damage roll attribute, obtained via GET_ATTR_DAMROLL, and subtracting any spell-induced modifications retrieved through GET_ATTR_MOD with APPLY_DAMROLL. It then iterates through all objects the character is carrying, specifically those that are currently worn (wear_loc != WEAR_NONE). For each worn object, it retrieves the list of effects applied to the object using affect::list_obj. If any effect modifies the damage roll (location == APPLY_DAMROLL), its modifier is added to the total sum. The final result represents the character's damage potential excluding spell effects, accounting for equipment and item effects that influence damage roll, providing an accurate measure of physical or equipment-based damage bonuses.",
+    "params": {
+      "ch": "A pointer to the Character whose unspelled damage roll is to be calculated."
+    },
+    "returns": "The total damage roll value excluding spell effects, incorporating base attributes and equipment effects.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function explicitly excludes spell effects by subtracting their modifiers and only includes effects from worn objects, ensuring an accurate calculation of non-spell damage bonuses. It relies on the linked list of affects associated with each object, emphasizing the modular design of effect management.",
+    "rationale": "This function is used when calculating damage that should not be influenced by ongoing spell effects, such as in physical attack calculations or effects that depend solely on equipment and inherent attributes. It is particularly useful in scenarios where spell effects are temporarily excluded to assess the character's baseline damage potential.",
+    "state": "refined_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc_1af89cfa15c31a7447e83d3fe72c13a434",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_unspelled_damroll",
+    "qualified_name": null,
+    "definition": "int get_unspelled_damroll",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "fight_8cc, bool damage(Character *ch, Character *victim, int dam, skill::type attack_skill, int attack_type, int dam_type, bool show, bool spell)": "Called to retrieve the character's unspelled damage bonus, which is added to the damage during spell damage calculations.",
+      "namespaceaffect, void affect::add_type_to_char(Character *ch, ::affect::type type, int level, int duration, int evolution, bool permanent)": "Called to obtain the character's damroll excluding spell effects, used for the hammerstrike affect's modifier."
+    }
+  },
+  "int get_unspelled_ac(Character *ch, int type)": {
+    "brief": "Calculates the character's unmodified armor class (AC) based on equipped items.",
+    "details": "This function determines a character's base armor class (AC) by iterating through all equipment slots up to MAX_WEAR. For each slot, it retrieves the equipped object using get_eq_char; if an object is present, it calculates its AC contribution for the specified type via apply_ac and subtracts this value from an initial baseline of 100. The final result represents the character's inherent AC derived solely from their worn gear, excluding any external effects such as spells or buffs. This comprehensive calculation ensures all relevant equipment influences the unmodified AC, providing an accurate measure of the character's defensive baseline.",
+    "params": {
+      "type": "An integer index specifying which AC value to retrieve from each object's value array, representing different AC types or effects.",
+      "ch": "A pointer to the Character whose unmodified AC is being calculated."
+    },
+    "returns": "The computed unmodified armor class value, starting from 100 and reduced by the AC contributions of all equipped items.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function assumes that apply_ac returns non-negative contributions and that subtracting these contributions from 100 yields a meaningful AC value. It does not account for external modifiers such as spells or temporary effects, focusing solely on equipment-based AC.",
+    "rationale": "This function is useful when assessing a character's baseline defensive capability based on their current equipment, such as during damage calculations or when evaluating equipment changes without external effects.",
+    "state": "refined_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc_1a2ad7c4c8fd08735a65f16a171e41fb0a",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_unspelled_ac",
+    "qualified_name": null,
+    "definition": "int get_unspelled_ac",
+    "argsstring": "(Character *ch, int type)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "fight_8cc, void do_bash(Character *ch, String argument)": "Calculates the victim's armor class against blunt weapons, influencing the bash success chance."
+    }
+  },
+  "void attribute_check(Character *ch)": {
+    "brief": "Checks whether a character is wielding a weapon that exceeds their strength capacity and drops it if they are under a negative strength effect.",
+    "details": "The function first validates that the character and their current room are valid pointers. It then retrieves the weapon equipped in the wield position using get_eq_char. If a weapon is equipped, it compares the weapon's weight, obtained via get_obj_weight, against the character's strength attribute (retrieved with GET_ATTR_STR) multiplied by 10. If the weapon is too heavy, the function scans the character's active effects (affects) to identify any negative strength modifiers that are not from equipment, specifically looking for affects where 'where' equals TO_AFFECTS, 'location' equals APPLY_STR, and 'modifier' is negative. If such an affect is found, the character is prompted with messages indicating the weapon is dropped, and the weapon is transferred from the character's inventory to the current room via obj_from_char and obj_to_room. This process prevents recursive calls when weapons with affects are involved and ensures characters cannot wield weapons beyond their strength capacity when negatively affected.",
+    "params": {
+      "ch": "Pointer to the Character to be checked for weapon wielding and strength-affect conditions."
+    },
+    "returns": "This function has no return value; it performs side effects such as dropping the weapon if conditions are met.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function specifically checks for negative strength modifiers that are not from equipment, avoiding recursive or unintended drops when affects originate from other sources. It ensures game consistency by enforcing weight limits based on current strength and effects.",
+    "rationale": "This function is used in scenarios where character equipment and effects may influence their ability to wield weapons, such as during combat or status updates. It helps maintain game balance by automatically dropping weapons that exceed the character's current strength capacity when affected by negative modifiers, preventing exploits or unrealistic equipment usage.",
+    "state": "refined_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc_1aabf4a6a2d7376beb89b6bfc0683f4d5a",
+    "etype": "member",
+    "kind": "function",
+    "name": "attribute_check",
+    "qualified_name": null,
+    "definition": "void attribute_check",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "fight_8cc, void violence_update()": "Called to verify and adjust a character's weapon weight and strength attributes, potentially dropping weapons if overloaded."
+    }
+  },
+  "attribute.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "attribute_8cc",
+    "mid": "attribute_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "attribute.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

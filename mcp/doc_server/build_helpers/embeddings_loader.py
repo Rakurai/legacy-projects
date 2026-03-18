@@ -4,23 +4,17 @@ Embeddings Loader - Load, generate, and attach embedding vectors.
 Supports config-aware artifact naming (embed_cache_{model}_{dim}.pkl).
 Can generate embeddings on demand via an EmbeddingProvider when no artifact exists.
 
-Generation iterates doc_db.json entries directly, using signature_map_data and
-id_map to convert doc_db keys to deterministic entity_ids.
+Generation iterates merged entities directly, using Document.to_doxygen() for text.
 """
 
-import json
 import pickle
 import tempfile
 from pathlib import Path
-from typing import TYPE_CHECKING, Any
 
-from build_helpers.embed_text import build_embed_text
 from build_helpers.entity_processor import MergedEntity
+from server.config import ServerConfig
+from server.embedding import EmbeddingProvider
 from server.logging_config import log
-
-if TYPE_CHECKING:
-    from server.config import ServerConfig
-    from server.embedding import EmbeddingProvider
 
 
 def get_embed_cache_path(artifacts_dir: Path, config: ServerConfig) -> Path:
@@ -81,50 +75,32 @@ def generate_embeddings(
     artifacts_dir: Path,
     provider: EmbeddingProvider,
     config: ServerConfig,
-    signature_map_data: dict[str, str],
-    id_map: dict[str, str],
+    merged_entities: list[MergedEntity],
 ) -> dict[str, list[float]]:
-    """Generate embeddings for every doc_db.json entry, save artifact.
+    """Generate embeddings for every entity that has a document.
 
-    Uses signature_map_data to find old entity_id per doc_db key, then
-    id_map to translate to deterministic entity_id.
+    Uses Document.to_doxygen() for embedding text. Entity IDs are already
+    computed (deterministic) on the merged entities.
 
     Args:
-        artifacts_dir: Directory containing doc_db.json and for the artifact file.
+        artifacts_dir: Directory for the artifact file.
         provider: An active EmbeddingProvider instance.
         config: Server config (for filename derivation).
-        signature_map_data: Raw signature_map.json dict.
-        id_map: old Doxygen entity_id → new deterministic entity_id.
+        merged_entities: Merged entities with deterministic IDs assigned.
 
     Returns:
         Dict mapping deterministic entity_id → embedding vector.
     """
-    doc_db_path = config.artifacts_path / "doc_db.json"
-    log.info("Loading doc_db.json for embedding generation", path=str(doc_db_path))
+    log.info("Generating embeddings from merged entities")
 
-    with doc_db_path.open("r", encoding="utf-8") as f:
-        raw_docs: dict[str, dict[str, Any]] = json.load(f)
-
-    log.info("Generating embeddings from doc_db", doc_count=len(raw_docs))
-
-    entity_ids: list[str] = []
-    texts: list[str] = []
-
-    for key_str, doc in raw_docs.items():
-        old_eid = signature_map_data.get(key_str)
-        if old_eid is None:
-            continue
-        new_eid = id_map.get(old_eid)
-        if new_eid is None:
-            continue
-        text = build_embed_text(doc)
-        entity_ids.append(new_eid)
-        texts.append(text)
+    docs_to_embed = [(m.entity_id, m.doc) for m in merged_entities if m.doc is not None]
+    entity_ids = [eid for eid, _ in docs_to_embed]
+    texts = [doc.to_doxygen() for _, doc in docs_to_embed]
 
     log.info("Docs to embed", count=len(texts))
 
     if not texts:
-        log.warning("No docs found in doc_db; no embeddings generated")
+        log.warning("No docs found in entity set; no embeddings generated")
         return {}
 
     vectors = provider.embed_documents_sync(texts)

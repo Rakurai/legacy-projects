@@ -1,0 +1,24 @@
+{
+  "src/gem": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "dir_5c96bc497a7b27c373513629c5467e5e",
+    "mid": "dir_5c96bc497a7b27c373513629c5467e5e",
+    "etype": "compound",
+    "kind": "dir",
+    "name": "src/gem",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

@@ -1,0 +1,690 @@
+{
+  "const String item_name(int item_type)": {
+    "brief": "Retrieves the name associated with a specified item type identifier.",
+    "details": "The function performs a linear search through the item_table, which maps item types to their descriptive names. It compares each entry's type with the provided item_type parameter, and upon finding a match, returns the corresponding name as a String object. If no matching entry is found after traversing the entire table, it returns the string \"none\". This method provides a straightforward and efficient way to obtain human-readable item names based on their type identifiers, relying on the structure of the item_table for quick lookups.",
+    "params": {
+      "item_type": "An integer representing the specific type of the item to retrieve the name for."
+    },
+    "returns": "The name of the item as a String if a matching type is found; otherwise, the string \"none\".",
+    "tparams": null,
+    "throws": "This function does not throw exceptions.",
+    "notes": "The function returns a default value of \"none\" when no matching item type is found, ensuring consistent output without exceptions. It relies on the integrity of the item_table to contain valid mappings for all relevant item types.",
+    "rationale": "This function is used whenever the system needs to convert an item type identifier into a human-readable name, such as for display purposes, logging, or debugging. Its straightforward implementation makes it suitable for quick lookups within the context of item management and user interface interactions.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a16195437fff2be4239b292a06c8365f9",
+    "etype": "member",
+    "kind": "function",
+    "name": "item_name",
+    "qualified_name": null,
+    "definition": "const String item_name",
+    "argsstring": "(int item_type)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "const String item_type_name(Object *obj)": {
+    "brief": "Returns the human-readable name corresponding to the object's item type.",
+    "details": "This function examines the item_type attribute of the provided Object pointer and maps it to a descriptive string using a switch statement. Each case corresponds to a predefined constant representing a specific item category, such as light sources, weapons, containers, and various special objects. If the item_type does not match any known constant, the function logs a bug report via Logging::bug to aid debugging and returns the string \"(unknown)\". This ensures consistent naming for recognized item types and facilitates debugging for unrecognized or invalid types, supporting reliable item identification throughout the game system.",
+    "params": {
+      "obj": "A pointer to an Object whose item_type attribute determines its human-readable name."
+    },
+    "returns": "A String representing the human-readable name of the object's item type, or \"(unknown)\" if the type is unrecognized.",
+    "tparams": null,
+    "throws": "None",
+    "notes": "The function relies on a comprehensive set of item type constants defined elsewhere, ensuring consistent naming conventions. It also logs unrecognized types for debugging, which helps maintain data integrity and aids in identifying potential issues with object item_type assignments.",
+    "rationale": "This function is used whenever a descriptive name of an item's type is needed for display, logging, or messaging purposes, such as in descriptions, identification, or auction listings. Its robust handling of unknown types ensures that developers are alerted to potential data inconsistencies or new item types introduced without corresponding string mappings.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1aee2ab81627b826280374b9a5ffbb8d39",
+    "etype": "member",
+    "kind": "function",
+    "name": "item_type_name",
+    "qualified_name": null,
+    "definition": "const String item_type_name",
+    "argsstring": "(Object *obj)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "_auction_8cc, void do_auction(Character *ch, String argument)": "Retrieves the name of the item's type for display in auction status messages.",
+      "set-stat_8cc, void format_ostat(Character *ch, Object *obj)": "Called to retrieve the string name of the object's item type for display purposes.",
+      "magic_8cc, void spell_imprint(skill::type sn, int level, Character *ch, void *vo)": "Retrieves the human-readable name of the item's type for use in descriptions and messages.",
+      "magic_8cc, void spell_identify(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": "Called to get the string representation of the object's item type for display purposes.\","
+    }
+  },
+  "const String affect_loc_name(int location)": {
+    "brief": "Returns the human-readable name corresponding to a specific affect location code.",
+    "details": "This function translates an integer affect location code into its descriptive string name by utilizing a switch statement that matches the code against predefined constants representing various character attributes, effects, and gear sets. If the provided code does not match any recognized case, it logs a bug report for debugging purposes and returns the string \"(unknown)\". This mechanism facilitates the conversion of internal affect location identifiers into user-friendly text for display, logging, or debugging, ensuring clarity and consistency across the system.",
+    "params": {
+      "location": "An integer representing the affect location code to be converted into a string."
+    },
+    "returns": "A String object containing the name of the affect location, or \"(unknown)\" if the code is unrecognized.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles both attribute effects (e.g., strength, dexterity) and gear set identifiers, providing a unified way to retrieve descriptive names for various effect locations. It also logs an error when an unknown code is encountered, aiding in debugging and data validation.",
+    "rationale": "This function is used whenever the system needs to display or log the name of an affect location, such as in character status displays, effect descriptions, or debugging output. It ensures consistent naming conventions and simplifies the process of translating internal codes into understandable text for users and developers.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a5976e2061dcd1beafe8fc2e276f0f682",
+    "etype": "member",
+    "kind": "function",
+    "name": "affect_loc_name",
+    "qualified_name": null,
+    "definition": "const String affect_loc_name",
+    "argsstring": "(int location)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to get string descriptions of affect locations when displaying affects.",
+      "act__info_8cc, void do_bonus(Character *ch, String argument)": "Used to retrieve the display name of an attribute location for output formatting.",
+      "act__info_8cc, void print_new_affects(Character *ch)": "Used to get the string representation of an affect's location when displaying spell details.",
+      "act__info_8cc, void do_consider(Character *ch, String argument)": "Called to get the name of the affect location when describing affect modifications.",
+      "set-stat_8cc, void format_rstat(Character *ch, Room *location)": "Called to get a human-readable name of the affect's location for display.",
+      "act__info_8cc, void show_affect_to_char(const affect::Affect *paf, Character *ch)": "Called to get the name of the affect's location for display when the location and modifier are non-zero."
+    }
+  },
+  "const String dam_type_name(int type)": {
+    "brief": "Converts a damage type code into its corresponding human-readable name.",
+    "details": "This function maps an integer damage type code to its descriptive string name. It employs a switch statement to compare the input against predefined damage type constants, returning the associated name such as \"fire\", \"cold\", or \"acid\". If the input does not match any known damage types, it logs a bug report via Logging::bug to aid debugging and returns \"(unknown)\" as a fallback. This ensures that all damage types are properly identified and unrecognized codes are flagged for review. The function relies on a set of predefined constants representing various damage types, facilitating consistent and maintainable damage type handling across the codebase.",
+    "params": {
+      "type": "An integer representing the damage type code for which the name is to be retrieved."
+    },
+    "returns": "A String object containing the human-readable name of the damage type, or \"(unknown)\" if the type is unrecognized.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that unrecognized damage type codes are logged for debugging purposes, aiding in maintenance and error detection. It provides a centralized way to obtain descriptive damage type names, which is useful for display, logging, and debugging.",
+    "rationale": "This function is used whenever the system needs to display or log the name of a damage type based on its code, such as in combat messages, damage reports, or debugging output. It helps maintain consistency in damage type naming and facilitates debugging unrecognized or new damage types introduced in the system.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1aab97eb6165526c745c6eb7656fb09df8",
+    "etype": "member",
+    "kind": "function",
+    "name": "dam_type_name",
+    "qualified_name": null,
+    "definition": "const String dam_type_name",
+    "argsstring": "(int type)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to get the name of the damage type for NPCs' damage message.",
+      "act__info_8cc, void do_bonus(Character *ch, String argument)": "Provides the name of a damage type based on its index for display purposes.",
+      "act__info_8cc, void do_consider(Character *ch, String argument)": "Used to get the name of the damage type associated with an affect when describing damage modifications.",
+      "act__info_8cc, void show_affect_to_char(const affect::Affect *paf, Character *ch)": "Called to get the name of the damage type for display when the affect's location is 'TO_DEFENSE' and the modifier is non-zero.",
+      "attribute_8cc, String print_defense_modifiers(Character *ch, int where)": "Called to retrieve the name of the damage type corresponding to each index 'i' when a defense modifier meets the specified condition."
+    }
+  },
+  "const String get_color_name(int color, int bold)": {
+    "brief": "Retrieves the name of a color based on its color code and boldness flag from a predefined color table.",
+    "details": "The function performs a linear search through the static color_table to find an entry that matches both the specified color code and boldness flag. If a matching entry is found, it returns the associated color name as a String object. If no match is found, it returns an empty String, indicating that the particular color configuration is not defined. This method provides a straightforward and efficient way to map color codes and styles to human-readable names, facilitating consistent color management across the application.",
+    "params": {
+      "color": "The integer code representing the color to search for.",
+      "bold": "An integer flag indicating whether the color should be bold (e.g., 1 for bold, 0 for normal)."
+    },
+    "returns": "The name of the color as a String if a matching entry is found; otherwise, an empty String.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function assumes that the color_table is a static, predefined collection, ensuring quick lookups without dynamic memory allocations. It performs a linear search, which is efficient given the typically small size of color_table.",
+    "rationale": "This function is used whenever the application needs to convert a color code and style flag into a human-readable name, such as for display purposes or logging, ensuring consistent naming conventions across different parts of the system.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a8b3ce0fa1971c6ae574efe07adf3e22c",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_color_name",
+    "qualified_name": null,
+    "definition": "const String get_color_name",
+    "argsstring": "(int color, int bold)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "typename_8cc, const String get_custom_color_name(Character *ch, int slot)": "Called with the selected color and boldness to obtain the corresponding color name string."
+    }
+  },
+  "const String get_color_code(int color, int bold)": {
+    "brief": "Retrieves the color code string that matches the specified color and boldness settings from a predefined color table.",
+    "details": "This function performs a linear search through a constant collection of color and style configurations stored in 'color_table'. It compares each entry's color and boldness attributes with the provided parameters. When a matching entry is found, it returns the associated color code as a String object. If no match exists, it returns an empty String, indicating that the requested style is not defined. This method ensures consistent retrieval of style codes based on standardized configurations, facilitating uniform visual formatting across the application.",
+    "params": {
+      "color": "The integer value representing the desired color to look up in the color table.",
+      "bold": "The integer value indicating whether the text should be bold; used to match the style in the color table."
+    },
+    "returns": "The color code String corresponding to the specified style, or an empty String if no match is found.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the 'color_table' being a fixed, predefined collection, making lookups efficient for small, static datasets. It performs a linear search, which is suitable given the likely small size of the color table.",
+    "rationale": "This function is used whenever a specific text style needs to be applied based on color and boldness preferences, such as in text rendering or UI styling, ensuring consistent style codes are retrieved efficiently.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a740094bb27ad67225c5ed024b127efef",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_color_code",
+    "qualified_name": null,
+    "definition": "const String get_color_code",
+    "argsstring": "(int color, int bold)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "typename_8cc, const String get_custom_color_code(Character *ch, int slot)": "Called with the selected color and boldness to generate and return the appropriate color code string."
+    }
+  },
+  "const String get_custom_color_name(Character *ch, int slot)": {
+    "brief": "Retrieves the name of a character's custom or default color setting at a specified slot.",
+    "details": "This function determines the appropriate color name for a character based on their personalized settings or default configurations. It first checks if the character is a player (not an NPC) and if a custom color is set for the specified slot; if so, it uses these custom settings. Otherwise, it falls back to predefined settings stored in the csetting_table. The function then calls get_color_name with the selected color code and boldness flag to obtain the corresponding color name string. This approach ensures that each character's display color accurately reflects their individual preferences when available, or defaults otherwise, facilitating consistent and customizable visual representation in the game interface.",
+    "params": {
+      "slot": "Index specifying which color setting slot to access.",
+      "ch": "Pointer to the Character object whose color name is to be retrieved."
+    },
+    "returns": "The name of the color as a String, corresponding to the character's custom or default settings.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function prioritizes player-specific color settings over default configurations, allowing for personalized visual customization. It also handles cases where no custom color is set by falling back to predefined defaults, ensuring a valid color name is always returned.",
+    "rationale": "This function is useful when displaying character-specific color information in messages, interfaces, or logs, especially when characters may have customized their appearance settings. It simplifies retrieving the correct color name, respecting user preferences and default configurations.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a046a0ac1f30a0ad39b00f1a113984ff6",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_custom_color_name",
+    "qualified_name": null,
+    "definition": "const String get_custom_color_name",
+    "argsstring": "(Character *ch, int slot)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "config_8cc, void config_color_func(Character *ch, String argument, int type)": "Retrieves a custom color name for display purposes based on the character and setting slot."
+    }
+  },
+  "const String get_custom_color_code(Character *ch, int slot)": {
+    "brief": "Generates the color code string for a character's specified color slot, incorporating custom or default settings.",
+    "details": "This function determines the appropriate color and boldness settings for a given character and color slot. If the character is a player with custom settings for that slot, it uses those; otherwise, it defaults to the predefined configurations from the csetting_table. It then calls get_color_code with these parameters to retrieve the corresponding color code string, ensuring consistent and customizable text styling in the game output. This mechanism supports personalized color schemes for players while maintaining standard styles for NPCs or unset slots, facilitating flexible and maintainable visual formatting.",
+    "params": {
+      "slot": "Index of the color slot to query, representing different style categories.",
+      "ch": "Pointer to the Character object for which the color code is being retrieved."
+    },
+    "returns": "A String containing the color code corresponding to the character's color and style settings for the specified slot.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function prioritizes player-specific customizations, falling back to default settings for NPCs or unset slots. It ensures that color and style preferences are consistently applied across various output contexts.",
+    "rationale": "This function is used whenever a character's visual styling needs to be retrieved for message formatting, such as in chat, combat logs, or interface displays, enabling personalized and consistent text presentation based on individual or default configurations.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a8309189437b4ddc0b83037787cef4a0d",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_custom_color_code",
+    "qualified_name": null,
+    "definition": "const String get_custom_color_code",
+    "argsstring": "(Character *ch, int slot)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__info_8cc, void score_new(Character *ch)": "Retrieves color codes for various score sections, used to colorize parts of the output.",
+      "act__info_8cc, void print_new_affects(Character *ch)": "Called to retrieve color codes for border and torch symbols used in formatting the output."
+    }
+  },
+  "const String weapon_name(int weapon_type)": {
+    "brief": "Retrieves the name associated with a given weapon type identifier.",
+    "details": "The function searches through a predefined weapon table to find an entry whose type matches the provided weapon_type parameter. It performs a linear iteration over the table entries, comparing each entry's type with the input. If a matching entry is found, it returns the corresponding name as a String object. If no match is found after completing the search, it defaults to returning the string \"exotic\". This ensures that all recognized weapon types are correctly mapped to their names, while unrecognized types are categorized as exotic. The function relies on the weapon_table, which is a constant list containing all valid weapon entries, to perform the lookup efficiently within the context of the game's weapon management system.",
+    "params": {
+      "weapon_type": "An integer representing the specific type of weapon to retrieve the name for."
+    },
+    "returns": "A String object containing the weapon's name if found; otherwise, the string \"exotic\".",
+    "tparams": null,
+    "throws": "This function does not throw exceptions.",
+    "notes": "The function performs a linear search, which is efficient given the typically small size of the weapon_table. It provides a default name \"exotic\" for unrecognized weapon types, ensuring robustness in cases of invalid or unknown input.",
+    "rationale": "This function is used whenever the system needs to display or process the name of a weapon based on its type identifier, such as in user interfaces, logs, or game logic that involves weapon descriptions.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a4d26adddd9f7a646df803a7f47da26d0",
+    "etype": "member",
+    "kind": "function",
+    "name": "weapon_name",
+    "qualified_name": null,
+    "definition": "const String weapon_name",
+    "argsstring": "(int weapon_type)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "const String print_bit_names(const std::vector< flag_type > &flag_table, const Flags &flags)": {
+    "brief": "Generates a space-separated string of the names of all active flags based on the provided flag table and Flags object.",
+    "details": "The function iterates over each element in the flag_table, which contains flag_type objects with associated names and bit positions. For each flag, it checks if the corresponding bit is set in the flags object using the has() method. If the flag is active, its name is appended to a buffer string with a leading space. After processing all flags, the function returns the concatenated string of flag names, omitting the initial space for proper formatting. If no flags are active, it returns the string 'none'. This implementation provides an efficient way to produce a human-readable list of active flags for display, debugging, or logging purposes, leveraging the flag metadata and current flag states.",
+    "params": {
+      "flag_table": "A vector of flag_type objects, each representing a named flag with associated bit information.",
+      "flags": "A Flags object that encapsulates the current set of active flags."
+    },
+    "returns": "A String listing the names of all set flags separated by spaces, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function constructs the output string by appending flag names with a leading space, then removes the initial space for correct formatting. This approach ensures a clean, human-readable list of active flags.",
+    "rationale": "This function is used whenever a human-readable representation of active flags is needed, such as in status displays, logs, or debugging outputs, providing clear insight into the current state of various boolean attributes within the system.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a074b5349ee8c866a00c5dc54077bfd2b",
+    "etype": "member",
+    "kind": "function",
+    "name": "print_bit_names",
+    "qualified_name": null,
+    "definition": "const String print_bit_names",
+    "argsstring": "(const std::vector< flag_type > &flag_table, const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "typename_8cc, const String room_bit_name(const Flags &flags)": "Called to produce a string listing the names of the set flags based on room_flags and the provided flags.",
+      "typename_8cc, const String comm_bit_name(const Flags &flags)": "Called to produce a string listing the names of the bits set in comm_flags according to the provided Flags object.",
+      "typename_8cc, const String revoke_bit_name(const Flags &flags)": " Called with revoke_flags and flags to generate a string of the names of the set bits in flags.",
+      "typename_8cc, const String censor_bit_name(const Flags &flags)": "Called with censor_flags and flags to generate a string of the names of the set bits in flags.",
+      "typename_8cc, const String cgroup_bit_name(const Flags &flags)": "Called with cgroup_flags and flags to produce a string listing the names of the set bits in flags.",
+      "typename_8cc, const String cont_bit_name(const Flags &flags)": "Called to produce a string listing the names of the bits set in cont_flags according to the provided flags.",
+      "typename_8cc, const String extra_bit_name(const Flags &flags)": "Called with extra_flags and flags to produce a string listing the names of the set bits in flags.",
+      "typename_8cc, const String off_bit_name(const Flags &flags)": "Called to generate a string listing the names of the bits set in off_flags according to the provided flags.",
+      "typename_8cc, const String act_bit_name(const Flags &flags, bool npc)": " Called to produce a string listing the names of the bits set in the provided Flags object, appended to the 'npc' or 'player' label.",
+      "typename_8cc, const String part_bit_name(const Flags &flags)": "Called to produce a string listing the names of the bits that are set in part_flags according to the provided flags.",
+      "typename_8cc, const String form_bit_name(const Flags &flags)": "Called to produce a string listing the names of the bits set in form_flags according to the provided flags.",
+      "typename_8cc, const String plr_bit_name(const Flags &flags)": "Called with pcdata_flags and flags to produce a string listing the names of the set flags.",
+      "typename_8cc, const String wear_bit_name(const Flags &flags)": "Called to produce a string listing the names of the bits set in wear_flags according to the provided flags."
+    }
+  },
+  "const String extra_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing the names of all active extra flags.",
+    "details": "The function extra_bit_name receives a Flags object representing the current set of flags. It internally calls the print_bit_names function, passing a predefined list of extra flags (extra_flags) along with the provided Flags object. The print_bit_names function then constructs and returns a String containing the names of all flags that are currently active within the Flags object, separated by spaces. If no flags are active, it returns the String 'none'. This mechanism simplifies the process of visualizing active flags for game objects, effects, or other entities, aiding in debugging, logging, and user interface presentation.",
+    "params": {
+      "flags": "A Flags object indicating which extra flags are currently active."
+    },
+    "returns": "A String listing the names of all active extra flags, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function relies on the predefined extra_flags list to determine which flags to check. It provides a convenient way to obtain a human-readable representation of an object's or effect's flags, facilitating debugging and display purposes.",
+    "rationale": "Used in contexts where a clear, human-readable description of active flags is needed, such as displaying object attributes, debugging flag states, or logging game object properties during gameplay or development.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1ac2cde8d3391ff91466ac2a0dcd28de28",
+    "etype": "member",
+    "kind": "function",
+    "name": "extra_bit_name",
+    "qualified_name": null,
+    "definition": "const String extra_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_ostat(Character *ch, Object *obj)": "Used to generate a string of extra flag names for the object, including cached flags.",
+      "magic_8cc, void spell_identify(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": "Converts extra flags of the object into a human-readable string for display.",
+      "act__info_8cc, void show_affect_to_char(const affect::Affect *paf, Character *ch)": "Called to get the string representation of object flags when the affect's bitvector is associated with 'TO_OBJECT'."
+    }
+  },
+  "const String act_bit_name(const Flags &flags, bool npc)": {
+    "brief": "Generates a descriptive string indicating whether the flags belong to an NPC or a player, along with their active flag names.",
+    "details": "The function act_bit_name constructs a human-readable string that specifies whether the given flags are associated with an NPC or a player character. It checks the npc parameter to determine the entity type: if true, it prefixes the output with 'npc ', otherwise with 'player '. It then calls print_bit_names with the appropriate flag table (act_flags for NPCs or plr_flags for players) and the provided Flags object to generate a space-separated list of active flag names. If no flags are active, the function returns 'npc none' or 'player none' accordingly. This function is useful for debugging, logging, or displaying character states in a clear format, aiding developers and users in understanding character attributes at runtime.",
+    "params": {
+      "flags": "A Flags object representing the current set of bit flags to be interpreted.",
+      "npc": "A boolean indicating whether the flags belong to an NPC (true) or a player (false)."
+    },
+    "returns": "A String containing the entity type prefix ('npc ' or 'player ') followed by the list of active flag names, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on print_bit_names to generate the list of active flags, which returns 'none' if no flags are set. The prefix helps distinguish between NPC and player flags in output, facilitating clearer debugging and status reporting.",
+    "rationale": "This function is used in contexts where it's necessary to display or log the current active flags of NPCs or players, such as in status displays, debugging, or command outputs, providing a quick and understandable overview of character states.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1ae14ba1a2bf05c393e347006018448bd2",
+    "etype": "member",
+    "kind": "function",
+    "name": "act_bit_name",
+    "qualified_name": null,
+    "definition": "const String act_bit_name",
+    "argsstring": "(const Flags &flags, bool npc)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string of active act flags for the victim.",
+      "act__info_8cc, void do_showflags(Character *ch, String argument)": "Used to generate a string of act-related flags for the victim character.",
+      "act__info_8cc, void do_consider(Character *ch, String argument)": "Called to generate a string representation of victim's act flags for display."
+    }
+  },
+  "const String comm_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string of all active communication flags based on the provided Flags object.",
+    "details": "This function calls the print_bit_names utility with a predefined set of communication flags and the given Flags object. It processes the bit flags to produce a space-separated String listing the names of all active communication-related flags. If no flags are active, it returns the String 'none'. This approach simplifies the translation of internal bit flag states into a format suitable for display, logging, or debugging, ensuring clear insight into the current communication settings represented by the Flags object.",
+    "params": {
+      "flags": "A Flags object representing the current set of communication-related bit flags."
+    },
+    "returns": "A String listing the names of all set communication flags, separated by spaces, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function relies on the global 'comm_flags' vector, which contains all available communication flags. It provides a convenient way to visualize the active communication options for characters or system components.",
+    "rationale": "Used in contexts where a clear, human-readable summary of communication flags is needed, such as in status displays, logs, or debugging outputs, facilitating easier understanding of a character's or system's communication state.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a8896edafc23e8407c1e388a2dd6c6f27",
+    "etype": "member",
+    "kind": "function",
+    "name": "comm_bit_name",
+    "qualified_name": null,
+    "definition": "const String comm_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string of communication flags for the victim."
+    }
+  },
+  "const String revoke_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing all active revoke-related flags in the given Flags object.",
+    "details": "This function calls the print_bit_names function with a predefined collection of revoke_flags and the provided Flags object. It constructs a space-separated string of the names of all flags currently set within the Flags object. If no revoke flags are active, it returns the string 'none'. This implementation provides a clear and concise textual representation of revoke-related privileges or restrictions, which is useful for debugging, status displays, or logging purposes. The function leverages the centralized revoke_flags collection to ensure consistent and accurate reporting of revoke states across the system.",
+    "params": {
+      "flags": "A Flags object representing the current set of revoke-related bit flags."
+    },
+    "returns": "A String listing the names of all active revoke flags, or 'none' if no flags are set.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the predefined revoke_flags collection to determine which flags are considered revoke-related. It provides a human-readable summary suitable for debugging and status reporting.",
+    "rationale": "This function is used whenever a textual representation of revoke flags is needed, such as in character status reports, logs, or debugging outputs, to quickly assess which revoke privileges or restrictions are active for an entity.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a7cf44018975ff473734ec4795ab6820b",
+    "etype": "member",
+    "kind": "function",
+    "name": "revoke_bit_name",
+    "qualified_name": null,
+    "definition": "const String revoke_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string of revoke flags for the victim."
+    }
+  },
+  "const String cgroup_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing the names of all active command group flags in a Flags object.",
+    "details": "The function cgroup_bit_name internally calls print_bit_names, passing it the predefined cgroup_flags table and the provided Flags object. It processes the Flags object to identify which bits are set and maps these to their corresponding flag names from the table. The resulting string lists all active flags separated by spaces, or 'none' if no flags are active. This approach allows for a clear and concise textual representation of the current command group permissions or categories, useful for debugging, logging, or user interface display.",
+    "params": {
+      "flags": "A Flags object representing the current set of command group flags."
+    },
+    "returns": "A String containing the names of all set flags separated by spaces, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function relies on the cgroup_flags table to map flag bits to human-readable names. It provides a convenient way to interpret the bitmask of command group flags in a user-friendly format.",
+    "rationale": "Used in contexts where a clear textual representation of command group permissions or categories is needed, such as in status reports, logs, or debugging outputs, to facilitate understanding of the current flag states.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a08fa6ecc54d1efab03d13e475fd1a28c",
+    "etype": "member",
+    "kind": "function",
+    "name": "cgroup_bit_name",
+    "qualified_name": null,
+    "definition": "const String cgroup_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string of command group flags for the victim if applicable."
+    }
+  },
+  "const String censor_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing the active censorship-related flags in the provided Flags object.",
+    "details": "This function utilizes the print_bit_names utility to convert the set bits within the given Flags object into a space-separated string of their corresponding flag names, based on the predefined censor_flags list. It internally calls print_bit_names, passing the censor_flags list and the Flags object, which iterates through each flag definition to determine which flags are active. If no censorship flags are set, the function returns the string 'none'. This implementation provides a clear and concise textual representation of the current censorship state, facilitating debugging, logging, and user interface display of censorship settings.",
+    "params": {
+      "flags": "A Flags object representing the current set of censorship-related bit flags."
+    },
+    "returns": "A String listing the names of all active censorship flags separated by spaces, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the global or external 'censor_flags' list, which defines the mapping between flag bits and their string names. It provides a straightforward way to visualize censorship states for debugging or display purposes.",
+    "rationale": "This function is used whenever a human-readable description of active censorship flags is needed, such as in status reports, logs, or user interfaces, to improve transparency and facilitate content moderation management.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a77ae5e852ccb8175aabe11b068e546ae",
+    "etype": "member",
+    "kind": "function",
+    "name": "censor_bit_name",
+    "qualified_name": null,
+    "definition": "const String censor_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string of censorship flags for the victim."
+    }
+  },
+  "const String plr_bit_name(const Flags &flags)": {
+    "brief": "Returns a human-readable string listing all active player-related bit flags.",
+    "details": "The function plr_bit_name creates a descriptive string of all active player-specific flags contained within the provided Flags object. It achieves this by invoking the print_bit_names function, passing in a predefined collection of player data flags (pcdata_flags) and the Flags object. The resulting string lists the names of all flags that are currently set, separated by spaces, or returns 'none' if no flags are active. This approach facilitates easy interpretation and debugging of player attributes by providing a clear textual representation of their current state.",
+    "params": {
+      "flags": "A Flags object representing the current set of player-related bit flags."
+    },
+    "returns": "A String listing the names of all active player flags, separated by spaces, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function relies on the predefined pcdata_flags collection to determine which flags are considered player-related. It provides a convenient way to generate human-readable status reports for player attributes, useful in debugging, status displays, and logging.",
+    "rationale": "Used in contexts where a clear textual representation of a player's current attributes is needed, such as displaying flags to players, debugging, or logging player states during gameplay or system checks.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1ad75fb06efbc096080206eeecb614e4f3",
+    "etype": "member",
+    "kind": "function",
+    "name": "plr_bit_name",
+    "qualified_name": null,
+    "definition": "const String plr_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string of player-specific flags if the victim is a player.",
+      "act__info_8cc, void do_showflags(Character *ch, String argument)": "Called to get a string of player-specific flags for the victim's pcdata when the victim is a player.",
+      "act__info_8cc, void do_consider(Character *ch, String argument)": "Called to generate a string representation of victim's player flags for display."
+    }
+  },
+  "const String room_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing all active room bit flags.",
+    "details": "This function creates a descriptive string that lists all the active flags associated with a room, based on the provided Flags object. It internally invokes the print_bit_names function, passing in the predefined collection of room flags and the current Flags instance. The output is a space-separated list of flag names, or 'none' if no flags are set. This facilitates easy interpretation of room properties by translating internal bit representations into understandable text, aiding debugging, status reporting, and user interface display.",
+    "params": {
+      "flags": "A Flags object representing the current set of room-related bit flags."
+    },
+    "returns": "A String listing the names of all active room flags, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the predefined 'room_flags' collection to map flag bits to their string names, ensuring consistency across the system.",
+    "rationale": "This function is used whenever a clear, human-readable description of a room's properties is needed, such as in status displays, logs, or debugging outputs, providing insight into the current state of room attributes.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a1faab2e1d32a64b570db2b63de3f1a77",
+    "etype": "member",
+    "kind": "function",
+    "name": "room_bit_name",
+    "qualified_name": null,
+    "definition": "const String room_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_rstat(Character *ch, Room *location)": "Called to generate a string of bit flags representing the affect's bits."
+    }
+  },
+  "const String wear_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing all active wear-related flags from the provided Flags object.",
+    "details": "This function calls the utility print_bit_names with the predefined wear_flags collection and the given Flags object to produce a space-separated string of all active wear flags. It interprets the bitwise data within the Flags object, translating it into a clear, human-readable format that indicates which wear locations or states are currently active. If no wear flags are set, the function returns the string 'none'. This approach simplifies the presentation of complex flag data for user interfaces, debugging, or logging purposes, ensuring consistent and understandable output across the system.",
+    "params": {
+      "flags": "A Flags object representing the current set of wear-related bit flags."
+    },
+    "returns": "A String listing the names of all active wear flags separated by spaces, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function relies on the predefined wear_flags collection and the print_bit_names utility to generate the output, ensuring consistency in how wear flags are represented across different parts of the system.",
+    "rationale": "Used in contexts where a clear, human-readable description of an item's wear status is needed, such as in user interfaces, debugging logs, or status reports, facilitating easier understanding of complex flag states.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a453c41b9ff70c2b31b9fd92488475933",
+    "etype": "member",
+    "kind": "function",
+    "name": "wear_bit_name",
+    "qualified_name": null,
+    "definition": "const String wear_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "_auction_8cc, void do_auction(Character *ch, String argument)": "Provides human-readable wear flags for the auction status display.",
+      "act__info_8cc, void do_pit(Character *ch, String argument)": "Retrieves the names of wear flags for user guidance when searching for wear locations.",
+      "set-stat_8cc, void format_ostat(Character *ch, Object *obj)": "Not used in this function, but available for wear flag descriptions.",
+      "wiz__gen_8cc, void do_olevel(Character *ch, String argument)": "Called to retrieve the string representation of an object's wear flags for display purposes."
+    }
+  },
+  "const String form_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing all active form-related flags.",
+    "details": "The form_bit_name function utilizes the print_bit_names utility to produce a space-separated list of the names of all flags currently active within the provided Flags object. It references the predefined form_flags table, which contains the mapping of individual bits to their descriptive names. If no flags are set, the function returns the string 'none'. This design enables easy interpretation of a character's form attributes for display, logging, or debugging purposes by translating internal bit flags into understandable text. The function's reliance on print_bit_names ensures consistent formatting and handling of the flag data.",
+    "params": {
+      "flags": "A Flags object representing the current set of form-related bit flags."
+    },
+    "returns": "A String listing the names of all active form flags, separated by spaces, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function provides a convenient way to visualize form attributes based on internal bit flags, facilitating debugging and user interface display. It depends on the correctness of the form_flags table and the print_bit_names utility to produce accurate and readable output.",
+    "rationale": "Used in contexts where a clear, human-readable description of a character's form attributes is needed, such as in status reports, debugging outputs, or command responses, leveraging existing flag-to-name mappings for consistency.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a7758266c0c8c4847e380235bc9de29e9",
+    "etype": "member",
+    "kind": "function",
+    "name": "form_bit_name",
+    "qualified_name": null,
+    "definition": "const String form_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string describing the victim's form flags.",
+      "act__info_8cc, void do_showflags(Character *ch, String argument)": "Creates a string representing the victim's form-related flags.",
+      "act__info_8cc, void do_consider(Character *ch, String argument)": "Used to generate a string representation of the victim's form flags."
+    }
+  },
+  "const String part_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing the active body part flags based on the provided Flags object.",
+    "details": "The function part_bit_name creates a descriptive string of all active body part flags contained within the given Flags object. It leverages the print_bit_names function, passing in a predefined collection of body part flag definitions (part_flags) and the Flags object. The print_bit_names function examines each flag in the table, determines which are active in the Flags object, and concatenates their associated names into a space-separated string. If no flags are active, it returns 'none'. This process facilitates easy visualization and debugging of entity body part states, supporting features such as status displays, logs, and descriptive outputs.",
+    "params": {
+      "flags": "A Flags object representing the current set of body part flags."
+    },
+    "returns": "A String listing the names of all active body part flags, or 'none' if no flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function relies on the global part_flags collection, which defines the mapping between flag bits and their human-readable names. It provides a straightforward way to interpret and display complex flag states in a user-friendly format.",
+    "rationale": "Used in contexts where a clear, textual representation of an entity's body parts is needed, such as in status reports, debugging, or user interface displays, aiding developers and users in understanding the current state efficiently.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1abb0dcaafa40bc9608ff467ee1db0b8f7",
+    "etype": "member",
+    "kind": "function",
+    "name": "part_bit_name",
+    "qualified_name": null,
+    "definition": "const String part_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string describing the victim's parts flags.",
+      "act__info_8cc, void do_showflags(Character *ch, String argument)": "Produces a string of part-related flags for the victim.",
+      "act__info_8cc, void do_consider(Character *ch, String argument)": "Used to generate a string representation of the victim's parts flags."
+    }
+  },
+  "const String cont_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing all active container-related flags.",
+    "details": "The cont_bit_name function calls the print_bit_names utility, passing it a predefined list of container flag definitions (cont_flags) along with the provided Flags object. The print_bit_names function inspects the bits set within the Flags object and constructs a space-separated String of the corresponding flag names. If no flags are active, it returns the String 'none'. This process provides a clear, human-readable summary of the current container state, which is useful for debugging, logging, and user interface display. The function encapsulates the logic of translating internal flag bits into understandable text, ensuring consistency across different parts of the system.",
+    "params": {
+      "flags": "A Flags object representing the current set of container-related flags."
+    },
+    "returns": "A String listing the names of all active flags, or 'none' if no flags are set.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function relies on the predefined 'cont_flags' list to interpret the flag bits. It provides a human-readable overview suitable for debugging and status reporting.",
+    "rationale": "Used in contexts where a clear textual representation of container flags is needed, such as status displays, logs, or debugging outputs, to facilitate understanding of container states at a glance.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1ad4a73ddd33f9b8d0b117b6c95c18b2f4",
+    "etype": "member",
+    "kind": "function",
+    "name": "cont_bit_name",
+    "qualified_name": null,
+    "definition": "const String cont_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_ostat(Character *ch, Object *obj)": "Called to generate a string of container flags for the object's value."
+    }
+  },
+  "const String off_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing all flags that are currently turned off.",
+    "details": "This function internally invokes the print_bit_names utility, providing it with the predefined list of off_flags and the given Flags object. It produces a space-separated string of the names of all flags within off_flags that are set to off in the Flags object. If no flags are off, it returns the string 'none'. This mechanism enables clear visualization of the off-state flags, which is useful for debugging, status reporting, or user interface displays related to combat or system configuration. The function leverages the encapsulation of flag states within the Flags class and the naming capabilities of the String class to produce an easily interpretable output.",
+    "params": {
+      "flags": "A Flags object representing the current set of flags, used to identify which flags are off."
+    },
+    "returns": "A String listing the names of all off flags that are active, separated by spaces, or 'none' if no such flags are active.",
+    "tparams": null,
+    "throws": null,
+    "notes": "This function is specifically tailored to work with the predefined off_flags list, which centralizes the representation of flags considered 'off' in the system. It provides a convenient way to generate descriptive status strings for debugging or display purposes.",
+    "rationale": "Used in contexts where a clear, human-readable summary of which offensive or status flags are turned off is needed, such as in character status displays, debugging outputs, or combat logs, aiding developers and users in understanding the current state efficiently.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a3866d0a368bafd533bbc1513ba80713e",
+    "etype": "member",
+    "kind": "function",
+    "name": "off_bit_name",
+    "qualified_name": null,
+    "definition": "const String off_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void format_mstat(Character *ch, Character *victim)": "Used to generate a string of offensive flags if the victim is an NPC.",
+      "act__info_8cc, void do_showflags(Character *ch, String argument)": "Generates a string of offensive or combat-related flags for NPCs.",
+      "act__info_8cc, void do_consider(Character *ch, String argument)": "Called to generate a string representation of victim's offensive flags for display."
+    }
+  },
+  "const String wiz_bit_name(const Flags &flags)": {
+    "brief": "Generates a human-readable string listing all the set bit flags in the provided Flags object.",
+    "details": "The function iterates through a predefined table of flag entries, checking each flag to determine if it is set in the given Flags object using the Flags::has method. For each set flag, its corresponding name is appended to a buffer string with a leading space. After processing all entries, the function returns a string containing the concatenated flag names, excluding the initial space, or 'none' if no flags are set. This approach efficiently translates a bitmask of flags into a human-readable string of flag names, facilitating debugging, logging, or user interface display of active flags.",
+    "params": {
+      "flags": "A reference to a Flags object representing the set of bit flags to be converted into a string."
+    },
+    "returns": "A String containing the names of all set flags separated by spaces, or 'none' if no flags are set.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the global 'wiznet_table' to map flags to their string names. It ensures that no leading space appears in the output by removing it before returning. If no flags are set, it explicitly returns 'none' to clearly indicate the absence of active flags.",
+    "rationale": "This function is useful in contexts where a clear, human-readable list of active flags is needed, such as displaying character or system states, debugging, or generating logs. It simplifies the process of interpreting bitmask flags into understandable text for users or developers.",
+    "state": "refined_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc_1a78763d0c21515f018cab401effd28100",
+    "etype": "member",
+    "kind": "function",
+    "name": "wiz_bit_name",
+    "qualified_name": null,
+    "definition": "const String wiz_bit_name",
+    "argsstring": "(const Flags &flags)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__info_8cc, void do_showflags(Character *ch, String argument)": "Called to generate a string of wizard-related bit flags for NPCs or players."
+    }
+  },
+  "typename.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "typename_8cc",
+    "mid": "typename_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "typename.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

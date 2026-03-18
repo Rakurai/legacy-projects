@@ -1,0 +1,49 @@
+{
+  "void substitute_alias(Descriptor *d, String argument)": {
+    "brief": "Substitutes an alias in the command string for a character.",
+    "details": "Substitutes aliases and processes commands for a character.\nThis function processes a command string for a character, substituting any defined aliases before interpreting the command. It first checks if the character and their data are valid. If the character has a prefix and the command does not already start with 'prefix', it prepends the prefix to the command. If the character is an NPC or the command starts with 'alias', 'una', or 'prefix', it directly interprets the command. Otherwise, it attempts to substitute the first word of the command with a defined alias. If an alias is found, it replaces the command with the alias and any remaining arguments. The function ensures the final command does not exceed the maximum input length, truncating if necessary, before interpreting it.",
+    "params": {
+      "d": "A pointer to a Descriptor object, which represents the network connection and contains the character for whom the command is being processed.",
+      "argument": "A String object containing the command string to be processed, which may include aliases to be substituted."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_playing_state_8cc",
+    "mid": "_playing_state_8cc_1a08fe07f3534427fa8a70787d1dd64135",
+    "etype": "member",
+    "kind": "function",
+    "name": "substitute_alias",
+    "qualified_name": null,
+    "definition": "void substitute_alias",
+    "argsstring": "(Descriptor *d, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "PlayingState.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_playing_state_8cc",
+    "mid": "_playing_state_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "PlayingState.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

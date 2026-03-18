@@ -1,0 +1,179 @@
+{
+  "HUNT_CONDITIONS": {
+    "brief": "HUNT_CONDITIONS is a typedef for the 'hunt_conditions' structure that encapsulates parameters and state information used during character hunting and pathfinding processes.",
+    "details": "HUNT_CONDITIONS is a typedef alias for the 'hunt_conditions' structure, which holds various parameters and state variables essential for executing hunting and pathfinding logic within the game. This structure includes data such as the current area, source and destination rooms, steps taken, and flags that influence access and visibility decisions. It is utilized extensively in functions like find_path and access_room to maintain and manipulate the context of a character's hunting behavior, enabling consistent and flexible pathfinding and environment interaction throughout the game logic.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This typedef simplifies references to the complex 'hunt_conditions' structure, facilitating clearer code and easier maintenance when passing context information across multiple functions involved in hunting and pathfinding.",
+    "rationale": "Used in pathfinding and environment access functions, HUNT_CONDITIONS provides a structured way to pass and manage the state and parameters necessary for character hunting logic, ensuring modularity and clarity in the game's AI behavior implementations.",
+    "state": "refined_summary",
+    "cid": "hunt_8cc",
+    "mid": "hunt_8cc_1a7eab6619006102e36a77a8f047ab7e15",
+    "etype": "member",
+    "kind": "typedef",
+    "name": "HUNT_CONDITIONS",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "hunt_8cc, static int find_path(HUNT_CONDITIONS *cond)": "Passed as a parameter and used to store and retrieve pathfinding state, including area, from_room, to_room, and steps, as well as to determine the pathfinding context.",
+      "hunt_8cc, static Room * access_room(HUNT_CONDITIONS *cond, Exit *ex)": "Provides conditions such as 'same_area' and 'thru_doors' that influence access logic and visibility checks."
+    }
+  },
+  "exit_num": {
+    "brief": "The variable `exit_num` specifies the maximum number of exits a room can have.",
+    "details": "This constant defines the upper limit on the number of exits that a room can possess within the system, facilitating consistent iteration and processing in algorithms such as pathfinding and environment exploration. It is initialized to 6, reflecting typical directional options (e.g., north, south, east, west, up, down) in a multi-directional environment. Being a static const, it ensures a fixed value that is scoped to the translation unit, providing compile-time guarantees of immutability and scope confinement.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "As a static constant, `exit_num` is optimized for use in loop bounds and array sizes, preventing magic numbers and enhancing code clarity.",
+    "rationale": "The variable exists to standardize the maximum number of exits per room, simplifying iteration logic and ensuring consistency across different parts of the codebase that handle room navigation and environment modeling.",
+    "state": "refined_summary",
+    "cid": "hunt_8cc",
+    "mid": "hunt_8cc_1a84adb2a5b89b329cdbfb74e6919149f2",
+    "etype": "member",
+    "kind": "variable",
+    "name": "exit_num",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "hunt_8cc, static int find_path(HUNT_CONDITIONS *cond)": "Used as the upper bound in loops to explore all possible exits of a room."
+    }
+  },
+  "static Room * access_room(HUNT_CONDITIONS *cond, Exit *ex)": {
+    "brief": "Determines if a room accessible via a specific exit can be entered under current conditions.",
+    "details": "The function evaluates multiple criteria to ascertain whether the destination room connected by the given exit is accessible. It first checks if the exit pointer is valid and if the exit leads to a valid room. It then verifies whether the hunt conditions restrict access to the same area and if the target room's area matches the specified area. Additionally, it considers whether doors can be passed through based on the exit's flags and the hunt conditions, specifically checking if the exit is closed when door traversal is disallowed. Finally, it confirms that the character initiating the hunt has permission to see or access the target room via the can_see_room function. If all these conditions are satisfied, the function returns a pointer to the target room; otherwise, it returns nullptr, indicating that the room is inaccessible under the current circumstances.",
+    "params": {
+      "ex": "A pointer to an Exit object representing the exit to be used for accessing the room.",
+      "cond": "A pointer to a HUNT_CONDITIONS structure that specifies constraints such as area restriction, door passage permission, and the character involved."
+    },
+    "returns": "A pointer to the accessible Room object if all conditions are met; otherwise, nullptr.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function combines checks for room validity, area restrictions, door states, and visibility permissions to determine accessibility. It ensures that only reachable and visible rooms are returned, supporting consistent navigation logic.",
+    "rationale": "This function is used during pathfinding and movement validation to ensure that a character can legally and logically access a connected room, respecting game rules about area boundaries, door states, and visibility constraints.",
+    "state": "refined_summary",
+    "cid": "hunt_8cc",
+    "mid": "hunt_8cc_1a42b18e43bd064e29a4873e68e52d5b64",
+    "etype": "member",
+    "kind": "function",
+    "name": "access_room",
+    "qualified_name": null,
+    "definition": "static Room * access_room",
+    "argsstring": "(HUNT_CONDITIONS *cond, Exit *ex)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "hunt_8cc, static int find_path(HUNT_CONDITIONS *cond)": "Called to retrieve the room object connected via a specific exit, and its result influences control flow based on whether the room is null or already visited."
+    }
+  },
+  "static int find_path(HUNT_CONDITIONS *cond)": {
+    "brief": "Performs a breadth-first search to find the shortest path from a starting room to a target room and determines the initial direction to take.",
+    "details": "The function executes a breadth-first search beginning from cond->from_room, exploring all accessible neighboring rooms through available exits. It assigns a unique hunt_id to each visited room to prevent revisiting and uses back pointers (hunt_back) to record the search path. The search proceeds outward in rings, moving through linked rooms in each ring before expanding to the next, effectively spiraling outward until the target room (cond->to_room) is found or the maximum steps are exceeded. If the target is located within the allowed steps, the function backtracks from the target to the start, counting the steps and verifying the path integrity. It then determines the initial direction from the starting room that leads toward the target by comparing exits. The function handles failure cases such as exceeding step limits, dead ends, loops, or inconsistent backtracking, returning specific negative error codes for each scenario. On success, it returns the index of the first exit direction to take toward the target room.",
+    "params": {
+      "cond": "A pointer to a HUNT_CONDITIONS structure that contains the starting room, target room, maximum steps, and relevant search parameters."
+    },
+    "returns": "The index of the initial direction to move from the starting room toward the target, or a negative error code indicating specific failure conditions.",
+    "tparams": null,
+    "throws": "None explicitly thrown; the function returns error codes for failure scenarios such as exceeding step limits or dead ends.",
+    "notes": "The function uses static variables to manage hunt IDs, ensuring unique identification for each search. It employs a ring-based outward exploration pattern, which efficiently searches in all directions without recursion. Path backtracking is used to determine the first move after the target is found, with safeguards against infinite loops or inconsistent paths. Error codes provide detailed failure reasons, aiding debugging and control flow.",
+    "rationale": "This function is used during pursuit or exploration behaviors to determine the shortest route from a starting point to a specific target, such as a character hunting another or an AI navigating toward an objective. Its design supports efficient pathfinding within the constraints of maximum steps, making it suitable for real-time decision-making in the game environment.",
+    "state": "refined_summary",
+    "cid": "hunt_8cc",
+    "mid": "hunt_8cc_1ab68d57fe6c758c905677c65b0b532abb",
+    "etype": "member",
+    "kind": "function",
+    "name": "find_path",
+    "qualified_name": null,
+    "definition": "static int find_path",
+    "argsstring": "(HUNT_CONDITIONS *cond)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "hunt_8cc, void hunt_victim(Character *ch)": " Used to determine the shortest route from the hunter's current room to the victim's room, returning the initial direction.",
+      "hunt_8cc, void do_hunt(Character *ch, String argument)": " Called to determine the direction to the victim based on current conditions, setting the hunt course."
+    }
+  },
+  "void do_hunt(Character *ch, String argument)": {
+    "brief": "Performs a hunting action for a character to locate and pursue a specified target within or across game areas.",
+    "details": "The function initiates a hunt for a target character specified by the argument. It first verifies that the character has the necessary hunting skill and stamina, then searches for the target either within the same area or the entire game world, depending on whether the character is an immortal or not. If the target is found and is not in the same room, it employs pathfinding logic to determine the initial direction toward the target, considering maximum steps and door traversal permissions. The process accounts for chance-based misses, where a failed skill check results in a random direction being chosen, simulating a missed trail. Successful skill checks allow the character to determine the precise direction to pursue. The function also handles error conditions, such as invalid directions or inability to find a path, providing appropriate in-game feedback. Skill improvement is managed based on success or failure, encouraging skill development over time. Immortals can hunt across different areas, while regular characters are restricted to their current area. The function ensures that the hunt process is integrated seamlessly with the game's messaging and movement systems, maintaining immersion and consistency.",
+    "params": {
+      "ch": "Pointer to the Character object representing the player issuing the command.",
+      "argument": "String specifying the name or identifier of the target to hunt."
+    },
+    "returns": "Void; the function performs side effects such as messaging, pathfinding, and skill checks without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses probabilistic skill checks to determine success, introducing variability in hunting outcomes. It also respects game rules regarding area restrictions and door traversal, and provides clear feedback messages to players based on the hunt's progress and results.",
+    "rationale": "This function is used when a character attempts to track or pursue another character, either for combat, role-playing, or quest purposes. It is especially useful in scenarios requiring dynamic pursuit behavior, such as chasing fleeing enemies or following clues across different areas, while maintaining game balance through skill-based success chances.",
+    "state": "refined_summary",
+    "cid": "hunt_8cc",
+    "mid": "hunt_8cc_1a6182974fad8696ba5caf3df6aecd910b",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_hunt",
+    "qualified_name": null,
+    "definition": "void do_hunt",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void hunt_victim(Character *ch)": {
+    "brief": "Controls the pursuit and attack behavior of an NPC character targeting a specific victim.",
+    "details": "The function manages an NPC's hunting behavior by first verifying the validity and existence of both the hunter and its target. It checks if the victim still exists in the game world and is visible to the hunter. If the victim is in the same room, the NPC engages in combat with a multi-hit attack and clears its hunting target. If not, it calculates a path toward the victim using a breadth-first search, considering whether to pass through doors and whether the hunt is restricted to the same area. If a valid path is found, the NPC moves in the initial direction of that path, opening closed doors if necessary. There is also a chance for the NPC to choose a random direction if it misses the pathfinding check. If no path is found or the victim is no longer visible, the hunt is canceled, and appropriate messages are displayed. The function manages messaging, movement, and combat initiation to simulate realistic pursuit behavior, ensuring the NPC responds dynamically to changing conditions in the environment.",
+    "params": {
+      "ch": "Pointer to the NPC character executing the hunt.",
+      "dir": "The direction in which the NPC should move toward the victim, determined by pathfinding or randomly if the path is uncertain."
+    },
+    "returns": "Void; executes movement, combat, or aborts the hunt based on current conditions.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function incorporates probabilistic behavior when pathfinding fails, introducing randomness to NPC movement. It also handles door interactions by opening closed doors en route to the target, enhancing realism. The pursuit logic is tightly integrated with visibility checks and world state validation to ensure consistent and immersive NPC behavior.",
+    "rationale": "This function is used during NPC pursuit routines, such as in combat or patrol scenarios, to enable dynamic and context-aware chasing behavior based on environmental conditions and target visibility, supporting engaging and believable AI interactions.",
+    "state": "refined_summary",
+    "cid": "hunt_8cc",
+    "mid": "hunt_8cc_1a9615e87579ac3a9aad717c7d98b59a4d",
+    "etype": "member",
+    "kind": "function",
+    "name": "hunt_victim",
+    "qualified_name": null,
+    "definition": "void hunt_victim",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "fight_8cc, void violence_update()": "Invoked for hunting NPCs to pursue and attack their designated targets."
+    }
+  },
+  "hunt.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "hunt_8cc",
+    "mid": "hunt_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "hunt.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

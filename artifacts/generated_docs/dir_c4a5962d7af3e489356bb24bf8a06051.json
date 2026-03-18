@@ -1,0 +1,24 @@
+{
+  "src/deps": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "dir_c4a5962d7af3e489356bb24bf8a06051",
+    "mid": "dir_c4a5962d7af3e489356bb24bf8a06051",
+    "etype": "compound",
+    "kind": "dir",
+    "name": "src/deps",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

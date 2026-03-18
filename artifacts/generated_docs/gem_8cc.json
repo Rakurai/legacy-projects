@@ -1,0 +1,49 @@
+{
+  "void do_inset(Character *ch, String argument)": {
+    "brief": "Enables a character to insert a gem into an unequipped item with available settings, following necessary validations.",
+    "details": "This function allows a character to embed a gem object into a specified equipment item, performing comprehensive validation checks. It parses the command arguments to identify both the gem and the target equipment, verifying that the character possesses the gem and can drop it, and that the equipment is present, not currently worn, and has available gem settings. It also ensures the gem's level does not exceed the equipment's level, maintaining game balance. Upon passing all checks, the function updates the equipment's gem list, removes the gem from the character's inventory, and invokes the gem effects compilation to apply any new effects. It provides contextual feedback messages to the character and the room, indicating success or failure at each step. Internal state updates ensure object associations and effects remain consistent, supporting dynamic gameplay interactions involving gem embedding.",
+    "params": {
+      "ch": "Pointer to the Character executing the gem insertion command.",
+      "argument": "A string containing the command arguments, specifying the gem and equipment to be used."
+    },
+    "returns": "Void; performs object manipulations and messaging without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function assumes that gem insertion is only possible when the equipment has available gem settings and the gem's level is compatible. It also updates the gem's internal references to reflect its new embedded state, ensuring effects are correctly applied.",
+    "rationale": "This function is used when a player or NPC wants to enhance equipment by embedding gems, enabling customization and effect stacking. It is typically invoked through command interfaces during gameplay, especially in contexts where item upgrading or enhancement is desired.",
+    "state": "refined_summary",
+    "cid": "gem_8cc",
+    "mid": "gem_8cc_1a5b9dfa72dd79e275cbe88a48fb0a5028",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_inset",
+    "qualified_name": null,
+    "definition": "void do_inset",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "gem.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "gem_8cc",
+    "mid": "gem_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "gem.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "src/skill": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "dir_e5d42dd3601b12345387d0dc329aa554",
+    "mid": "dir_e5d42dd3601b12345387d0dc329aa554",
+    "etype": "compound",
+    "kind": "dir",
+    "name": "src/skill",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

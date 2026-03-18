@@ -53,7 +53,7 @@ cd mcp/doc_server && uv run python -m build_script.build_mcp_db
 - **Fail-fast**: No defensive programming, no fallback logic, no legacy compatibility paths. Let errors raise.
 - **Refactoring**: Update interfaces everywhere, remove dead code, no compatibility shims. Source reflects current truth; history lives in git.
 - **Comments**: Explain intent or invariants only. No narration, no restating symbol names, no historical commentary.
-- **Ruff**: E, W, F, I, N, UP, B, C4, SIM rules enabled. Line length 120. Target py314.
+- **Ruff**: Strict baseline in root `ruff.toml` — E, W, F, I, N, UP, B, C4, SIM, ANN, ARG, PL, T20, RUF. Line length 120. Target py314. MCP server extends with additional PLR/B008/ARG001 ignores.
 - **mypy**: Strict mode on MCP server code.
 
 ## Scratch Files

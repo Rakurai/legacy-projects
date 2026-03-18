@@ -130,6 +130,7 @@ EMBEDDING_DIMENSION=768            # default 768
 
 # Local provider config
 EMBEDDING_LOCAL_MODEL=BAAI/bge-base-en-v1.5
+EMBEDDING_ONNX_PROVIDER=CPUExecutionProvider  # ONNX Runtime execution provider (e.g. CoreMLExecutionProvider, CUDAExecutionProvider) <!-- spec 006 -->
 
 # Hosted provider config (only when EMBEDDING_PROVIDER=hosted)
 EMBEDDING_BASE_URL=http://localhost:4000/v1

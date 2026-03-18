@@ -13,7 +13,8 @@ Uses existing doxygen_graph.py parser to load GML.
 from collections import defaultdict
 from pathlib import Path
 
-from build_helpers.artifact_models import load_gml_graph
+from legacy_common.doxygen_graph import load_graph
+
 from build_helpers.entity_processor import SIDE_EFFECT_FUNCTIONS, MergedEntity
 from server.logging_config import log
 
@@ -41,7 +42,7 @@ def load_graph_edges(
     gml_path = artifacts_dir / "code_graph.gml"
     log.info("Loading dependency graph from GML", path=str(gml_path))
 
-    g = load_gml_graph(gml_path)
+    g = load_graph(gml_path)
 
     # Build mapping from graph node ID to deterministic entity ID.
     # GML uses: bare member hash for members, compound_id string for compounds.

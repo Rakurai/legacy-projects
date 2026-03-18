@@ -44,7 +44,6 @@ from build_helpers.loaders import (
     load_capability_graph,
     load_documents,
     load_entities,
-    load_signature_map,
     validate_artifacts,
 )
 from server.config import ServerConfig
@@ -288,55 +287,41 @@ async def main() -> None:
 
     log.info("Starting MCP database build", artifacts_dir=str(config.artifacts_path))
 
-    # Stage 1: Validate artifacts
     validate_artifacts(config.artifacts_path)
 
-    # Stage 2: Load signature map (raw dict for merge + ID computation)
-    signature_map_data = load_signature_map(config.artifacts_path)
-
-    # Stage 3: Load entities and docs
     entity_db = load_entities(config.artifacts_path)
     doc_db = load_documents(config.artifacts_path)
 
-    # Stage 4: Merge entities + docs
-    merged_entities = merge_entities(entity_db, doc_db, signature_map_data)
+    merged_entities = merge_entities(entity_db, doc_db)
 
-    # Stage 5: Compute deterministic IDs
     id_map = assign_deterministic_ids(merged_entities)
 
-    # Stage 6: Extract source code
     extract_source_code(merged_entities, config.project_root)
 
-    # Stage 7: Load capabilities (before graph metrics so bridge detection has capability data)
     cap_defs = load_capability_defs(config.artifacts_path)
     cap_graph = load_capability_graph(config.artifacts_path)
 
-    # Stage 8: Assign capabilities to entities from cap_graph members
     assign_capabilities(merged_entities, cap_graph)
 
-    # Stage 9: Load graph and compute metrics (bridge detection needs capabilities)
     edges = load_graph_edges(config.artifacts_path, merged_entities)
     compute_fan_metrics(merged_entities, edges)
     compute_bridge_flags(merged_entities, edges)
     compute_side_effect_markers(merged_entities, edges)
 
-    # Stage 10: Compute other derived fields
     compute_is_entry_point(merged_entities)
 
-    # Stage 11: Load or generate embeddings (with ID translation)
     provider = create_provider(config)
     embeddings = load_embeddings(config.artifacts_path, config, id_map)
 
     if embeddings is None and provider is not None:
-        log.info("No cached artifact found; generating embeddings from doc_db via provider")
-        embeddings = generate_embeddings(config.artifacts_path, provider, config, signature_map_data, id_map)
+        log.info("No cached artifact found; generating embeddings via provider")
+        embeddings = generate_embeddings(config.artifacts_path, provider, config, merged_entities)
     elif embeddings is None and provider is None:
         log.warning("No embedding provider configured and no artifact found; entities will have null embeddings")
         embeddings = {}
 
     attach_embeddings(merged_entities, embeddings)
 
-    # Stage 12: Populate database
     db_manager = DatabaseManager(config)
 
     # DDL (tables + indexes) uses engine directly, outside session

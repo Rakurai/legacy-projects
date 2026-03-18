@@ -52,28 +52,29 @@ Implementation is phased; each phase builds on the prior phase's infrastructure.
 ### Phase 1 — Database + Core Lookup
 
 - [ ] Build script populates all tables from artifacts without errors
-- [ ] `resolve_entity("damage", kind="function")` returns ranked candidates including `void damage(Character *ch, ...)` from `src/fight.cc`
+- [ ] `search("damage")` returns ranked candidates including `void damage(Character *ch, ...)` from `src/fight.cc` <!-- spec 005: search replaces resolve_entity -->
 - [ ] `get_entity` returns full record with all documentation fields, metrics, and optional source code
 - [ ] `list_file_entities("src/fight.cc")` returns all entities in that file
-- [ ] `get_file_summary("src/fight.cc")` returns entity counts, capability breakdown, doc quality distribution
+- [ ] `get_file_summary("src/fight.cc")` returns entity counts and capability breakdown <!-- spec 005: doc_quality_distribution removed -->
 - [ ] Resources (`legacy://entity/*`, `legacy://file/*`, `legacy://stats`) return correct data
+- [ ] Entity IDs are deterministic `{prefix}:{7hex}` and stable across rebuilds <!-- spec 005 -->
 
 ### Phase 2 — Search
 
 - [ ] `search("poison spreading between characters")` returns relevant entities ranked by combined score
 - [ ] With no embedding provider configured, search returns results with `search_mode: "keyword_fallback"`
-- [ ] Filtering by kind, capability, and min_doc_quality works correctly
+- [ ] Filtering by kind and capability works correctly <!-- spec 005: min_doc_quality filter removed -->
 
 ### Phase 3 — Graph Exploration
 
-- [ ] `get_callers("damage", depth=2)` returns transitive callers with path information
-- [ ] `get_dependencies("Character", relationship="inherits")` returns class hierarchy
+- [ ] `get_callers(entity_id, depth=2)` returns transitive callers with path information <!-- spec 005: entity_id only, not entity name -->
+- [ ] `get_dependencies(entity_id, relationship="inherits")` returns class hierarchy
 - [ ] All graph tools include truncation metadata when results are capped
-- [ ] Resolution envelope present on all name-accepting graph tools
+- [ ] <!-- spec 005: resolution envelope removed from graph tools; tools accept only entity_id -->
 
 ### Phase 4 — Behavior Analysis
 
-- [ ] `get_behavior_slice("do_kill", max_depth=5)` returns call cone with direct/transitive separation
+- [ ] `get_behavior_slice(entity_id, max_depth=5)` returns call cone with direct/transitive separation <!-- spec 005: entity_id only -->
 - [ ] Side-effect markers correctly categorized (messaging, persistence, state_mutation, scheduling)
 - [ ] `get_hotspots(metric="bridge")` returns cross-capability entities
 - [ ] Provenance labels present on all derived data items
@@ -85,6 +86,15 @@ Implementation is phased; each phase builds on the prior phase's infrastructure.
 - [ ] `list_entry_points(capability="combat")` returns filtered entry points
 - [ ] All four canned prompts produce coherent analysis output
 
+### Phase 6 — Deterministic IDs & Interface Simplification <!-- spec 005 -->
+
+- [ ] Entity IDs follow `{prefix}:{7hex}` format, deterministic across rebuilds
+- [ ] `resolve_entity` tool removed from catalog (19 tools)
+- [ ] All tools accept only `entity_id` (no `signature` parameter)
+- [ ] No `ResolutionEnvelope` in any response
+- [ ] ≥95% of doc_db entries with briefs retain their brief in the database
+- [ ] `doc_quality`, `doc_state`, `compound_id`, `member_id` columns removed
+
 ---
 
 ## 4. Risks and Mitigations
@@ -94,7 +104,7 @@ Implementation is phased; each phase builds on the prior phase's infrastructure.
 | No embedding provider configured | Semantic search disabled; keyword-only mode | Explicit `keyword_fallback` mode; agents warned via `search_mode` field |
 | Embedding provider error at query time | Single request degrades to keyword-only | Provider errors caught; request completes with keyword fallback and logs warning |
 | Large call cones exceed response limits | Truncated behavior slices | `max_cone_size` parameter + truncation metadata in response |
-| Entity resolution returns wrong entity | Agent proceeds with incorrect context | Two-step resolve/get workflow; ambiguity explicitly flagged in resolution envelope |
+| Entity resolution returns wrong entity | Agent proceeds with incorrect context | Deterministic entity IDs eliminate ID instability; search returns ranked results for disambiguation <!-- spec 005: deterministic IDs replace two-step resolve/get --> |
 | Source code on disk out of sync with artifacts | Stale `source_text` in DB | Build script extracts source at build time; rebuild after code changes |
 | Stale embedding artifact | Embeddings don't reflect documentation changes | Manual invalidation — developer deletes artifact file to trigger regeneration |
 | First-run model download | Initial local embedding build requires internet | ONNX model cached locally (~130 MB); subsequent runs are fully offline |

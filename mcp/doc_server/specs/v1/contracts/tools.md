@@ -1,6 +1,6 @@
 # Tool Contracts: MCP Documentation Server
 
-<!-- Canonical V1 tool contracts. MCP tool interfaces are unchanged by specs 003/004 (build/embedding changes are internal). -->
+<!-- Canonical V1 tool contracts. Updated per spec 005: resolve_entity removed; signature param removed from all tools; ResolutionEnvelope removed; doc_quality fields removed; min_doc_quality param removed from search. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -12,102 +12,53 @@ This document defines the MCP tool interface contracts for the Legacy Documentat
 - **Output**: JSON object with consistent response shapes (EntitySummary base, resolution envelopes, truncation metadata)
 - **Errors**: MCP errors for hard failures (DB down, invalid params); successful responses with status indicators for degraded states
 
-**Total Tools**: 20 (grouped by category)
+**Total Tools**: 19 (grouped by category) <!-- spec 005: was 20; resolve_entity removed -->
 
 ---
 
-## Entity Resolution & Lookup (5 tools)
+## Entity Lookup (4 tools) <!-- spec 005: was 5; resolve_entity removed -->
 
-### resolve_entity
-
-Resolve entity name to ranked candidate list with match metadata.
-
-**Parameters:**
-```typescript
-{
-  query: string,              // Entity name or signature
-  kind?: string,              // Filter by kind (function, class, etc.)
-  limit?: number = 10,        // Max candidates to return
-  verbose?: boolean = false   // Include per-stage pipeline details for each candidate
-}
-```
-
-**Response:**
-```typescript
-{
-  resolution_status: "exact" | "ambiguous" | "not_found",
-  resolved_from: string,
-  match_type: "signature_exact" | "name_exact" | "name_prefix" | "keyword" | "semantic",
-  candidates: EntitySummary[],
-  truncation: TruncationMetadata
-}
-```
-
-**Match Metadata (per candidate):**
-- `match_score`: float (0-1)
-- `match_reason`: string (why this candidate matched)
-
-**Example:**
-```bash
-Input: {query: "damage", kind: "function"}
-Output: {
-  resolution_status: "ambiguous",
-  resolved_from: "damage",
-  match_type: "name_exact",
-  candidates: [
-    {entity_id: "fight_8cc_1a...", signature: "void damage(Character *ch, ...)", name: "damage", kind: "function", ...},
-    {entity_id: "magic_8cc_2b...", signature: "int damage(Spell *sp)", name: "damage", kind: "function", ...}
-  ],
-  truncation: {truncated: false, total_available: 2, node_count: 2}
-}
-```
-
----
+<!-- spec 005: resolve_entity tool REMOVED. search is the sole path from text to entity IDs.
+     The multi-stage resolution pipeline (name_exact → prefix → keyword → semantic) is preserved
+     internally as the implementation of search. -->
 
 ### get_entity
 
-Fetch full entity details by entity_id or signature (exact match required).
+Fetch full entity details by entity_id. <!-- spec 005: signature param removed; entity_id is required -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,         // Internal ID (from resolve_entity)
-  signature?: string,         // Or full signature (fallback to resolution if ambiguous)
-  include_code?: boolean = false,      // Include source_text field
-  include_neighbors?: boolean = false  // Include direct graph neighbors
+  entity_id: string,                           // Deterministic ID ({prefix}:{7hex})
+  include_code?: boolean = false,              // Include source_text field
+  include_neighbors?: boolean = false          // Include direct graph neighbors
 }
 ```
 
 **Response:**
 ```typescript
-{
-  entity: EntityDetail,
-  resolution?: ResolutionEnvelope  // Present if signature was used
-}
+EntityDetail  // <!-- spec 005: ResolutionEnvelope removed -->
 ```
 
 **Example:**
 ```bash
-Input: {entity_id: "fight_8cc_1a2b3c...", include_code: true}
+Input: {entity_id: "fn:a1b2c3d", include_code: true}
 Output: {
-  entity: {
-    entity_id: "fight_8cc_1a2b3c...",
-    signature: "void damage(Character *ch, Character *victim, int dam)",
-    name: "damage",
-    kind: "function",
-    file_path: "src/fight.cc",
-    body_start_line: 142,
-    body_end_line: 203,
-    definition_text: "void damage(Character *ch, Character *victim, int dam)",
-    source_text: "void damage(Character *ch, ...) {\n  ...\n}",
-    capability: "combat",
-    doc_quality: "high",
-    brief: "Apply damage to a character, handling death, corpse creation, and position updates.",
-    details: "...",
-    params: {"ch": "Attacker", "victim": "Target", "dam": "Damage amount"},
-    returns: null,
-    ...
-  }
+  entity_id: "fn:a1b2c3d",
+  signature: "void damage(Character *ch, Character *victim, int dam)",
+  name: "damage",
+  kind: "function",
+  file_path: "src/fight.cc",
+  body_start_line: 142,
+  body_end_line: 203,
+  definition_text: "void damage(Character *ch, Character *victim, int dam)",
+  source_text: "void damage(Character *ch, ...) {\n  ...\n}",
+  capability: "combat",
+  brief: "Apply damage to a character, handling death, corpse creation, and position updates.",
+  details: "...",
+  params: {"ch": "Attacker", "victim": "Target", "dam": "Damage amount"},
+  returns: null,
+  ...
 }
 ```
 
@@ -115,14 +66,13 @@ Output: {
 
 ### get_source_code
 
-Retrieve source code for an entity with optional context lines.
+Retrieve source code for an entity with optional context lines. <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string,         // Resolve if needed
-  context_lines?: number = 0  // Lines of context before/after body
+  entity_id: string,                   // Deterministic ID
+  context_lines?: number = 0           // Lines of context before/after body
 }
 ```
 
@@ -136,8 +86,7 @@ Retrieve source code for an entity with optional context lines.
   end_line: number,
   source_text: string,        // From database (build-time extraction)
   context_before?: string,    // If context_lines > 0, read from disk
-  context_after?: string,
-  resolution?: ResolutionEnvelope
+  context_after?: string
 }
 ```
 
@@ -183,7 +132,7 @@ Get aggregate file-level statistics.
   file_path: string,
   entity_count_by_kind: Record<string, number>,     // {function: 42, variable: 18, ...}
   capability_distribution: Record<string, number>,  // {combat: 30, utility: 12, ...}
-  doc_quality_distribution: Record<string, number>, // {high: 25, medium: 15, low: 2}
+  // <!-- spec 005: doc_quality_distribution removed -->
   top_entities_by_fan_in: EntitySummary[],          // Top 10
   include_graph: string[],                          // Files this file includes
   included_by_graph: string[]                       // Files that include this file
@@ -198,7 +147,7 @@ Get aggregate file-level statistics.
 
 ### search
 
-Hybrid semantic + keyword search with exact match boost.
+Hybrid semantic + keyword search with exact match boost. <!-- spec 005: sole path from text to entity IDs -->
 
 **Parameters:**
 ```typescript
@@ -207,7 +156,7 @@ Hybrid semantic + keyword search with exact match boost.
   top_k?: number = 10,        // Number of results
   kind?: string,              // Filter by kind
   capability?: string,        // Filter by capability
-  min_doc_quality?: "high" | "medium" | "low",
+  // <!-- spec 005: min_doc_quality parameter removed -->
   source?: "entity" = "entity" // V2: support "subsystem_doc" (unused in V1)
 }
 ```
@@ -227,8 +176,8 @@ Hybrid semantic + keyword search with exact match boost.
   result_type: "entity",  // V2: "subsystem_doc"
   score: number,          // Combined score (exact * 10 + semantic * 0.6 + keyword * 0.4)
   search_mode: "hybrid" | "semantic_only" | "keyword_fallback",
-  provenance: "doxygen_extracted" | "llm_generated" | "subsystem_narrative",  // Doc source provenance
-  summary: EntitySummary  // V1 always EntitySummary; V2 may be SubsystemDocSummary
+  provenance: "doxygen_extracted" | "llm_generated" | "precomputed" | "subsystem_narrative",  // Doc source provenance <!-- spec 005: added "precomputed" -->
+  entity_summary: EntitySummary  // <!-- spec 005: field renamed from "summary" -->
 }
 ```
 
@@ -238,14 +187,13 @@ Hybrid semantic + keyword search with exact match boost.
 
 ### get_callers
 
-Get functions that call this entity (reverse CALLS edges).
+Get functions that call this entity (reverse CALLS edges). <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string,
-  depth?: number = 1,         // 1-3 (transitive levels)
+  entity_id: string,                   // Deterministic ID
+  depth?: number = 1,                  // 1-3 (transitive levels)
   limit?: number = 50
 }
 ```
@@ -254,10 +202,8 @@ Get functions that call this entity (reverse CALLS edges).
 ```typescript
 {
   entity_id: string,
-  signature: string,
   callers_by_depth: Record<number, EntitySummary[]>,  // {1: [...], 2: [...]}
-  truncation: TruncationMetadata,
-  resolution?: ResolutionEnvelope
+  truncation: TruncationMetadata
 }
 ```
 
@@ -265,13 +211,12 @@ Get functions that call this entity (reverse CALLS edges).
 
 ### get_callees
 
-Get functions this entity calls (forward CALLS edges).
+Get functions this entity calls (forward CALLS edges). <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string,
+  entity_id: string,
   depth?: number = 1,
   limit?: number = 50
 }
@@ -281,10 +226,8 @@ Get functions this entity calls (forward CALLS edges).
 ```typescript
 {
   entity_id: string,
-  signature: string,
   callees_by_depth: Record<number, EntitySummary[]>,
-  truncation: TruncationMetadata,
-  resolution?: ResolutionEnvelope
+  truncation: TruncationMetadata
 }
 ```
 
@@ -292,13 +235,12 @@ Get functions this entity calls (forward CALLS edges).
 
 ### get_dependencies
 
-Get entities this entity depends on (filtered by relationship type and direction).
+Get entities this entity depends on (filtered by relationship type and direction). <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string,
+  entity_id: string,
   relationship?: "calls" | "uses" | "inherits" | "includes" | "contained_by",  // NULL = all
   direction?: "incoming" | "outgoing" | "both" = "outgoing",
   limit?: number = 50
@@ -309,14 +251,12 @@ Get entities this entity depends on (filtered by relationship type and direction
 ```typescript
 {
   entity_id: string,
-  signature: string,
   dependencies: Array<{
     entity: EntitySummary,
     relationship: string,
     direction: "incoming" | "outgoing"
   }>,
-  truncation: TruncationMetadata,
-  resolution?: ResolutionEnvelope
+  truncation: TruncationMetadata
 }
 ```
 
@@ -324,13 +264,12 @@ Get entities this entity depends on (filtered by relationship type and direction
 
 ### get_class_hierarchy
 
-Get inheritance tree (base classes and derived classes).
+Get inheritance tree (base classes and derived classes). <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string,
+  entity_id: string,
   direction?: "ancestors" | "descendants" | "both" = "both",
   limit?: number = 50
 }
@@ -340,11 +279,9 @@ Get inheritance tree (base classes and derived classes).
 ```typescript
 {
   entity_id: string,
-  signature: string,
   base_classes: EntitySummary[],     // Parents
   derived_classes: EntitySummary[],  // Children
-  truncation: TruncationMetadata,
-  resolution?: ResolutionEnvelope
+  truncation: TruncationMetadata
 }
 ```
 
@@ -352,13 +289,12 @@ Get inheritance tree (base classes and derived classes).
 
 ### get_related_entities
 
-Get all direct neighbors grouped by relationship type.
+Get all direct neighbors grouped by relationship type. <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string,
+  entity_id: string,
   limit_per_type?: number = 20
 }
 ```
@@ -367,7 +303,6 @@ Get all direct neighbors grouped by relationship type.
 ```typescript
 {
   entity_id: string,
-  signature: string,
   relationships: Record<string, Array<{
     entity: EntitySummary,
     direction: "incoming" | "outgoing"
@@ -410,13 +345,12 @@ Get files related via INCLUDES edges, co-dependency, or shared entities.
 
 ### get_behavior_slice
 
-Compute transitive call cone with capabilities touched, globals used, side effects.
+Compute transitive call cone with capabilities touched, globals used, side effects. <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string,
+  entity_id: string,                   // Deterministic ID
   max_depth?: number = 5,
   max_cone_size?: number = 200
 }
@@ -453,8 +387,8 @@ Compute transitive call cone with capabilities touched, globals used, side effec
 
   fan_in: number,             // Aggregate metrics for seed
   fan_out: number,
-  confidence: string,         // Overall confidence based on doc_quality distribution in cone
-  resolution?: ResolutionEnvelope
+  confidence: string          // Overall confidence based on doc distribution in cone
+  // <!-- spec 005: resolution field removed -->
 }
 ```
 
@@ -462,13 +396,12 @@ Compute transitive call cone with capabilities touched, globals used, side effec
 
 ### get_state_touches
 
-Analyze which global variables an entity uses (direct and transitive).
+Analyze which global variables an entity uses (direct and transitive). <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string
+  entity_id: string
   // Note: transitive reach is fixed at 2 hops (CALLS → USES)
 }
 ```
@@ -477,7 +410,6 @@ Analyze which global variables an entity uses (direct and transitive).
 ```typescript
 {
   entity_id: string,
-  signature: string,
   direct_uses: EntitySummary[],           // Globals directly used (USES edges, depth=1)
   direct_side_effects: Array<{            // Side-effect markers from own CALLS (depth=1)
     function: EntitySummary,
@@ -491,8 +423,7 @@ Analyze which global variables an entity uses (direct and transitive).
     category: "messaging" | "persistence" | "state_mutation" | "scheduling",
     access_type: "transitive",
     provenance: "graph_transitive"
-  }>,
-  resolution?: ResolutionEnvelope
+  }>
 }
 ```
 
@@ -542,8 +473,8 @@ List all capability groups with metadata.
     type: "domain" | "policy" | "projection" | "infrastructure" | "utility",
     description: string,
     function_count: number,
-    stability: string,
-    doc_quality_dist: Record<string, number>
+    stability: string
+    // <!-- spec 005: doc_quality_dist removed from capability responses -->
   }>
 }
 ```
@@ -570,7 +501,7 @@ Get detailed capability information including dependencies and functions.
   description: string,
   function_count: number,
   stability: string,
-  doc_quality_dist: Record<string, number>,
+  // <!-- spec 005: doc_quality_dist removed -->
   dependencies: Array<{
     target_capability: string,
     edge_type: string,  // requires_core, requires_policy, uses_utility, etc.
@@ -633,13 +564,12 @@ List entry points (do_*, spell_*, spec_* functions) filterable by capability.
 
 ### get_entry_point_info
 
-Analyze which capabilities an entry point exercises.
+Analyze which capabilities an entry point exercises. <!-- spec 005: entity_id only -->
 
 **Parameters:**
 ```typescript
 {
-  entity_id?: string,
-  signature?: string
+  entity_id: string
 }
 ```
 
@@ -651,8 +581,7 @@ Analyze which capabilities an entry point exercises.
     capability: string,
     direct_count: number,
     transitive_count: number
-  }>,
-  resolution?: ResolutionEnvelope
+  }>
 }
 ```
 
@@ -667,10 +596,9 @@ Analyze which capabilities an entry point exercises.
 - Internal server errors
 
 **Successful Responses with Status Indicators (Degraded States):**
-- `resolution_status: "not_found"` — Entity not found (includes nearest matches)
-- `resolution_status: "ambiguous"` — Multiple candidates (top one used, candidates list provided)
 - `search_mode: "keyword_fallback"` — Embedding service unavailable
 - `truncated: true` — Result set truncated (total_available > node_count)
+<!-- spec 005: resolution_status indicators removed (resolve_entity retired) -->
 
 **Example Error Response (MCP Error):**
 ```json

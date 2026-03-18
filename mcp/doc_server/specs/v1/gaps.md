@@ -97,37 +97,36 @@ The contracts define tool schemas but contain no worked request/response example
 
 ### 4.1 Resolve + Fetch workflow
 
-> **Note:** Entity IDs shown below use V1 Doxygen format (`compound_member`). These are **not stable** across Doxygen runs. Design 005 replaces them with deterministic `{prefix}:{7 hex}` IDs.
+> **Note:** Entity IDs shown below use V1 Doxygen format (`compound_member`). These are **not stable** across Doxygen runs. ~~Design 005 replaces them with deterministic `{prefix}:{7 hex}` IDs.~~ **Implemented per spec 005**: entity IDs are now deterministic `{prefix}:{7hex}` format. The `resolve_entity` tool shown below is retired; `search` is the sole discovery path. `doc_quality` fields shown below are removed.
 
 ```
-→ resolve_entity(query="damage", kind="function")
+→ search(query="damage", kind="function")  <!-- spec 005: search replaces resolve_entity -->
 ← {
-    resolution_status: "ambiguous",
-    resolved_from: "damage",
-    candidates: [
-      { entity_id: "fight_8cc_abc123...", signature: "void damage(Character *ch, Character *victim, int dam, int dt, int class_, bool show)",
-        kind: "function", file_path: "src/fight.cc", capability: "combat", doc_quality: "high",
-        match_type: "name_exact", score: 1.0, brief: "Apply damage from ch to victim..." },
-      { entity_id: "act_wiz_8cc_def456...", signature: "void damage(Object *obj, int amount)",
-        kind: "function", file_path: "src/act_wiz.cc", capability: null, doc_quality: "medium",
-        match_type: "name_exact", score: 1.0, brief: "Apply damage to an object..." },
+    search_mode: "hybrid",
+    results: [
+      { result_type: "entity", score: 1.0, entity_summary:
+        { entity_id: "fn:a1b2c3d", signature: "void damage(Character *ch, Character *victim, int dam, int dt, int class_, bool show)",
+          kind: "function", file_path: "src/fight.cc", capability: "combat",
+          brief: "Apply damage from ch to victim..." } },
+      { result_type: "entity", score: 1.0, entity_summary:
+        { entity_id: "fn:e4f5g6h", signature: "void damage(Object *obj, int amount)",
+          kind: "function", file_path: "src/act_wiz.cc", capability: null,
+          brief: "Apply damage to an object..." } },
     ]
   }
 
-→ get_entity(entity_id="fight_8cc_abc123...", include_neighbors=true)
-← { full entity detail + doc_quality: "high" + neighbor list as EntitySummary objects }
+→ get_entity(entity_id="fn:a1b2c3d", include_neighbors=true)  <!-- spec 005: entity_id only -->
+← { full entity detail + neighbor list as EntitySummary objects }
 ```
 
 ### 4.2 Behavior slice for an entry point
 
 ```
-→ get_behavior_slice(entity="do_kill", max_depth=5, max_cone_size=200)
+→ get_behavior_slice(entity_id="fn:x1y2z3w", max_depth=5, max_cone_size=200)  <!-- spec 005: entity_id only; resolution fields removed -->
 ← {
-    resolution_status: "exact",
-    resolved_from: "do_kill",
     truncated: false,
     confidence: "high",
-    entry_point: { signature: "void do_kill(Character *ch, String argument)", doc_quality: "high", ... },
+    entry_point: { signature: "void do_kill(Character *ch, String argument)", ... },  <!-- spec 005: doc_quality removed from entry_point -->
     direct_callees: [
       { signature: "void multi_hit(...)", capability: "combat", provenance: "graph" },
       { signature: "void send_to_char(...)", capability: "output", provenance: "graph" }
@@ -164,12 +163,12 @@ The contracts define tool schemas but contain no worked request/response example
 ### 4.3 Semantic search
 
 ```
-→ search(query="poison spreading between characters", top_k=5)
+→ search(query="poison spreading between characters", top_k=5)  <!-- spec 005: search replaces resolve for discovery -->
 ← [
     { signature: "void plague_spread(Character *ch)", score: 0.89,
-      search_mode: "hybrid", doc_quality: "high", provenance: "llm_generated", ... },
+      search_mode: "hybrid", provenance: "precomputed", ... },  <!-- spec 005: doc_quality removed; provenance updated -->
     { signature: "void spell_plague(int sn, int level, Character *ch, void *vo, int target)",
-      score: 0.82, doc_quality: "medium", provenance: "llm_generated", ... },
+      score: 0.82, provenance: "precomputed", ... },
     ...
   ]
 ```
@@ -182,7 +181,7 @@ The contracts define tool schemas but contain no worked request/response example
     file_path: "src/fight.cc",
     entity_count: { function: 42, variable: 8, total: 50 },
     capabilities: { "combat": 38, "affects": 4, "attributes": 6 },
-    doc_quality_distribution: { high: 30, medium: 15, low: 5 },
+    <!-- spec 005: doc_quality_distribution removed from file summary -->
     key_entities: [
       { signature: "void damage(...)", fan_in: 47, kind: "function", brief: "..." },
       { signature: "void multi_hit(...)", fan_in: 12, kind: "function", brief: "..." }
@@ -203,7 +202,7 @@ The contracts define tool schemas but contain no worked request/response example
 
 ### 5.1 Motivation
 
-V1 is function-forward: every tool resolves, describes, and traverses individual code entities. V2 adds a **system-level narrative layer** drawn from the project's existing architectural documentation (`.ai/docs/components/*.md`, `.ai/docs/subsystems.md`) — 23 subsystem documents totaling ~4,500 lines of curated prose covering features, responsibilities, component breakdowns, implementation details, key files, system behaviors, and inter-system dependencies.
+V1 is function-forward: every tool resolves, describes, and traverses individual code entities. V2 adds a **system-level narrative layer** drawn from the project's existing architectural documentation (`docs/components/*.md`, `docs/subsystems.md`) — 23 subsystem documents totaling ~4,500 lines of curated prose covering features, responsibilities, component breakdowns, implementation details, key files, system behaviors, and inter-system dependencies.
 
 This prose captures knowledge that per-entity documentation cannot compose on its own: *"the combat system resolves attacks in a per-round cycle: hit check → damage calc → defensive rolls → elemental cascading → death processing with corpse creation"* is a system-level narrative, not something derivable from the brief of `damage()` or `raw_kill()`.
 
@@ -317,7 +316,7 @@ Two distinct stages: **mechanical ingestion** and **agent-assisted curation**. T
 
 #### 5.5.1 Curation artifacts
 
-Stored in `.ai/artifacts/v2/`:
+Stored in `artifacts/v2/`:
 
 | Artifact | Format | Description |
 |----------|--------|-------------|
@@ -380,7 +379,11 @@ Ideas mentioned in DESIGN.md but not captured elsewhere.
 
 ## 7. doc_quality Derivation Rules
 
-MODEL.md says `doc_quality` is derived but doesn't specify the exact logic. DESIGN.md §7.2 gives the rules:
+<!-- spec 005: doc_quality and doc_state columns removed from schema. This section is historical only.
+     Quality assessment belongs to artifact creation, not server/agent interaction.
+     Agents use `brief is not null` as the practical quality signal. -->
+
+~~MODEL.md says `doc_quality` is derived but doesn't specify the exact logic. DESIGN.md §7.2 gives the rules:~~
 
 - **high** — `doc_state` is `refined_summary` or `refined_usage` AND `details` is non-empty AND `params` coverage exists (for functions)
 - **medium** — `doc_state` is `generated_summary` or `refined_*` but missing details/params

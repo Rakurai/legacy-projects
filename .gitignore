@@ -16,3 +16,5 @@ venv/
 # spec-kit
 .specify/
 speckit.*
+
+artifacts/embed_cache_*

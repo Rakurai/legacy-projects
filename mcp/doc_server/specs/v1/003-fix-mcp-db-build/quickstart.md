@@ -5,21 +5,21 @@
 
 ## Prerequisites
 
-- PostgreSQL 17+ with pgvector extension running (Docker: `docker compose up -d` from `.ai/mcp/doc_server/`)
+- PostgreSQL 17+ with pgvector extension running (Docker: `docker compose up -d` from `mcp/doc_server/`)
 - Python 3.11+ via `uv` (dependency manager)
-- Pre-computed artifacts in `.ai/artifacts/` (code_graph.json, code_graph.gml, doc_db.json, embeddings_cache.pkl, capability_defs.json, capability_graph.json)
-- `.env` file configured in `.ai/mcp/doc_server/`
+- Pre-computed artifacts in `artifacts/` (code_graph.json, code_graph.gml, doc_db.json, embeddings_cache.pkl, capability_defs.json, capability_graph.json)
+- `.env` file configured in `mcp/doc_server/`
 
 ## Files to Modify
 
-1. `.ai/mcp/doc_server/build_mcp_db.py` — Main build script (index creation, capability population, pipeline ordering)
-2. `.ai/mcp/doc_server/build_helpers/entity_processor.py` — Add capability assignment from cap_graph
-3. `.ai/mcp/doc_server/build_helpers/loaders.py` — Fix docstring for load_capability_graph
+1. `mcp/doc_server/build_mcp_db.py` — Main build script (index creation, capability population, pipeline ordering)
+2. `mcp/doc_server/build_helpers/entity_processor.py` — Add capability assignment from cap_graph
+3. `mcp/doc_server/build_helpers/loaders.py` — Fix docstring for load_capability_graph
 
 ## Build & Validate
 
 ```bash
-cd .ai/mcp/doc_server
+cd mcp/doc_server
 
 # Run the build
 uv run python build_mcp_db.py

@@ -133,7 +133,7 @@ Based on code review, potential improvements include:
 
 ## Related Resources
 
-- [File Inventory](/Users/qte2333/repos/legacy/.ai/context/files_old.json): Source files with summaries
+- [File Inventory](/Users/qte2333/repos/legacy/projects/doc_gen/files_old.json): Source files with summaries
 - [Commands Reference](/Users/qte2333/repos/legacy/.ai/docs/commands_reference.md): Available game commands
 - [Coding Standards](/Users/qte2333/repos/legacy/.ai/docs/coding_standards.md): Code style guidelines
 - [Design Patterns](/Users/qte2333/repos/legacy/.ai/docs/design_patterns.md): Pattern usage throughout the codebase

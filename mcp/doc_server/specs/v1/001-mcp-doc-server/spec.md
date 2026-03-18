@@ -13,7 +13,7 @@ An AI assistant needs to understand what a specific function, class, or variable
 
 **Why this priority**: Entity lookup is the foundational capability. Without reliable entity resolution and documentation retrieval, no other analysis can proceed. This is the MVP that makes the pre-computed documentation artifacts accessible to AI assistants.
 
-**Independent Test**: Can be fully tested by querying known entities (e.g., `damage` function, `Character` class, `game_loop_unix` function) and verifying that returned documentation matches the pre-computed artifacts in `.ai/artifacts/doc_db.json`. Success means an assistant can explore the codebase without parsing raw JSON files.
+**Independent Test**: Can be fully tested by querying known entities (e.g., `damage` function, `Character` class, `game_loop_unix` function) and verifying that returned documentation matches the pre-computed artifacts in `artifacts/doc_db.json`. Success means an assistant can explore the codebase without parsing raw JSON files.
 
 **Acceptance Scenarios**:
 
@@ -168,7 +168,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Build Script & Data Pipeline
 
-- **FR-030**: Build script MUST ingest all six source artifacts from `.ai/artifacts/` directory: entity database (code_graph.json), dependency graph (code_graph.gml), document database (doc_db.json), embeddings cache (embeddings_cache.pkl), capability definitions (capability_defs.json), and capability graph (capability_graph.json)
+- **FR-030**: Build script MUST ingest all six source artifacts from `artifacts/` directory: entity database (code_graph.json), dependency graph (code_graph.gml), document database (doc_db.json), embeddings cache (embeddings_cache.pkl), capability definitions (capability_defs.json), and capability graph (capability_graph.json)
 - **FR-031**: Build script MUST merge entity metadata with documentation records via 1:1 join on compound_id and signature, producing complete entity records
 - **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column
 - **FR-033**: Build script MUST extract C++ definition lines and store in database definition_text column
@@ -242,7 +242,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 ### Assumptions
 
-- **A-001**: Pre-computed artifacts in `.ai/artifacts/` are complete, up-to-date, and internally consistent at time of database build; build script is run offline before server startup and not during server operation
+- **A-001**: Pre-computed artifacts in `artifacts/` are complete, up-to-date, and internally consistent at time of database build; build script is run offline before server startup and not during server operation
 - **A-002**: PostgreSQL database with pgvector extension is available and accessible via connection string in `.env` file
 - **A-003**: OpenAI-compatible embedding endpoint is available for semantic search but system must function correctly if unavailable
 - **A-004**: NetworkX in-memory graph constructed from ~25,000 edges fits in available memory (estimated ~100-200 MB) and is read-only after initial load (no thread safety concerns for concurrent reads)
@@ -273,6 +273,6 @@ The MCP server runs as a **long-lived process** on developer machines, handling 
 - Artifacts directory path
 - Log level (DEBUG/INFO/WARNING/ERROR, defaults to INFO)
 
-PostgreSQL runs in a Docker container using `pgvector/pgvector:pg17` image. The database is populated by running an offline build script (`build_mcp_db.py`) that processes artifacts from `.ai/artifacts/` directory. The server executable is started via `uv run python -m server.server` from the project directory and remains active until the client terminates the connection.
+PostgreSQL runs in a Docker container using `pgvector/pgvector:pg17` image. The database is populated by running an offline build script (`build_mcp_db.py`) that processes artifacts from `artifacts/` directory. The server executable is started via `uv run python -m server.server` from the project directory and remains active until the client terminates the connection.
 
 The server integrates with MCP clients configured to recognize the `legacy://` URI scheme for resources and the documented tool/prompt interfaces. No authentication or network transport is required; all communication happens via stdin/stdout. The in-memory dependency graph (loaded at startup) persists across multiple tool invocations within a session. Structured logs are emitted to stderr (separate from MCP protocol on stdout) for monitoring, debugging, and performance analysis.

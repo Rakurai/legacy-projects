@@ -4,7 +4,7 @@ cap_probe — batch tool for tuning capability_defs.json descriptions.
 
 Iterates over every group in capability_defs.json, embeds its description
 against the full callee embedding pool, and writes per-group result files
-to .ai/gen_docs/cap_probe_results/.
+to projects/gen_docs/cap_probe_results/.
 
 Each file shows every function above a similarity threshold together with
 its doxygen documentation.  If a group has an "avoid" field, functions

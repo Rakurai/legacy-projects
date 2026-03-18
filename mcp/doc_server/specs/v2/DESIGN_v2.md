@@ -397,7 +397,7 @@ V2 build (`build_v2_db.py`) populates the new tables.
 
 ```
 Stage 0: Documentation rewrite (manual)
-  ├─ Rewrite .ai/docs/components/*.md per system list and format spec (§5.2)
+  ├─ Rewrite docs/components/*.md per system list and format spec (§5.2)
   ├─ One file per system, structured headings, inline metadata tags
   ├─ All classification encoded in the document itself
   └─ Output: chunking-ready markdown files
@@ -434,7 +434,7 @@ heading classification, no ambiguity.
 
 ### 5.2 Document format specification
 
-Each system gets one markdown file in `.ai/docs/components/`. The file structure
+Each system gets one markdown file in `docs/components/`. The file structure
 encodes all metadata needed for mechanical chunking.
 
 #### File-level: YAML frontmatter
@@ -600,7 +600,7 @@ redistributed into the new files:
 
 ### 5.4 Curation artifacts
 
-Stored in `.ai/artifacts/v2/`, git-tracked, human-reviewable:
+Stored in `artifacts/v2/`, git-tracked, human-reviewable:
 
 | Artifact | Format | Description |
 |----------|--------|-------------|
@@ -676,11 +676,11 @@ Run after curation, before ingestion:
 
 ```bash
 # V1 build (prerequisite, unchanged)
-cd .ai/mcp/doc_server
+cd mcp/doc_server
 uv run python build_mcp_db.py
 
 # V2 build
-uv run python build_v2_db.py          # reads .env + .ai/artifacts/v2/
+uv run python build_v2_db.py          # reads .env + artifacts/v2/
 ```
 
 Build order: V1 first (entities, edges, capabilities), then V2 (subsystems, docs, links).
@@ -810,7 +810,7 @@ All forward-compatibility guarantees from DESIGN.md §18.5 hold:
 ## 9. Implementation Phases
 
 ### Phase V2.0 — Documentation Rewrite (Stage 0)
-- Rewrite `.ai/docs/components/*.md` per system list and format spec (§5.2)
+- Rewrite `docs/components/*.md` per system list and format spec (§5.2)
 - One file per system/feature/support entry
 - All classification metadata encoded in frontmatter + inline tags
 - Content grounded against source code
@@ -858,7 +858,7 @@ relevant context for any piece of code.
 ## 11. Project Structure (V2 additions)
 
 ```
-.ai/
+
 ├── artifacts/
 │   └── v2/                         # V2 curation artifacts (git-tracked)
 │       ├── subsystems_seed.json

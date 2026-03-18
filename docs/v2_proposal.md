@@ -1,6 +1,6 @@
 # V2 Stage 0 Proposal: Document Cleanup
 
-Reference: [DESIGN_v2.md §5.2–§5.3](../.ai/mcp/doc_server/DESIGN_v2.md), [v2_indexing.md §5.6](../.ai/mcp/doc_server/v2_indexing.md)
+Reference: [DESIGN_v2.md §5.2–§5.3](../mcp/doc_server/DESIGN_v2.md), [v2_indexing.md §5.6](../mcp/doc_server/v2_indexing.md)
 
 All changes below are architectural: file layout, YAML frontmatter, heading tags, and content ownership reassignment. No prose rewriting.
 

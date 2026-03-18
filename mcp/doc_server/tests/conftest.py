@@ -33,7 +33,7 @@ def test_config() -> ServerConfig:
         db_user="postgres",
         db_password="postgres",
         project_root=Path("/tmp/legacy_test"),
-        artifacts_dir=Path(".ai/artifacts"),
+        artifacts_dir=Path("artifacts"),
         log_level="DEBUG",
     )
 

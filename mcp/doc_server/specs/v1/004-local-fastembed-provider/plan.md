@@ -51,7 +51,7 @@ specs/004-local-fastembed-provider/
 ### Source Code (repository root)
 
 ```text
-.ai/mcp/doc_server/
+mcp/doc_server/
 ├── pyproject.toml                       # + fastembed dependency
 ├── .env.example                         # + new embedding config vars
 ├── build_mcp_db.py                      # Stage 9 load-or-generate flow
@@ -74,7 +74,7 @@ specs/004-local-fastembed-provider/
     └── test_embed_text.py               # NEW: unit tests for text construction
 ```
 
-**Structure Decision**: Existing flat layout within `.ai/mcp/doc_server/` is preserved. Two new files (`server/embedding.py`, `build_helpers/embed_text.py`) and two new test files are added. No directory restructuring needed.
+**Structure Decision**: Existing flat layout within `mcp/doc_server/` is preserved. Two new files (`server/embedding.py`, `build_helpers/embed_text.py`) and two new test files are added. No directory restructuring needed.
 
 ## Constitution Check — Post-Design
 

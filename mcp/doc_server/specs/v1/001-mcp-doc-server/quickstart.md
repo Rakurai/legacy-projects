@@ -12,7 +12,7 @@ This guide covers setting up and running the Legacy MCP Documentation Server fro
 - Python 3.11+
 - Docker (for PostgreSQL + pgvector)
 - `uv` Python package manager
-- Pre-computed artifacts in `.ai/artifacts/`
+- Pre-computed artifacts in `artifacts/`
 
 **Time to First Query**: ~10 minutes (5 min build + instant server startup)
 
@@ -24,7 +24,7 @@ This guide covers setting up and running the Legacy MCP Documentation Server fro
 
 ```bash
 # Navigate to project directory
-cd .ai/mcp/doc_server/
+cd mcp/doc_server/
 
 # Install uv if not already installed
 curl -LsSf https://astral.sh/uv/install.sh | sh
@@ -81,7 +81,7 @@ PGPASSWORD=postgres
 
 # Project paths
 PROJECT_ROOT=/Users/QTE2333/repos/legacy
-ARTIFACTS_DIR=/Users/QTE2333/repos/legacy/.ai/artifacts
+ARTIFACTS_DIR=/Users/QTE2333/repos/legacy/artifacts
 
 # Logging
 LOG_LEVEL=INFO
@@ -100,7 +100,7 @@ LOG_LEVEL=INFO
 
 ```bash
 # Verify all required artifacts exist
-ls -lh $PROJECT_ROOT/.ai/artifacts/
+ls -lh $PROJECT_ROOT/artifacts/
 
 # Expected files:
 # - code_graph.json      (~8 MB, 5305 entities)
@@ -123,7 +123,7 @@ uv run python build_mcp_db.py
 
 **Build Pipeline (expected output):**
 ```
-2026-03-14 10:15:23.142 | INFO | build_mcp_db:main:45 - Starting database build artifacts_dir=".ai/artifacts"
+2026-03-14 10:15:23.142 | INFO | build_mcp_db:main:45 - Starting database build artifacts_dir="artifacts"
 2026-03-14 10:15:23.156 | INFO | loaders:validate_artifacts:28 - Validating artifacts
 2026-03-14 10:15:23.158 | INFO | loaders:validate_artifacts:35 - All artifacts present and valid
 2026-03-14 10:15:24.892 | INFO | loaders:load_entities:52 - Loaded entity database entities=5305
@@ -238,7 +238,7 @@ echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | uv run python -m server.
     "legacy-docs": {
       "command": "uv",
       "args": ["run", "python", "-m", "server.server"],
-      "cwd": "/Users/QTE2333/repos/legacy/.ai/mcp/doc_server",
+      "cwd": "/Users/QTE2333/repos/legacy/mcp/doc_server",
       "env": {
         "LOG_LEVEL": "INFO"
       }
@@ -262,7 +262,7 @@ echo '{"jsonrpc":"2.0","method":"tools/list","id":1}' | uv run python -m server.
     "legacy-documentation": {
       "command": "uv",
       "args": ["run", "python", "-m", "server.server"],
-      "cwd": "/Users/QTE2333/repos/legacy/.ai/mcp/doc_server"
+      "cwd": "/Users/QTE2333/repos/legacy/mcp/doc_server"
     }
   }
 }
@@ -417,15 +417,15 @@ psql -h localhost -U postgres -d legacy_docs -c "SELECT 1;"
 **Fix**:
 ```bash
 # Verify artifacts directory path
-echo $PROJECT_ROOT/.ai/artifacts/
-ls -la $PROJECT_ROOT/.ai/artifacts/
+echo $PROJECT_ROOT/artifacts/
+ls -la $PROJECT_ROOT/artifacts/
 
 # Check .env settings
 cat .env | grep ARTIFACTS_DIR
 
 # Regenerate artifacts (if missing)
 cd $PROJECT_ROOT
-# Run doxygen + docgen pipeline (see .ai/gen_docs/README.md)
+# Run doxygen + docgen pipeline (see gen_docs/README.md)
 ```
 
 ---

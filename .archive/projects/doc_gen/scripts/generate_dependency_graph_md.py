@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 """
-Script to generate .ai/docs/dependency_graph.md for legacy C/C++ codebase.
+Script to generate artifacts/dependency_graph.md for legacy C/C++ codebase.
 Parses ctags and cscope outputs to build a richer dependency map for LLM context.
 
 - ctags: symbol definitions and locations
 -- run with:  ctags -R --c-kinds=+p --fields=+l --extras=+q src/
 
 - cscope: function calls, symbol references, file includes
--- find src/ -name '*.[ch]*' > .ai/context/internal/cscope.files
--- cscope -b -q -R -i .ai/context/internal/cscope.files
+-- find src/ -name '*.[ch]*' > projects/doc_gen/internal/cscope.files
+-- cscope -b -q -R -i projects/doc_gen/internal/cscope.files
 
-Outputs: .ai/context/dependency_graph.md
+Outputs: projects/doc_gen/dependency_graph.md
 """
 import pathlib
 import re
@@ -19,9 +19,9 @@ from datetime import datetime
 
 # Paths
 workspace = pathlib.Path(__file__).resolve().parents[2]
-ctags_path = workspace / ".ai/context/internal/tags"
-cscope_path = workspace / ".ai/context/internal/cscope.out"
-output_path = workspace / ".ai/context/dependency_graph.md"
+ctags_path = workspace / "projects/doc_gen/internal/tags"
+cscope_path = workspace / "projects/doc_gen/internal/cscope.out"
+output_path = workspace / "projects/doc_gen/dependency_graph.md"
 
 # --- Parse ctags ---
 # Map: file -> set(symbols defined)

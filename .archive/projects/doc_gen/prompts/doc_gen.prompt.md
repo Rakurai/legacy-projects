@@ -12,20 +12,20 @@ Your goal is to execute the workflow and iteration process for a documentation g
 ## Stage Workflow Instructions
 
 1. **Review File Summaries and Context**
-   - Review `.ai/context/files_old.json` for summaries, line counts, and categories of all original (legacy) source files. This file is a structured JSON object mapping file paths to their metadata.
-   - Review `.ai/context/files_docs.md` for documentation files, and `.ai/context/dependency_graph.md` for file/module relationships. These serve as a directory and context reference.
+   - Review `projects/doc_gen/files_old.json` for summaries, line counts, and categories of all original (legacy) source files. This file is a structured JSON object mapping file paths to their metadata.
+   - Review `projects/doc_gen/files_docs.md` for documentation files, and `projects/doc_gen/dependency_graph.md` for file/module relationships. These serve as a directory and context reference.
 
 2. **Discovery Phase**
-   - Gather the list of header and source files from `.ai/context/files_old.json` to reference the file paths and the number of lines of code for each file.
-   - Files that already have a non-null summary in `.ai/context/files_old.json` have been processed by a previous agent and can be skipped.
+   - Gather the list of header and source files from `projects/doc_gen/files_old.json` to reference the file paths and the number of lines of code for each file.
+   - Files that already have a non-null summary in `projects/doc_gen/files_old.json` have been processed by a previous agent and can be skipped.
 
 3. **Batching and Processing of Header Files**
    - For all batching and summarization of header (`.h`, `.hh`) files, follow the detailed instructions in `.github/prompts/doc_gen_batch.prompt.md`. This batch prompt governs grouping, processing, and documentation of header files.
-   - Iterate on the instructions until all header files in `.ai/context/files_old.json` have been summarized.
+   - Iterate on the instructions until all header files in `projects/doc_gen/files_old.json` have been summarized.
 
 4. **Batching and Processing of Implementation Files**
    - For all batching and summarization of source (`.c`, `.cpp`, `.cc`) files, follow the detailed instructions in `.github/prompts/doc_gen_batch.prompt.md`. This batch prompt governs grouping, processing, and documentation of implementation files.
-   - Iterate on the instructions until all implementation files in `.ai/context/files_old.json` have been summarized.
+   - Iterate on the instructions until all implementation files in `projects/doc_gen/files_old.json` have been summarized.
 
 5. **Combine & Integrate Results**
    - Integrate header and implementation summaries to produce module-level and system-level overviews.

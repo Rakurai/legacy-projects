@@ -75,7 +75,7 @@ Using `prompts/doc_gen_regroup_loop.prompt.md`, the agent extracted, refined,
 and reclassified content from the 9 old groups into 23 focused subsystem docs.
 Progress was tracked via `component_doc_checklist.md` (all items completed).
 
-**Output:** `.ai/docs/components/*.md` — the current subsystem documentation
+**Output:** `docs/components/*.md` — the current subsystem documentation
 (still in the active tree, not archived here).
 
 ---
@@ -105,7 +105,7 @@ Working context consumed by the agent during documentation sessions.
 
 ### `old_component_groups/`
 The 9 first-pass component group documents from Phase 4a. Superseded by the 23
-subsystem docs in `.ai/docs/components/`.
+subsystem docs in `docs/components/`.
 
 ### `prompts/`
 VS Code Copilot agent prompts that guided each phase.
@@ -141,8 +141,8 @@ One-shot Python scripts used during Phase 1 discovery. None are needed again.
 
 The following outputs from this project remain in the active tree:
 
-- `.ai/docs/components/*.md` — 23 subsystem documentation files (Phase 4b output)
+- `docs/components/*.md` — 23 subsystem documentation files (Phase 4b output)
 
 These are the durable products of the project. The Doxygen-based entity pipeline
-(`.ai/gen_docs/`, `.ai/artifacts/`) later built on top of these as additional
+(`gen_docs/`, `artifacts/`) later built on top of these as additional
 context, but that is a separate project.

@@ -16,7 +16,7 @@ def _make_config(**overrides) -> ServerConfig:
         db_host="myhost",
         db_port=5433,
         project_root="/tmp/repo",
-        artifacts_dir=".ai/artifacts",
+        artifacts_dir="artifacts",
     )
     defaults.update(overrides)
     return ServerConfig(**defaults)
@@ -30,8 +30,8 @@ def test_db_url():
 
 def test_artifacts_path():
     """artifacts_path joins project_root with artifacts_dir."""
-    cfg = _make_config(project_root="/tmp/repo", artifacts_dir=".ai/artifacts")
-    assert cfg.artifacts_path == Path("/tmp/repo/.ai/artifacts")
+    cfg = _make_config(project_root="/tmp/repo", artifacts_dir="artifacts")
+    assert cfg.artifacts_path == Path("/tmp/repo/artifacts")
 
 
 def test_embedding_enabled_true():

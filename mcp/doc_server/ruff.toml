@@ -45,8 +45,7 @@ exclude = [
     "**/tests/**",
     "test_*.py",
     "*_test.py",
-    "_archive/**",
-    ".ai/**"
+    "_archive/**"
 ]
 
 [lint.isort]

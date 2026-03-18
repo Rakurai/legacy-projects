@@ -15,7 +15,7 @@ This guide covers setting up PostgreSQL 18 with pgvector extension for the MCP D
 
 ### 1.1 Create Docker Compose File
 
-Create `docker-compose.yml` in `.ai/mcp/doc_server/`:
+Create `docker-compose.yml` in `mcp/doc_server/`:
 
 ```yaml
 version: '3.8'
@@ -48,7 +48,7 @@ volumes:
 ### 1.2 Start Container
 
 ```bash
-cd .ai/mcp/doc_server/
+cd mcp/doc_server/
 docker-compose up -d
 ```
 
@@ -262,7 +262,7 @@ sudo systemctl reload postgresql
 ### Create `.env` File
 
 ```bash
-cd .ai/mcp/doc_server/
+cd mcp/doc_server/
 
 # Copy example
 cp .env.example .env
@@ -516,7 +516,7 @@ sudo systemctl restart postgresql
 
 **Quick Setup (Docker)**:
 ```bash
-cd .ai/mcp/doc_server/
+cd mcp/doc_server/
 docker-compose up -d
 docker exec -it mcp-postgres psql -U postgres -d legacy_docs -c "CREATE EXTENSION IF NOT EXISTS vector;"
 echo "✓ PostgreSQL ready for build script"
@@ -551,7 +551,7 @@ docker exec -it mcp-postgres psql -U postgres -d legacy_docs -c "CREATE EXTENSIO
 ### Running the Server
 
 ```bash
-cd .ai/mcp/doc_server/
+cd mcp/doc_server/
 uv run python -m server.server
 ```
 

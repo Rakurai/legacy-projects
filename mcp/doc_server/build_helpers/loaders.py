@@ -1,7 +1,7 @@
 """
 Artifact Loaders - Validation and parsing of pre-computed artifacts.
 
-Reuses existing parsers from .ai/gen_docs/clustering/ to load:
+Reuses existing parsers from projects/gen_docs/clustering/ to load:
 - code_graph.json (entity database via doxygen_parse)
 - doc_db.json (documentation database via doc_db)
 - signature_map.json (entity_id ↔ doc_db key mapping — loaded via entity_ids.SignatureMap)

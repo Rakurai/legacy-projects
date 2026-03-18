@@ -3,8 +3,8 @@ from pathlib import Path
 import json
 from loguru import logger as log
 
-GRAPH_INPUT = Path(".ai/context/internal/code_graph.gml")
-TRAVERSAL_OUTPUT = Path(".ai/context/internal/traversal_order.json")
+GRAPH_INPUT = Path("projects/doc_gen/internal/code_graph.gml")
+TRAVERSAL_OUTPUT = Path("projects/doc_gen/internal/traversal_order.json")
 
 REQUIRES = "requires"
 CONTAINS = "contains"

@@ -25,7 +25,7 @@ Build an MCP (Model Context Protocol) server that exposes the Legacy MUD codebas
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-**Note**: The Legacy MUD Server Constitution (v1.0.0) applies to the **MUD source code in `src/`**, not this MCP documentation server which lives in `.ai/mcp/doc_server/`. This is a separate Python project serving the documentation layer. The constitution's principles are noted here for context but do not create gates for this feature.
+**Note**: The Legacy MUD Server Constitution (v1.0.0) applies to the **MUD source code in `src/`**, not this MCP documentation server which lives in `mcp/doc_server/`. This is a separate Python project serving the documentation layer. The constitution's principles are noted here for context but do not create gates for this feature.
 
 ### Informational Review (Not Blocking)
 
@@ -87,7 +87,7 @@ specs/001-mcp-doc-server/
 ### Source Code (repository root)
 
 ```text
-.ai/mcp/doc_server/
+mcp/doc_server/
 ├── server/
 │   ├── __init__.py
 │   ├── server.py          # FastMCP app entry point, tool handlers
@@ -110,7 +110,7 @@ specs/001-mcp-doc-server/
 ├── build_mcp_db.py        # Offline ETL: artifacts → PostgreSQL (at project root per DESIGN.md)
 ├── build_helpers/
 │   ├── __init__.py
-│   ├── loaders.py         # Artifact loaders (reuse .ai/gen_docs/clustering/ modules)
+│   ├── loaders.py         # Artifact loaders (reuse projects/gen_docs/clustering/ modules)
 │   ├── entity_processor.py # Entity + doc merge, derived metrics computation (imports schema from server/db_models.py)
 │   ├── graph_loader.py    # GML → edges table, side-effect marker computation (imports schema from server/db_models.py)
 │   └── embeddings_loader.py # Pickle → pgvector insertion (imports schema from server/db_models.py)
@@ -127,7 +127,7 @@ specs/001-mcp-doc-server/
 └── docker-compose.yml     # PostgreSQL 17 + pgvector container
 ```
 
-**Structure Decision**: Single Python project with two main entry points: `server/server.py` (long-lived MCP server) and `build_mcp_db.py` (offline ETL, at project root per DESIGN.md §12). The project lives in `.ai/mcp/doc_server/` to separate it from the C++ MUD source code. Uses `uv` for Python dependency management. Database schema is defined in `server/db_models.py` (SQLModel table=True classes) and imported by build_helpers modules—this ensures the server has no dependency on build_helpers. Database access uses SQLModel table models with SQLAlchemy async engine (asyncpg driver); repositories encapsulate queries, services own transactions. The server reuses existing artifact parsers from `.ai/gen_docs/clustering/` (doxygen_parse, doxygen_graph, doc_db modules) rather than reinventing parsing logic. PostgreSQL runs in Docker for local development; database is populated offline before server startup.
+**Structure Decision**: Single Python project with two main entry points: `server/server.py` (long-lived MCP server) and `build_mcp_db.py` (offline ETL, at project root per DESIGN.md §12). The project lives in `mcp/doc_server/` to separate it from the C++ MUD source code. Uses `uv` for Python dependency management. Database schema is defined in `server/db_models.py` (SQLModel table=True classes) and imported by build_helpers modules—this ensures the server has no dependency on build_helpers. Database access uses SQLModel table models with SQLAlchemy async engine (asyncpg driver); repositories encapsulate queries, services own transactions. The server reuses existing artifact parsers from `projects/gen_docs/clustering/` (doxygen_parse, doxygen_graph, doc_db modules) rather than reinventing parsing logic. PostgreSQL runs in Docker for local development; database is populated offline before server startup.
 
 ## Complexity Tracking
 

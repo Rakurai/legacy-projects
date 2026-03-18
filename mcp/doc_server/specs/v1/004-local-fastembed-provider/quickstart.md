@@ -7,14 +7,14 @@
 - Python 3.11+
 - PostgreSQL with pgvector extension
 - uv package manager
-- The `.ai/artifacts/` directory with `code_graph.json`, `code_graph.gml`, `doc_db.json`, `capability_defs.json`, `capability_graph.json`
+- The `artifacts/` directory with `code_graph.json`, `code_graph.gml`, `doc_db.json`, `capability_defs.json`, `capability_graph.json`
 
 ## Setup (Local Embedding — Default)
 
 ### 1. Install dependencies
 
 ```bash
-cd .ai/mcp/doc_server
+cd mcp/doc_server
 uv sync
 ```
 
@@ -36,7 +36,7 @@ DB_USER=postgres
 DB_PASSWORD=postgres
 
 PROJECT_ROOT=/path/to/legacy/repo
-ARTIFACTS_DIR=/path/to/legacy/repo/.ai/artifacts
+ARTIFACTS_DIR=/path/to/legacy/repo/artifacts
 
 EMBEDDING_PROVIDER=local
 EMBEDDING_DIMENSION=768
@@ -96,7 +96,7 @@ The build will detect that no artifact exists for the new configuration and gene
 If source documentation has changed and you want fresh embeddings:
 
 ```bash
-rm .ai/artifacts/embed_cache_BAAI-bge-base-en-v1.5_768.pkl
+rm artifacts/embed_cache_BAAI-bge-base-en-v1.5_768.pkl
 uv run python build_mcp_db.py
 ```
 

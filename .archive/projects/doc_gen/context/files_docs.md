@@ -9,13 +9,13 @@ This document summarizes the purpose and goals of each documentation file in the
 ### .ai/docs/best_practices.md
 Defines coding, testing, documentation, and workflow standards for the project. Ensures consistency and quality for both AI agents and human contributors.
 
-### .ai/context/files_old.md
+### projects/doc_gen/files_old.md
 Directory and summary of all original (legacy) source files, updated as new insights are discovered.
 
-### .ai/context/files_docs.md
+### projects/doc_gen/files_docs.md
 Directory and summary of all documentation files, updated as new docs are created or changed.
 
-### .ai/context/dependency_graph.md
+### projects/doc_gen/dependency_graph.md
 Static dependency graph of legacy source files, generated for context in documentation and migration tasks.
 
 ### .ai/docs/system_architecture_overview.md
@@ -70,7 +70,7 @@ Details the plan for migrating legacy data and features to the new system, inclu
 ### .ai/docs/ai_integration.md
 Documents how AI and automation are used in the project, including prompt engineering, workflows, and context management.
 
-### .ai/context/files_new.md
+### projects/doc_gen/files_new.md
 Directory and summary of all new Python source files, organized by dependency and updated as files are added or changed.
 
 ### .ai/docs/summary_headers_batch_affect.md

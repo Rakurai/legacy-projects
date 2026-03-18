@@ -341,8 +341,8 @@ async def main() -> None:
     #   (e.g., Vnum::operator< / member 1a29987e54e75885b7cd1d114ddf0f04f3).
     #   These are real entities with docs but were excluded from the GML graph
     #   for unknown reasons. Currently we drop them; revisit after investigating
-    #   the graph generation pipeline in .ai/gen_docs/clustering/doxygen_graph.py.
-    #   See .ai/artifacts/unmapped.json for full list.
+    #   the graph generation pipeline in gen_docs/clustering/doxygen_graph.py.
+    #   See artifacts/unmapped.json for full list.
     edges = load_graph_edges(config.artifacts_path, merged_entities)
     compute_fan_metrics(merged_entities, edges)
     compute_bridge_flags(merged_entities, edges)

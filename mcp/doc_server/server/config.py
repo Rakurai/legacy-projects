@@ -34,7 +34,7 @@ class ServerConfig(BaseSettings):
 
     # Project paths
     project_root: Path = Field(description="Repository root directory")
-    artifacts_dir: Path = Field(default=Path(".ai/artifacts"), description="Artifacts directory (relative to project_root)")
+    artifacts_dir: Path = Field(default=Path("artifacts"), description="Artifacts directory (relative to project_root)")
 
     # Logging
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")

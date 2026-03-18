@@ -7,7 +7,7 @@
 
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (US1, US2, US3, US4)
-- All paths relative to `.ai/mcp/doc_server/`
+- All paths relative to `mcp/doc_server/`
 
 ---
 

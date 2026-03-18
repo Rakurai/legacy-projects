@@ -11,9 +11,9 @@ from pathlib import Path
 workspace = Path(__file__).resolve().parents[2]
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-TAGS_FILE = PROJECT_ROOT / ".ai/context/internal/tags"
-CSCOPE_WORKDIR = PROJECT_ROOT / ".ai/context/internal"
-GRAPH_OUTPUT = PROJECT_ROOT / ".ai/context/internal/call_graph.json"
+TAGS_FILE = PROJECT_ROOT / "projects/doc_gen/internal/tags"
+CSCOPE_WORKDIR = PROJECT_ROOT / "projects/doc_gen/internal"
+GRAPH_OUTPUT = PROJECT_ROOT / "projects/doc_gen/internal/call_graph.json"
 
 SOURCE_DIRS = ["src",]
 EXCLUDE_DIRS = []
@@ -82,9 +82,9 @@ def parse_tags():
         entities[name] = best
 
     # Save entities for manual review
-    with open(PROJECT_ROOT / ".ai/context/internal/raw_entities.json", "w") as ef:
+    with open(PROJECT_ROOT / "projects/doc_gen/internal/raw_entities.json", "w") as ef:
         json.dump(raw_entities, ef, indent=2)
-    with open(PROJECT_ROOT / ".ai/context/internal/entities.json", "w") as ef:
+    with open(PROJECT_ROOT / "projects/doc_gen/internal/entities.json", "w") as ef:
         json.dump(entities, ef, indent=2)
 
     return entities
@@ -119,7 +119,7 @@ def build_dependency_graph(entities):
             print(f"Warning: failed cscope query for {func}: {e}")
 
     # Append cscope results to a file for manual review
-    with open(PROJECT_ROOT / ".ai/context/internal/cscope_lookup.json", "w") as f:
+    with open(PROJECT_ROOT / "projects/doc_gen/internal/cscope_lookup.json", "w") as f:
         json.dump({k:list(v) for k, v in calls.items()}, f, indent=2)
     return graph
 

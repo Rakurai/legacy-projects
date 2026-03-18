@@ -37,7 +37,7 @@ We have successfully completed the initial phases of the high-level component di
   - `integrated_clustering_report.md`
   - `subsystems_catalog.md`
   - `hierarchical_view.md`
-  - Individual subsystem documentation in `.ai/docs/subsystems/`
+  - Individual subsystem documentation in `docs/subsystems/`
 
 - **Visualizations**:
   - Cluster size visualizations

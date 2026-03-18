@@ -6,7 +6,7 @@ import json
 import os
 
 # File to update
-JSON_FILE = "/Users/qte2333/repos/legacy/.ai/context/files_old.json"
+JSON_FILE = "/Users/qte2333/repos/legacy/context/files_old.json"
 
 # New summaries to add
 new_summaries = {

@@ -3,9 +3,9 @@ import json
 import glob
 import re
 
-DOCS_DIR = ".ai/docs/components"
-FILES_OLD_JSON = ".ai/context/files_old.json"
-OUTPUT_MD = ".ai/context/files_old.md"
+DOCS_DIR = "docs/components"
+FILES_OLD_JSON = "projects/doc_gen/files_old.json"
+OUTPUT_MD = "projects/doc_gen/files_old.md"
 
 def load_json(path):
     with open(path, "r", encoding="utf-8") as f:
@@ -72,7 +72,7 @@ def main():
                 continue
             # Title
             title = cat.replace("_", " ").title()
-            doc_link = f".ai/docs/components/{cat}.md"
+            doc_link = f"docs/components/{cat}.md"
             out.write(f"## {title} System [link]({doc_link})\n")
             # Group by header/implementation/resource
             headers = [e for e in entries if e["path"].endswith(".hh") or e["path"].endswith(".h")]

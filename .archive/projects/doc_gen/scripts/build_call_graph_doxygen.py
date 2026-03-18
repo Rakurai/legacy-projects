@@ -7,9 +7,9 @@ import json
 from loguru import logger as log
 
 # Configuration
-DOXYGEN_XML_DIR = Path(".ai/context/doxygen_output/xml")
+DOXYGEN_XML_DIR = Path("projects/doc_gen/doxygen_output/xml")
 INDEX_XML = DOXYGEN_XML_DIR / "index.xml"
-GRAPH_OUTPUT = Path(".ai/context/internal/code_graph.gml")
+GRAPH_OUTPUT = Path("projects/doc_gen/internal/code_graph.gml")
 
 # Graph edge types
 CONTAINS = "contains"

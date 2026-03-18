@@ -3,7 +3,7 @@
 **Feature Branch**: `002-mcp-doc-server-v2`
 **Created**: 2026-03-14
 **Status**: Draft
-**Input**: User description: "V2 of .ai/mcp/doc_server — add hierarchical system documentation layer on top of V1 entity-level services, referencing DESIGN.md §18 for intended shape and scope"
+**Input**: User description: "V2 of mcp/doc_server — add hierarchical system documentation layer on top of V1 entity-level services, referencing DESIGN.md §18 for intended shape and scope"
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -13,7 +13,7 @@ An AI assistant needs to understand the high-level architectural organization of
 
 **Why this priority**: Subsystem lookup is the foundational V2 capability. Without the ability to browse and retrieve system-level documentation, none of the cross-referencing (entity↔subsystem links, unified search, context assembly) is useful. This is the MVP that makes the architectural narrative layer accessible.
 
-**Independent Test**: Can be fully tested by querying known subsystems (e.g., "Combat System", "Affect System", "Networking") and verifying that returned documentation matches the corresponding component markdown files in `.ai/docs/components/`. Success means an assistant can navigate the codebase at the architectural level using curated prose rather than aggregating function-level docs.
+**Independent Test**: Can be fully tested by querying known subsystems (e.g., "Combat System", "Affect System", "Networking") and verifying that returned documentation matches the corresponding component markdown files in `docs/components/`. Success means an assistant can navigate the codebase at the architectural level using curated prose rather than aggregating function-level docs.
 
 **Acceptance Scenarios**:
 
@@ -113,7 +113,7 @@ An AI assistant planning changes to the Affect System needs to understand which 
 
 #### Subsystem Data Ingestion & Build Pipeline
 
-- **FR-001**: Build pipeline MUST parse the 23 subsystem component documents from `.ai/docs/components/*.md` and the subsystem index from `.ai/docs/subsystems.md` into structured subsystem records
+- **FR-001**: Build pipeline MUST parse the 23 subsystem component documents from `docs/components/*.md` and the subsystem index from `docs/subsystems.md` into structured subsystem records
 - **FR-002**: Build pipeline MUST chunk component documents by heading boundaries (`##`/`###`) producing one doc section record per heading, preserving heading hierarchy as `section_path` (e.g., "Core Components > Attack Resolution")
 - **FR-003**: Build pipeline MUST classify each doc section's `section_kind` mechanically from heading text using a closed enumeration: overview, responsibilities, key_components, implementation, dependencies, behaviors, future
 - **FR-004**: Build pipeline MUST identify and flag exactly one `is_overview` section per subsystem (the canonical overview paragraph)
@@ -168,7 +168,7 @@ An AI assistant planning changes to the Affect System needs to understand which 
 
 #### Curation Intermediate Artifacts
 
-- **FR-035**: The curation agent MUST produce versioned intermediate artifact files (stored in `.ai/artifacts/v2/`) rather than writing directly to the database
+- **FR-035**: The curation agent MUST produce versioned intermediate artifact files (stored in `artifacts/v2/`) rather than writing directly to the database
 - **FR-036**: Curation artifacts MUST include: `subsystems_seed.json`, `subsystem_doc_chunks.jsonl`, `entity_subsystem_links.jsonl`, `subsystem_edges.json`, and `curation_flags.jsonl`
 - **FR-037**: Curation artifacts MUST be human-reviewable, re-ingestable without rerunning the curation agent, and correctable by manual editing
 
@@ -208,12 +208,12 @@ An AI assistant planning changes to the Affect System needs to understand which 
 - **SC-009**: Subsystem dependency graph correctly represents all dependency relationships declared in `subsystems.md`, with accurate upstream/downstream traversal
 - **SC-010**: The V2 build script completes processing of all artifacts (23 subsystems, ~200 doc sections, curation links, dependency edges) and database population in under 10 minutes
 - **SC-011**: When an entity has no subsystem links, context assembly tools return a meaningful response (capability fallback) rather than an error or empty result
-- **SC-012**: Curation artifacts in `.ai/artifacts/v2/` are human-reviewable and can be re-ingested without rerunning the curation agent, producing identical database state
+- **SC-012**: Curation artifacts in `artifacts/v2/` are human-reviewable and can be re-ingested without rerunning the curation agent, producing identical database state
 
 ### Assumptions
 
 - **A-001**: V1 of the MCP Documentation Server (spec 001-mcp-doc-server) is complete and operational before V2 work begins — V1 tables, tools, and response shapes are available and stable
-- **A-002**: The 23 subsystem component documents in `.ai/docs/components/` and the subsystem index in `.ai/docs/subsystems.md` are complete and accurate at build time
+- **A-002**: The 23 subsystem component documents in `docs/components/` and the subsystem index in `docs/subsystems.md` are complete and accurate at build time
 - **A-003**: Entity↔subsystem links require agent-assisted curation — mechanical keyword matching is insufficient for accurate mappings; the curation agent uses V1's tools (search, behavior slices, capability detail) to make informed decisions
 - **A-004**: The curation agent produces intermediate artifact files rather than writing directly to the database, enabling human review and correction before ingestion
 - **A-005**: Subsystem hierarchy (parent/child nesting) is flat or shallow (1-2 levels maximum) based on the current 23 component documents

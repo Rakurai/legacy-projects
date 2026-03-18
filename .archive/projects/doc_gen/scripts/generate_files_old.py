@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Script to generate .ai/context/files_old.json as a summary of all legacy source/header files.
+Script to generate projects/doc_gen/files_old.json as a summary of all legacy source/header files.
 Scans src/ and stored_src/ recursively for .h, .hh, .c, .cpp, .cc, .hpp files.
-Outputs: .ai/context/files_old.json as a JSON summary.
+Outputs: projects/doc_gen/files_old.json as a JSON summary.
 If the output file exists, it will be loaded and updated with any new files.
 """
 import os
@@ -11,7 +11,7 @@ import json
 
 ROOTS = ["src"]
 EXTS = {".h", ".hh", ".hpp", ".c", ".cpp", ".cc"}
-OUTPUT = ".ai/context/files_old.json"
+OUTPUT = "projects/doc_gen/files_old.json"
 
 workspace = pathlib.Path(__file__).resolve().parents[2]
 output_path = workspace / OUTPUT

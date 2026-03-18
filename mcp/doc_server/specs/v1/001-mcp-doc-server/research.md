@@ -441,7 +441,7 @@ class ServerConfig(BaseSettings):
     embedding_api_key: str | None = None
     embedding_model: str | None = None
     project_root: str
-    artifacts_dir: str = ".ai/artifacts"
+    artifacts_dir: str = "artifacts"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
 ```
 

@@ -19,7 +19,7 @@
 
 **Purpose**: No project initialization needed — this is a bugfix to an existing project. Load capability graph earlier in the pipeline.
 
-- [x] T001 Reorder `main()` to load capability graph before graph metrics computation in `.ai/mcp/doc_server/build_mcp_db.py`
+- [x] T001 Reorder `main()` to load capability graph before graph metrics computation in `mcp/doc_server/build_mcp_db.py`
 
 ---
 
@@ -29,9 +29,9 @@
 
 **⚠️ CRITICAL**: US3 (bridge detection) depends on US2 (capability mapping). US4 (function counts) and US5 (capability edges) depend on correct `cap_graph` parsing.
 
-- [x] T002 Add `assign_capabilities()` function to build name→capability mapping from `cap_graph["capabilities"]` members in `.ai/mcp/doc_server/build_helpers/entity_processor.py`
-- [x] T003 Add `_capability` instance variable to `MergedEntity.__init__()` and update `capability` property to prefer it over `doc.system` in `.ai/mcp/doc_server/build_helpers/entity_processor.py`
-- [x] T004 Call `assign_capabilities(merged_entities, cap_graph)` in `main()` after merge and before bridge detection in `.ai/mcp/doc_server/build_mcp_db.py`
+- [x] T002 Add `assign_capabilities()` function to build name→capability mapping from `cap_graph["capabilities"]` members in `mcp/doc_server/build_helpers/entity_processor.py`
+- [x] T003 Add `_capability` instance variable to `MergedEntity.__init__()` and update `capability` property to prefer it over `doc.system` in `mcp/doc_server/build_helpers/entity_processor.py`
+- [x] T004 Call `assign_capabilities(merged_entities, cap_graph)` in `main()` after merge and before bridge detection in `mcp/doc_server/build_mcp_db.py`
 
 **Checkpoint**: Entity capability assignment infrastructure ready
 
@@ -45,9 +45,9 @@
 
 ### Implementation for User Story 1
 
-- [x] T005 [US1] Refactor `drop_and_create_schema()` to accept `engine` parameter instead of `session` and use it for `create_all()` in `.ai/mcp/doc_server/build_mcp_db.py`
-- [x] T006 [US1] Move index creation to use `engine.begin()` with `CREATE INDEX IF NOT EXISTS` in `.ai/mcp/doc_server/build_mcp_db.py`
-- [x] T007 [US1] Update `main()` to pass `db_manager.engine` to `drop_and_create_schema()` and call it outside the session context manager in `.ai/mcp/doc_server/build_mcp_db.py`
+- [x] T005 [US1] Refactor `drop_and_create_schema()` to accept `engine` parameter instead of `session` and use it for `create_all()` in `mcp/doc_server/build_mcp_db.py`
+- [x] T006 [US1] Move index creation to use `engine.begin()` with `CREATE INDEX IF NOT EXISTS` in `mcp/doc_server/build_mcp_db.py`
+- [x] T007 [US1] Update `main()` to pass `db_manager.engine` to `drop_and_create_schema()` and call it outside the session context manager in `mcp/doc_server/build_mcp_db.py`
 
 **Checkpoint**: Run `uv run python build_mcp_db.py` then verify 19+ indexes via `test_database.py`
 
@@ -61,7 +61,7 @@
 
 ### Implementation for User Story 2
 
-- [x] T008 [US2] Fix docstring for `load_capability_graph()` to document actual nested dict format (`dependencies`, `capabilities.members`) in `.ai/mcp/doc_server/build_helpers/loaders.py`
+- [x] T008 [US2] Fix docstring for `load_capability_graph()` to document actual nested dict format (`dependencies`, `capabilities.members`) in `mcp/doc_server/build_helpers/loaders.py`
 
 **Checkpoint**: Run full build, query entities — ~848 should have capability set. Bridge detection (US3) should now also produce results automatically.
 
@@ -75,7 +75,7 @@
 
 ### Implementation for User Story 3
 
-No additional code changes required. Bridge detection is a cascading fix from US2 (capability assignment). The existing `compute_bridge_flags()` in `.ai/mcp/doc_server/build_helpers/graph_loader.py` works correctly once capabilities are populated.
+No additional code changes required. Bridge detection is a cascading fix from US2 (capability assignment). The existing `compute_bridge_flags()` in `mcp/doc_server/build_helpers/graph_loader.py` works correctly once capabilities are populated.
 
 - [x] T009 [US3] Verify bridge detection produces > 10 results after full build by running `uv run python test_database.py` and checking bridge function output
 
@@ -91,9 +91,9 @@ No additional code changes required. Bridge detection is a cascading fix from US
 
 ### Implementation for User Story 4
 
-- [x] T010 [P] [US4] Fix `populate_capabilities()` to read description from `cap_def.get("desc", "")` instead of `"description"` in `.ai/mcp/doc_server/build_mcp_db.py`
-- [x] T011 [P] [US4] Fix `populate_capabilities()` to read `function_count` from `cap_graph["capabilities"][cap_name]["function_count"]` instead of `len(cap_def.get("functions", []))` in `.ai/mcp/doc_server/build_mcp_db.py`
-- [x] T012 [US4] Fix `populate_capabilities()` to compute `doc_quality_dist` by aggregating entity doc_quality per capability instead of hard-coded zeros in `.ai/mcp/doc_server/build_mcp_db.py`
+- [x] T010 [P] [US4] Fix `populate_capabilities()` to read description from `cap_def.get("desc", "")` instead of `"description"` in `mcp/doc_server/build_mcp_db.py`
+- [x] T011 [P] [US4] Fix `populate_capabilities()` to read `function_count` from `cap_graph["capabilities"][cap_name]["function_count"]` instead of `len(cap_def.get("functions", []))` in `mcp/doc_server/build_mcp_db.py`
+- [x] T012 [US4] Fix `populate_capabilities()` to compute `doc_quality_dist` by aggregating entity doc_quality per capability instead of hard-coded zeros in `mcp/doc_server/build_mcp_db.py`
 
 **Checkpoint**: All capabilities show correct function counts and descriptions in test output
 
@@ -107,7 +107,7 @@ No additional code changes required. Bridge detection is a cascading fix from US
 
 ### Implementation for User Story 5
 
-- [x] T013 [US5] Fix `populate_capabilities()` capability edges section to parse `cap_graph.get("dependencies", {})` as nested dict instead of `cap_graph.get("edges", [])` as flat list in `.ai/mcp/doc_server/build_mcp_db.py`
+- [x] T013 [US5] Fix `populate_capabilities()` capability edges section to parse `cap_graph.get("dependencies", {})` as nested dict instead of `cap_graph.get("edges", [])` as flat list in `mcp/doc_server/build_mcp_db.py`
 
 **Checkpoint**: 200 capability edges appear in test output
 

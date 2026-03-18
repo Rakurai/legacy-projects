@@ -17,7 +17,7 @@ cindex.Config.set_library_file("/opt/local/libexec/llvm-20/lib/libclang.dylib")
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 COMPILE_COMMANDS = PROJECT_ROOT / "src/compile_commands.json"
-GRAPH_OUTPUT = PROJECT_ROOT / ".ai/context/internal/clang_call_graph.json"
+GRAPH_OUTPUT = PROJECT_ROOT / "projects/doc_gen/internal/clang_call_graph.json"
 SOURCE_DIR = PROJECT_ROOT / "src"
 
 log_level = "info"
@@ -501,7 +501,7 @@ def main(args):
 
     function_ranges = {file: sorted(ranges, key=lambda x: (x[0], x[1])) for file, ranges in function_ranges.items()}
 
-    with open(PROJECT_ROOT / '.ai/context/internal/function_ranges.json', 'w') as f:
+    with open(PROJECT_ROOT / 'projects/doc_gen/internal/function_ranges.json', 'w') as f:
         json.dump(function_ranges, f, indent=2)
 
     # Enhance debug output to include entity types
@@ -510,7 +510,7 @@ def main(args):
         if 'entity_type' in attrs:
             entity_types[node] = attrs['entity_type']
 
-    with open(PROJECT_ROOT / '.ai/context/internal/entity_types.json', 'w') as f:
+    with open(PROJECT_ROOT / 'projects/doc_gen/internal/entity_types.json', 'w') as f:
         json.dump(entity_types, f, indent=2)
 
     for macro_name, loc_keys in macro_instantiations.items():
@@ -536,9 +536,9 @@ def main(args):
                 log.warning(f"no enclosing function for macro {macro_name} at {loc_key}, remove this later")
     #            raise Exception(f"no function found for macro call {macro_name} at {loc_key}")
 
-    with open(PROJECT_ROOT / '.ai/context/internal/debug_entities.json', 'w') as f:
+    with open(PROJECT_ROOT / 'projects/doc_gen/internal/debug_entities.json', 'w') as f:
         json.dump(debug_calls_from_to, f, indent=2)
-    with open(PROJECT_ROOT / '.ai/context/internal/macro_instantiations.json', 'w') as f:
+    with open(PROJECT_ROOT / 'projects/doc_gen/internal/macro_instantiations.json', 'w') as f:
         json.dump(macro_instantiations, f, indent=2)
 
     # Add functionality to export comments as part of our JSON output
@@ -547,7 +547,7 @@ def main(args):
         if 'doc_comment' in attrs and attrs['doc_comment']:
             doc_comments[node] = attrs['doc_comment']
     
-    with open(PROJECT_ROOT / '.ai/context/internal/doc_comments.json', 'w') as f:
+    with open(PROJECT_ROOT / 'projects/doc_gen/internal/doc_comments.json', 'w') as f:
         json.dump(doc_comments, f, indent=2)
     
     log.info(f"Extracted {len(doc_comments)} documentation comments")

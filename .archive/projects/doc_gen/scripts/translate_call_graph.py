@@ -7,7 +7,7 @@ import networkx as nx
 from flask import Flask, jsonify, send_from_directory, render_template_string
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-STATIC_DIR = PROJECT_ROOT / ".ai/context/internal"
+STATIC_DIR = PROJECT_ROOT / "projects/doc_gen/internal"
 
 call_graph_path = STATIC_DIR / "clang_call_graph.json"
 web_graph_output = STATIC_DIR / "web_call_graph.json"

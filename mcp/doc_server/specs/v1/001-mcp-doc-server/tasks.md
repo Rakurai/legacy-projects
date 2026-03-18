@@ -14,7 +14,7 @@ description: "Implementation tasks for MCP Documentation Server"
 
 - **[P]**: Can run in parallel (different files, no dependencies)
 - **[Story]**: Which user story this task belongs to (e.g., US1, US2)
-- All paths relative to `.ai/mcp/doc_server/`
+- All paths relative to `mcp/doc_server/`
 
 ---
 
@@ -22,7 +22,7 @@ description: "Implementation tasks for MCP Documentation Server"
 
 **Purpose**: Project initialization and basic structure
 
-- [X] T001 Create project directory structure in .ai/mcp/doc_server/ per plan.md
+- [X] T001 Create project directory structure in mcp/doc_server/ per plan.md
 - [X] T002 Initialize Python project with uv and create pyproject.toml with dependencies (FastMCP, Pydantic v2, SQLModel, SQLAlchemy[asyncio], pgvector, NetworkX, loguru, OpenAI SDK, pytest, pytest-asyncio)
 - [X] T003 [P] Create docker-compose.yml for PostgreSQL 17 + pgvector container
 - [X] T004 [P] Create .env.example with configuration template (PGHOST, PGPORT, PGDATABASE, PROJECT_ROOT, ARTIFACTS_DIR, LOG_LEVEL, EMBEDDING_*)
@@ -79,7 +79,7 @@ description: "Implementation tasks for MCP Documentation Server"
 
 **Goal**: AI assistant can resolve entity names, retrieve full documentation, access source code, and explore file-level entities
 
-**Independent Test**: Query known entities (e.g., `damage` function, `Character` class, `game_loop_unix`) and verify returned documentation matches pre-computed artifacts in `.ai/artifacts/doc_db.json`
+**Independent Test**: Query known entities (e.g., `damage` function, `Character` class, `game_loop_unix`) and verify returned documentation matches pre-computed artifacts in `artifacts/doc_db.json`
 
 ### Tests for User Story 1 (Happy-Path Integration Tests)
 

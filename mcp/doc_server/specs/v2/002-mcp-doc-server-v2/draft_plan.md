@@ -131,7 +131,7 @@ Runs on each chunk's body text during the build:
 
 ### A.4 — Intermediate Artifact Output
 
-Phase A produces these files in `.ai/artifacts/v2/`:
+Phase A produces these files in `artifacts/v2/`:
 
 | Artifact | Format | Content |
 |----------|--------|---------|

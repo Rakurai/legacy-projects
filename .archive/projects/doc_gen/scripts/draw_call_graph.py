@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
-STATIC_DIR = PROJECT_ROOT / ".ai/context/internal"
+STATIC_DIR = PROJECT_ROOT / "projects/doc_gen/internal"
 
 call_graph_path = STATIC_DIR / "clang_call_graph.json"
 

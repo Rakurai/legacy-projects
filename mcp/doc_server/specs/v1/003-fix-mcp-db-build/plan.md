@@ -12,7 +12,7 @@ Fix 4 bugs in the MCP documentation server's offline build script (`build_mcp_db
 ## Technical Context
 
 **Language/Version**: Python 3.11+
-**Primary Dependencies**: SQLModel + SQLAlchemy[asyncio] (ORM, async engine), asyncpg (PostgreSQL driver), pgvector (vector column type), loguru (logging). Build reuses parsers from `.ai/gen_docs/clustering/` (doxygen_parse, doc_db, doxygen_graph).
+**Primary Dependencies**: SQLModel + SQLAlchemy[asyncio] (ORM, async engine), asyncpg (PostgreSQL driver), pgvector (vector column type), loguru (logging). Build reuses parsers from `gen_docs/clustering/` (doxygen_parse, doc_db, doxygen_graph).
 **Storage**: PostgreSQL 17 + pgvector extension (existing database, schema unchanged)
 **Testing**: Manual validation via `test_database.py` (row counts, index checks, sample queries). Run with `uv run python test_database.py`.
 **Target Platform**: macOS/Linux developer workstations
@@ -25,7 +25,7 @@ Fix 4 bugs in the MCP documentation server's offline build script (`build_mcp_db
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-The Legacy MUD Server Constitution (v1.0.0) applies to the **MUD source code in `src/`**, not this MCP documentation server which lives in `.ai/mcp/doc_server/`. This is a separate Python project serving the documentation layer. The constitution's principles are noted here for context but do not create gates for this feature.
+The Legacy MUD Server Constitution (v1.0.0) applies to the **MUD source code in `src/`**, not this MCP documentation server which lives in `mcp/doc_server/`. This is a separate Python project serving the documentation layer. The constitution's principles are noted here for context but do not create gates for this feature.
 
 ### Informational Review (Not Blocking)
 
@@ -81,7 +81,7 @@ specs/003-fix-mcp-db-build/
 ### Source Code (files to modify)
 
 ```text
-.ai/mcp/doc_server/
+mcp/doc_server/
 ├── build_mcp_db.py              # Fix: index creation engine, capability population, capability edges parsing
 ├── build_helpers/
 │   ├── loaders.py               # Fix: docstring for load_capability_graph (wrong format documented)

@@ -1,0 +1,312 @@
+{
+  "void do_addapply(Character *ch, String argument)": {
+    "brief": "Applies a specified affect or modification to an in-game object based on command parameters.",
+    "details": "The do_addapply function allows a character to add an effect or attribute modification to an object within the game world. It begins by parsing the input argument string into four components: the target object identifier, the affect type, the value to apply, and an optional duration. The function validates the presence and correctness of these arguments, including checking if the object exists in the game world, whether the affect type is recognized, and if the value falls within the acceptable range (-30000 to 30000). For the duration, it defaults to indefinite (-1) if not specified or invalid; otherwise, it ensures the duration is within -1 to 998. After validation, it constructs an Affect object, setting its properties such as location, modifier, duration, level, and other attributes, then adds it to the object's affect list via affect::join_to_obj, which manages effect stacking and merging. If any validation step fails, an appropriate message is sent to the character, and no changes are made to the object.",
+    "params": {
+      "ch": "A pointer to the Character executing the command, used for validation and messaging.",
+      "argument": "A String containing the command arguments: object identifier, affect type, value, and optional duration."
+    },
+    "returns": "None; the function performs its effect through side effects and messaging.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function supports a flexible set of affect types, mapped from string identifiers to internal constants, facilitating diverse attribute modifications. It ensures robust validation to prevent invalid or out-of-range effects, and uses affect::join_to_obj to handle effect stacking, avoiding duplicates and maintaining effect integrity.",
+    "rationale": "This function is used when a game administrator or script needs to dynamically apply effects or attribute modifications to objects, such as enchantments, buffs, or custom effects, during gameplay or setup, providing a flexible and validated mechanism for effect management.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1ad835f687a408947202721bc21c33b521",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_addapply",
+    "qualified_name": null,
+    "definition": "void do_addapply",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_morph(Character *ch, String argument)": {
+    "brief": "Transforms a connected player character into a different mobile NPC based on specified criteria.",
+    "details": "The do_morph function allows a character to morph a connected player into a new mobile NPC. It parses the input argument to extract the target player's name and the desired mobile prototype name, verifying that the target player exists, is connected, and is not already morphed. It then retrieves the specified mobile prototype and creates a new mobile character instance. The function modifies the act flags of the new mobile to set its behavior, such as removing aggression and enabling color and morph flags. It moves the new mobile into the target player's current room and switches control from the player to this new mobile using do_switch. The original player is then moved to a designated limbo room to complete the morph process. Throughout, the function provides feedback messages to the initiating character and logs errors if the mobile creation fails, ensuring robust operation and clear communication.",
+    "params": {
+      "ch": "The character who initiates the morph command.",
+      "argument": "A string containing the target player's name followed by the mobile prototype name."
+    },
+    "returns": "This function does not return a value; it performs side effects such as changing character states and sending messages.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that only connected, unmorphed players can be targeted for morphing. It also handles failure cases gracefully, providing feedback and logging errors. The act flags are carefully adjusted to set the appropriate behavior for the new mobile, and the control switch maintains game consistency. The use of a limbo room as a default location for the original player prevents potential issues with disconnected or invalid rooms.",
+    "rationale": "This function is used when an administrator or game mechanic needs to temporarily transform a player into a specific NPC for purposes such as role-playing, testing, or event scripting. It facilitates seamless control transfer and maintains game integrity by managing character states and locations appropriately.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1a8b6a1dcf0511086227d348f525463c12",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_morph",
+    "qualified_name": null,
+    "definition": "void do_morph",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_rppaward(Character *ch, String argument)": {
+    "brief": "Handles listing, awarding, and deducting role playing points (RPPs) for player characters.",
+    "details": "The function 'do_rppaward' operates in two modes: if called without arguments, it lists all visible player characters along with their current RPPs by iterating through active network descriptors and filtering based on visibility and connection status. When arguments are provided, it parses the input to determine whether to award or deduct RPPs from a specified player. It validates the command syntax, ensures the target player exists in the game world, and verifies that the RPP amount is a numeric value within the allowed range (0-50). For awarding, it increases the target's RPPs, sends confirmation messages to both the administrator and the target, and logs the action via wiznet with appropriate security and categorization flags. For deduction, it checks if the target has sufficient RPPs before subtracting, then communicates the change similarly. The function also handles invalid inputs, player not found scenarios, and insufficient RPPs for deduction, providing appropriate feedback to the administrator.",
+    "params": {
+      "ch": "A pointer to the Character object representing the administrator executing the command.",
+      "argument": "A String object containing the command arguments, which include the action ('award' or 'deduct'), the target player's name, and the RPP amount."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that RPP adjustments are within the specified bounds (0-50) and provides clear user feedback for all operational outcomes. It also utilizes wiznet for logging administrative actions, with security and categorization flags to control message visibility among high-level staff.",
+    "rationale": "This function is used by game administrators to manage role playing points, either to review current RPPs of players or to adjust them as part of moderation or reward systems. Its design supports maintaining fair play and encouraging roleplay engagement by allowing controlled modifications and transparent logging of such actions.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1a2b8a9308a0fd038b9e53790e6f1442de",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_rppaward",
+    "qualified_name": null,
+    "definition": "void do_rppaward",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "Room * get_scatter_room(Character *ch)": {
+    "brief": "Selects a random suitable room in the game world for scattering a character.",
+    "details": "The function attempts to find an appropriate room for scattering a character by performing up to two passes through all rooms in the game world. During each pass, it filters out rooms that are null, the character's current room, or inaccessible based on visibility and various restrictions such as area exclusions, specific area names, guild associations, sector types like arenas, and certain room flags including private, solitary, or no-quest. It also skips rooms designated as pet shops or with other restrictive flags. In the first pass, it counts all eligible rooms and randomly selects one index. In the second pass, it returns the room corresponding to this randomly chosen index. If no suitable room is found after both passes, the function returns nullptr, indicating failure to find a valid scatter location.",
+    "params": {
+      "ch": "Pointer to the Character object for which a scatter room is being determined."
+    },
+    "returns": "A pointer to a Room object representing the selected scatter location, or nullptr if no suitable room is found.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that the selected room is accessible and appropriate for scattering by applying multiple filters, including visibility, area restrictions, and room flags. It performs a two-pass approach to randomly select a room from the filtered set, which helps in evenly distributing scatter locations across eligible rooms.",
+    "rationale": "This function is used when a character needs to be relocated to a random, suitable room, such as during teleportation, death, or certain game events that require dispersing characters across the game world while respecting game restrictions and environment rules.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1a76f796e1c81869d969fdc50d412b6e51",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_scatter_room",
+    "qualified_name": null,
+    "definition": "Room * get_scatter_room",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "wiz__quest_8cc, void do_scatter(Character *ch, String argument)": "Called to determine a random room where objects will be moved during scattering."
+    }
+  },
+  "void do_scatter(Character *ch, String argument)": {
+    "brief": "Relocates all portable objects in the character's current room to a randomly selected scatter room.",
+    "details": "This function iterates through all objects present in the character's current room, checking each for the ITEM_TAKE flag via the CAN_WEAR macro to determine if the object is portable. For each portable object found, it removes the object from its current room using obj_from_room() and then places it into a new, randomly selected room obtained through get_scatter_room(). The process continues for all such objects, and a boolean flag tracks whether any objects were moved. After processing, the function sends a message to the character: 'You see nothing to scatter.' if no objects were moved, or 'Done.' if the scattering occurred. The function gracefully handles cases where the character is not in a room by performing no actions. It ensures only items that can be taken are relocated, maintaining game consistency and providing a randomized redistribution of objects across the game world.",
+    "params": {
+      "ch": "Pointer to the Character executing the scatter command.",
+      "argument": "Additional command arguments as a String; not utilized in this implementation."
+    },
+    "returns": "This function does not return a value; it performs actions and sends messages to the character.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on get_scatter_room() to determine a suitable destination room, which may involve internal logic for room selection. Only objects with the ITEM_TAKE flag are moved, ensuring immovable or special objects remain unaffected. The use of CAN_WEAR macro simplifies the check for item portability. The function provides a randomized dispersal mechanic useful for gameplay scenarios such as death, teleportation, or environmental effects.",
+    "rationale": "This function is useful when a game mechanic requires dispersing items from a character's current location to a random area, such as during death, teleportation, or chaos events, to enhance gameplay variability and realism.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1aded239d3c12b0c8f32b9d0607fdd32d9",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_scatter",
+    "qualified_name": null,
+    "definition": "void do_scatter",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_string(Character *ch, String argument)": {
+    "brief": "Handles in-game string modifications for characters, objects, and rooms based on command arguments.",
+    "details": "The function begins by parsing the input argument string into four components: target type, target identifier, field to modify, and the new string value. It validates the presence of all required arguments and provides usage instructions if any are missing. Depending on the target type\u2014character, object, or room\u2014it searches for the specified entity within the game world, inventory, or environment, performing necessary permission and existence checks. For characters, it allows changing attributes such as name, description, short and long descriptions, title, deity, status, and spouse, with restrictions on player and NPC modifications. For objects, it supports updating name, short description, long description, material, and managing extended descriptions, including adding or removing extra descriptions. Room string modifications are present but currently disabled. After applying changes, it sends confirmation messages to the initiating character. The function ensures game consistency, security, and proper feedback, facilitating dynamic content updates during gameplay.",
+    "params": {
+      "ch": "Pointer to the Character initiating the command, used for context and messaging.",
+      "argument": "String containing the command arguments, specifying target, field, and new string."
+    },
+    "returns": "This function does not return a value; it performs in-place modifications and outputs messages to the character.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function includes permission checks to prevent unauthorized modifications, such as restricting name changes to NPCs and disallowing title changes for mobiles. Extended descriptions can be added or removed dynamically, supporting rich object descriptions. Room string modifications are currently disabled, indicating potential future expansion. The function provides comprehensive usage instructions when invoked with incorrect or incomplete arguments, ensuring user clarity.",
+    "rationale": "This function is used during game moderation or scripting to dynamically update character, object, or environment descriptions, facilitating debugging, customization, or storytelling adjustments without restarting or recompiling the game.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1a92e724c8538b36d18446a89cea1e2990",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_string",
+    "qualified_name": null,
+    "definition": "void do_string",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "wiz__quest_8cc, void do_string(Character *ch, String argument)": "The function itself; invoked to perform in-game string modifications based on parsed arguments."
+    }
+  },
+  "void do_switch(Character *ch, String argument)": {
+    "brief": "Switches control from a player character to a specified NPC within the game world.",
+    "details": "This function enables a player-controlled character to assume control of an NPC (non-player character) in the game, primarily for administrative, role-playing, or monitoring purposes. It begins by verifying that the caller is a real player (not an NPC) and not already switched into another character. It then parses the input argument to identify the target NPC by name or identifier, checking that the target exists, is an NPC, and is accessible\u2014ensuring the target is not in a private room unless the caller has sufficient privileges (such as being an implementor). It also confirms that the NPC is not currently in use by another descriptor. If all validations pass, the function updates the caller's descriptor to point to the NPC, saves the original character in the 'original' pointer for potential reversion, and transfers communication settings, prompts, and flags to the NPC. It broadcasts a notification via wiznet to inform administrators of the switch, and provides feedback messages to both the player and the NPC, indicating the successful control transfer. This process preserves the original character's state, allowing for seamless control switching without data loss or inconsistency.",
+    "params": {
+      "ch": "Pointer to the Character object representing the player initiating the switch.",
+      "argument": "String containing the name or identifier of the NPC to switch into."
+    },
+    "returns": "Void; performs the switch operation with appropriate notifications, no return value.",
+    "tparams": null,
+    "throws": "None explicitly thrown; function performs validation and outputs messages for failure cases.",
+    "notes": "The function ensures that only valid, accessible NPCs can be switched into, and that the switch is transparent to both the player and the NPC. It also broadcasts the switch event for administrative oversight and maintains the original character reference for potential reversion. The communication and display settings are transferred to maintain consistency in user experience.",
+    "rationale": "This function is used when a player with appropriate privileges needs to assume control of an NPC for purposes such as moderation, scripting, or role-playing scenarios. It allows seamless control transfer while preserving the original character's state, facilitating administrative oversight or dynamic gameplay interactions.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1af2aba1b66723954a961edfea9b62a8e0",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_switch",
+    "qualified_name": null,
+    "definition": "void do_switch",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "magic_8cc, void spell_polymorph(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": "Invoked to switch control from the player character to the newly created mobile after successful morphing.",
+      "wiz__quest_8cc, void do_morph(Character *ch, String argument)": "Called to transfer control from the victim to the newly created mobile character.\","
+    }
+  },
+  "void do_return(Character *ch, String argument)": {
+    "brief": "Handles a character's return from a morphed or transformed state back to their original form.",
+    "details": "This function manages the process of reverting a character from a morphed or transformed state to their original body. It first verifies that the character has an active network connection and is currently morphed by checking the 'original' pointer. If the character is not morphed, it informs the player accordingly. When returning, it clears the character's prompt, broadcasts a notification to the original character via wiznet, and moves the original character back to their previous room or a default morgue room if their current room is unavailable. It then updates the descriptor to point back to the original character, clears the 'original' pointer, and restores the connection between the descriptor and the character. If the character was morphed and in a room, it removes the morphed character from the game world to prevent duplication. Additionally, if the original character has pending messages in their buffer, it notifies them to check 'replay'. The function ensures proper cleanup of the morphed state and maintains consistency within the game world after the return process, handling room transitions and character state updates appropriately.",
+    "params": {
+      "ch": "Pointer to the Character object representing the character attempting to return from a morphed state.",
+      "argument": "A String containing any additional arguments provided to the command (not utilized in this implementation)."
+    },
+    "returns": "Void; the function performs side effects such as updating character states, moving rooms, and sending messages, but does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles both the visual and logical aspects of returning from a morph, including messaging, room management, and descriptor updates. It also ensures that if the character was morphed, they are properly removed from the game world to prevent duplication or inconsistencies.",
+    "rationale": "This function is used when a player or character needs to revert from a transformed or morphed state back to their original form, typically after a temporary transformation or disguise, ensuring a seamless transition back to normal gameplay and maintaining game state integrity.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1af08271058a72a9604064f9509ba151ec",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_return",
+    "qualified_name": null,
+    "definition": "void do_return",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "handler_8cc, void extract_char(Character *ch, bool fPull)": "Called to handle the process of returning a character to their original body if they are a player and have an original form, specifically when the character is a non-NPC with an active descriptor."
+    }
+  },
+  "bool setup_obj(Character *ch, Object *obj, String argument)": {
+    "brief": "Configures or initializes an in-game object based on its type and optional parameters.",
+    "details": "The function 'setup_obj' is responsible for setting up or modifying an in-game object ('obj') according to its item type and an optional argument string. It begins by parsing the first argument from the provided 'argument' string using 'one_argument', storing it in 'arg1'. The function then uses a switch statement on 'obj->item_type' to determine the specific setup actions needed for different categories of items. Currently, detailed logic is implemented for ITEM_TOKEN, where it assigns the object's name, short description, and type based on the argument, although this code is commented out. For all other item types, the function performs no specific configuration and simply returns true, indicating successful setup or that no setup is necessary. This structure allows for easy extension to handle additional item types with custom setup logic in the future, facilitating flexible object configuration within the game system.",
+    "params": {
+      "obj": "Pointer to the Object to be configured or initialized.",
+      "ch": "Pointer to the Character object associated with the setup process, used for messaging or context.",
+      "argument": "A String containing optional parameters that influence the object's setup, typically parsed for specific keywords or types."
+    },
+    "returns": "Returns true if the object setup completes successfully or if no specific setup is required for its type; returns false if setup fails due to invalid arguments (notably in ITEM_TOKEN logic).",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function currently contains commented-out logic for ITEM_TOKEN setup, indicating planned or optional detailed configuration for token objects. Its design supports future expansion to handle various object types with custom setup procedures, enabling flexible and context-sensitive object initialization.",
+    "rationale": "This function is used during object creation or modification processes, such as in item crafting or spawning, to ensure objects are properly configured according to their type and provided parameters, thereby maintaining consistency and enabling customized object behaviors.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1a85c116a18f431d7a20ecfa2a4d8ad8cc",
+    "etype": "member",
+    "kind": "function",
+    "name": "setup_obj",
+    "qualified_name": null,
+    "definition": "bool setup_obj",
+    "argsstring": "(Character *ch, Object *obj, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "wiz__quest_8cc, void do_create(Character *ch, String argument)": "Called to configure the newly created object based on the remaining argument string; its success determines whether the object is kept or extracted."
+    }
+  },
+  "void do_create(Character *ch, String argument)": {
+    "brief": "Creates a new in-game object of a specified type and assigns it to the character's inventory.",
+    "details": "The function 'do_create' allows an immortal character to generate a new game object based on a specified item type. It first verifies that the character has immortal privileges. If no arguments are provided, it displays usage instructions. When invoked with the 'object' keyword and a valid item type, it searches the item table for a matching entry, retrieves the corresponding object prototype from the game world, and creates a new object instance. The function then attempts to configure the object using 'setup_obj' with any additional parameters; if setup fails, the object is discarded. Upon successful creation and setup, the object is added to the character's inventory, and a message is broadcasted to the room indicating the creation. Certain restricted item types, such as 'npc_corpse' and 'pc_corpse', are disallowed from creation. If the item type is invalid, the function recursively calls itself with minimal arguments to display the correct syntax and usage instructions.",
+    "params": {
+      "ch": "Pointer to the Character executing the command; must have immortal privileges.",
+      "argument": "String containing the command arguments, specifying the object type and optional setup parameters."
+    },
+    "returns": "This function does not return a value; it performs object creation, messaging, and logging as side effects.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces restrictions on certain object types to prevent creation of specific in-game items. It relies on 'setup_obj' for additional object configuration, which can influence object attributes based on optional parameters. The recursive calls for invalid input ensure user-friendly guidance on correct command usage.",
+    "rationale": "This function is used by game administrators or developers to spawn objects dynamically within the game world for testing, event creation, or gameplay enhancement, ensuring controlled and consistent object instantiation.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1adc2cda21737d2fbf99a48087a6cfdd4f",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_create",
+    "qualified_name": null,
+    "definition": "void do_create",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "wiz__quest_8cc, void do_create(Character *ch, String argument)": "Recursively called to display syntax or handle invalid input when the initial command is incorrect."
+    }
+  },
+  "void do_skillpoint(Character *ch, String argument)": {
+    "brief": "Adjusts a player's skill points by awarding or deducting a specified amount.",
+    "details": "The `do_skillpoint` function processes the command to modify a player's skill points, allowing an immortal character to either award or deduct points from a target player. It begins by parsing the command arguments to extract the action ('award' or 'deduct'), the target player's name, and the amount of points to modify. It then verifies the existence of the target player in the game world, ensuring they are not an immortal, and validates that the amount is a numeric value within the allowed range (1 to 50). The function prevents immortals from modifying their own skill points and updates the target player's skill points accordingly, providing confirmation messages to both the issuer and the recipient. It employs string parsing, input validation, and safe data modification to maintain game integrity and deliver clear feedback, utilizing helper functions for string handling, player lookup, and message formatting.",
+    "params": {
+      "ch": "A pointer to the Character object representing the immortal issuing the command.",
+      "argument": "A String object containing the command arguments specifying the action ('award' or 'deduct'), the target player's name, and the amount of skill points to modify."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces a maximum modification amount of 50 skill points per command to prevent excessive adjustments. It also ensures that only valid numeric inputs within the specified range are accepted, and that immortals cannot modify their own skill points, preserving game balance.",
+    "rationale": "This function is used by game administrators or moderators to manage player skill development, especially for correcting or balancing gameplay. Its validation and feedback mechanisms help maintain fair play and clear communication during administrative interventions.",
+    "state": "refined_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc_1a3a405da4b5526f07df93824ebc012f21",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_skillpoint",
+    "qualified_name": null,
+    "definition": "void do_skillpoint",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "wiz_quest.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "wiz__quest_8cc",
+    "mid": "wiz__quest_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "wiz_quest.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

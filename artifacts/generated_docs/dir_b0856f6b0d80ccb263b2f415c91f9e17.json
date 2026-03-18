@@ -1,0 +1,24 @@
+{
+  "src/include": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "dir_b0856f6b0d80ccb263b2f415c91f9e17",
+    "mid": "dir_b0856f6b0d80ccb263b2f415c91f9e17",
+    "etype": "compound",
+    "kind": "dir",
+    "name": "src/include",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

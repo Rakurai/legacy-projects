@@ -1,0 +1,49 @@
+{
+  "conn::GetAlignmentState": {
+    "brief": "Represents a specific state in the connection process responsible for managing character alignment selection and deity assignment interactions.",
+    "details": "GetAlignmentState is a specialized state derived from the base State class, dedicated to handling user input related to character alignment and deity selection within a networked environment. It overrides the handleInput method to interpret commands from a Descriptor, which encapsulates the connection and associated character data. This state manages the process of setting or confirming a character's moral alignment, initializing relevant attributes, and prompting the user for deity choice. By encapsulating this logic, GetAlignmentState ensures a clear, modular flow during character creation or adjustment phases, facilitating consistent and context-aware interactions. Its design supports the broader connection state machine by transitioning to subsequent states based on user input, maintaining a structured and maintainable connection handling architecture.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct employs the State design pattern, enabling flexible and modular management of connection phases. The handleInput method returns a pointer to the next State, allowing seamless transitions within the state machine based on user responses.",
+    "rationale": "GetAlignmentState exists to encapsulate the logic for alignment and deity selection, which are critical steps in character creation. It fits into the system architecture as a dedicated state within the connection's state machine, promoting separation of concerns and enhancing maintainability by isolating alignment-related interactions from other connection processes.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_alignment_state",
+    "mid": "structconn_1_1_get_alignment_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetAlignmentState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetAlignmentState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input to set a character's alignment, initializes related character attributes, and prompts for deity selection.",
+    "details": "This function processes the first character of the input argument to determine the character's desired alignment, setting it based on their guild affiliation\u2014good, evil, or neutral. It validates the input, providing feedback if invalid, and updates the character's alignment accordingly. Following this, it adds the character to essential skill groups, sets initial skill levels for recall and scan, and constructs a list of deities that match the character's alignment and guild. The deity list is formatted and sent to the character, prompting them to choose a deity. Finally, the function transitions the connection state to handle deity input, facilitating the character creation or alignment adjustment process within the game.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the connection and associated character.",
+      "argument": "Constant reference to a String containing the user's input command or choice."
+    },
+    "returns": "Pointer to the next State object, either remaining in the current state for re-input or transitioning to the deity selection state.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that paladins and non-paladins have different alignment ranges and behaviors. It also dynamically constructs the deity list based on the character's alignment and guild, supporting flexible character customization. The state transition facilitates a guided character setup process.",
+    "rationale": "Used during character creation or alignment adjustment to set moral standing, initialize skills, and guide the player through deity selection, ensuring consistent and context-sensitive character setup.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_alignment_state",
+    "mid": "structconn_1_1_get_alignment_state_1a93ad8259945164d4213f8ce98599a950",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetAlignmentState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

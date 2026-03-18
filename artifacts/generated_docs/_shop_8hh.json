@@ -1,0 +1,49 @@
+{
+  "MAX_TRADE": {
+    "brief": "Defines the maximum number of trade types supported by the shop system.",
+    "details": "MAX_TRADE is a compile-time constant that specifies the upper limit on the number of different trade or buy types a shop can handle. It is used to size arrays, control iteration bounds, and maintain consistency across various functions that process trade types, such as during shop initialization, transaction handling, and item categorization. Its fixed value ensures predictable behavior and simplifies array management within the system.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "Since MAX_TRADE is a fixed constant, it should be used consistently to prevent array overflows and to facilitate easy adjustments if the supported trade types are expanded in the future.",
+    "rationale": "This variable exists to enforce a predefined limit on trade categories, simplifying array management and iteration logic, and ensuring that the shop system operates within a consistent set of trade types.",
+    "state": "refined_summary",
+    "cid": "_shop_8hh",
+    "mid": "_shop_8hh_1a5c81d4eb05a4ca43bc05cc554b10cbc7",
+    "etype": "member",
+    "kind": "variable",
+    "name": "MAX_TRADE",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_shop, Shop::Shop(FILE *fp)": "Used as the upper limit in the loop to determine how many buy_type entries are read from the file stream.",
+      "act__obj_8cc, int get_cost(Character *keeper, Object *obj, bool fBuy)": "Defines the number of trade types; used as the upper limit in a loop to match object item types with shop buy types."
+    }
+  },
+  "Shop.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_shop_8hh",
+    "mid": "_shop_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "Shop.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

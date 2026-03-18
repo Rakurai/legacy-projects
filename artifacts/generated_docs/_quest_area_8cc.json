@@ -1,0 +1,48 @@
+{
+  "QUEST_STARTROOM": {
+    "brief": "The virtual number (Vnum) indicating the starting location for quests in the game.",
+    "details": "QUEST_STARTROOM is a constant that holds the Vnum of the designated starting room for quests. Initialized with the fixed value 12000, it serves as a key identifier for the quest start location throughout the codebase. This variable is utilized in functions such as QuestArea::init() to retrieve and set the initial quest location, ensuring that all quests reference a consistent starting point. The Vnum type encapsulates these identifiers, providing type safety and clarity when managing game locations and ensuring reliable referencing across various systems.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This variable is a hard-coded constant, emphasizing its fixed role in defining the quest start location. Its use as a Vnum ensures type safety and consistency in location referencing.",
+    "rationale": "QUEST_STARTROOM exists to provide a centralized, unchanging reference point for quest initiation, supporting consistent quest behavior and location management within the game system.",
+    "state": "refined_summary",
+    "cid": "_quest_area_8cc",
+    "mid": "_quest_area_8cc_1aa8395e4f20d01702c27ef78b62d828b5",
+    "etype": "member",
+    "kind": "variable",
+    "name": "QUEST_STARTROOM",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_quest_area, void QuestArea::init()": " Used as an identifier to specify which start room location to retrieve for the quest."
+    }
+  },
+  "QuestArea.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_quest_area_8cc",
+    "mid": "_quest_area_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "QuestArea.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

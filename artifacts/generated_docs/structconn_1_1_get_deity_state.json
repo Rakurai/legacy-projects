@@ -1,0 +1,52 @@
+{
+  "conn::GetDeityState": {
+    "brief": "Represents the state responsible for handling deity selection input during character creation or interaction within the connection's state machine.",
+    "details": "GetDeityState is a specialized subclass of State that manages user input related to deity selection in a networked environment. It overrides the handleInput method to interpret commands, deity names, or help requests entered by the player. This struct facilitates the transition between different connection states based on input validity, guiding users through deity assignment and subsequent steps such as weapon selection. Its design ensures smooth state management, input parsing, and user guidance during the character creation process, contributing to a modular and maintainable connection handling system.",
+    "params": {},
+    "returns": null,
+    "tparams": {
+      "Descriptor": "Provides context and connection details for the current user session.",
+      "String": "Represents the user input, which may be a deity name, command, or help request."
+    },
+    "throws": null,
+    "notes": "This struct follows the State design pattern, enabling flexible and organized handling of different connection states. It relies on polymorphism through the handleInput method to process input dynamically based on the current state.",
+    "rationale": "GetDeityState exists to encapsulate the logic for deity selection within the connection's state machine, ensuring a clear separation of concerns. It allows the system to manage user interactions during character creation in a modular way, simplifying input handling and state transitions, and supporting scalable multiplayer interactions.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_deity_state",
+    "mid": "structconn_1_1_get_deity_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetDeityState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetDeityState::handleInput(Descriptor *, const String &)": {
+    "brief": "Processes player input related to deity selection, help requests, and transitions to weapon choice.",
+    "details": "This function handles input from a player during the deity selection phase. It first checks if the input is a help command by examining the prefix; if so, it extracts additional arguments to display relevant help information for deity or other topics. If the input is not a help request, it attempts to match the input to a deity name using a lookup function. A successful match assigns the deity to the character, updates training points if the character has fewer than 40, and prompts the player to select a weapon from their learned skills. If the deity name is invalid, it notifies the player and re-prompts for input. Upon successful deity assignment, the function transitions the connection state to handle weapon selection; otherwise, it remains in the current state, awaiting valid input.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the connection and associated character.",
+      "argument": "The input string from the character, which may be a command, deity name, or help request."
+    },
+    "returns": "Pointer to the next connection State; transitions to the weapon selection state upon successful deity assignment, or remains in the current state otherwise.",
+    "tparams": null,
+    "throws": "None.",
+    "notes": "The function ensures that deity names can be matched using prefixes, facilitating user convenience. It also manages character state updates and prompts, integrating seamlessly with the overall character creation flow.",
+    "rationale": "This function is used during character creation or deity assignment phases, allowing players to select their deity with flexible input options, access help information, and proceed to weapon selection once a valid deity is chosen.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_deity_state",
+    "mid": "structconn_1_1_get_deity_state_1a49b910070d81fc1dc2171836d488d709",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetDeityState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

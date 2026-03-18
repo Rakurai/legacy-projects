@@ -1,0 +1,48 @@
+{
+  "dex_app_type": {
+    "brief": "A structure that encapsulates the defensive attributes of an entity within the system.",
+    "details": "The `dex_app_type` struct models the defensive properties of an entity, primarily through its `defensive` member variable, which is an integer representing the entity's defensive strength or type. This structure facilitates the management of defense mechanics such as damage mitigation, resistance, or special defensive behaviors. It is used across various modules to evaluate and modify an entity's defensive capabilities, supporting flexible gameplay mechanics and consistent attribute handling. The design allows for easy extension and integration with other systems that depend on defense-related data.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct is part of a broader attribute system, enabling scalable and modular management of entity characteristics. Its simplicity allows for straightforward integration with damage calculation and status effect systems.",
+    "rationale": "The `dex_app_type` struct exists to encapsulate defensive attributes in a dedicated, easily manageable form, promoting clean code architecture and facilitating future enhancements to defense mechanics within the game system.",
+    "state": "refined_summary",
+    "cid": "structdex__app__type",
+    "mid": "structdex__app__type",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "dex_app_type",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "defensive": {
+    "brief": "An integer representing the defensive attribute or type within the dex_app_type structure.",
+    "details": "The 'defensive' variable indicates a specific defensive characteristic or capability associated with an entity, such as a character or object, within the dex_app_type structure. It influences how the entity responds to incoming attacks or damage, potentially affecting damage mitigation or resistance calculations. This attribute is initialized and modified through various parts of the codebase, although it may not be directly referenced in all functions. Its value contributes to the overall defensive profile used in combat or damage assessment routines.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The 'defensive' attribute is stored as an integer, allowing for a range of defensive types or levels. It is part of a larger set of attributes within dex_app_type, which collectively define the entity's capabilities.",
+    "rationale": "This variable exists to encapsulate the defensive properties of an entity, enabling flexible and scalable handling of defense mechanics within the game's systems. It supports the implementation of different defensive behaviors and interactions based on its value.",
+    "state": "refined_summary",
+    "cid": "structdex__app__type",
+    "mid": "structdex__app__type_1a52cccee10ba44215405f9f37da1151b1",
+    "etype": "member",
+    "kind": "variable",
+    "name": "defensive",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "_character_8cc, int GET_ATTR_AC(Character *ch)": " Not directly used in the function; included in dependencies but commented out in the code."
+    }
+  }
+}

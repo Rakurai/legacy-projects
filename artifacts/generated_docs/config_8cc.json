@@ -1,0 +1,318 @@
+{
+  "void config_color_func(Character *ch, String argument, int type)": {
+    "brief": "Manages a character's color configuration for different output categories, allowing viewing, modification, or resetting of settings.",
+    "details": "The function config_color_func handles the viewing and modification of a character's color settings across various output categories such as channels, score, and miscellaneous messages. It begins by determining the category based on the 'type' parameter, setting descriptive labels and index ranges accordingly. If no argument is provided, it lists the current color and style settings for the relevant category, applying filters to exclude certain slots based on the character's state, such as clan membership, marital status, or immortality. When arguments are supplied, it parses the input to identify the target slot either by number or by prefix matching with the slot's name. It validates the slot, and if the 'reset' command is issued, restores the default color and style settings for that slot. Otherwise, it searches for a color name in the color table; if found, it updates the character's color and boldness settings accordingly, applying the new style. Throughout, it provides feedback messages for invalid inputs or successful updates, ensuring the character's output appearance is customizable and consistent with their preferences.",
+    "params": {
+      "type": "An integer indicating the category of color settings, such as channel, score, or miscellaneous.",
+      "ch": "A pointer to the Character object whose color settings are being configured.",
+      "argument": "A String containing arguments for configuring color settings, which may include a color name or 'reset'."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": "None explicitly thrown; logs bugs internally if an invalid 'type' is provided.",
+    "notes": "The function filters certain slots based on character state, such as clan membership, marital status, or immortality, to prevent inappropriate modifications. It supports both numeric and prefix-based slot identification, enhancing usability. The use of color and style tables ensures consistent visual formatting across the system.",
+    "rationale": "This function is used when a character wants to customize their text display settings for different communication channels or message types, providing flexibility and personalization in the user interface.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1ac12306360d58c6a491f3267349a8b736",
+    "etype": "member",
+    "kind": "function",
+    "name": "config_color_func",
+    "qualified_name": null,
+    "definition": "void config_color_func",
+    "argsstring": "(Character *ch, String argument, int type)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "config_8cc, void config_color(Character *ch, String argument)": "Called for options 3, 4, and 5 to handle specific color configuration functions for channels, score, and miscellaneous settings."
+    }
+  },
+  "void config_color(Character *ch, String argument)": {
+    "brief": "Configures, toggles, or resets a character's color-related settings based on input arguments.",
+    "details": "This function interprets the provided argument to allow a character to view current color settings, toggle color features, or reset preferences to default values. When called without arguments, it displays a list of available color options along with their current states, such as whether color or crazy color is enabled. If the argument is 'help' or '?', it provides detailed instructions on how to use the configuration options. The function parses the first argument to identify specific commands or options, supporting both numeric and prefix matches for flexibility. For options like 'color' and 'crazy', it toggles the corresponding flags in the character's act_flags and provides feedback messages. For category-specific configurations such as channels, score, and miscellaneous, it delegates to subordinate functions. The 'reset' option clears the character's color and bold arrays, restoring default settings. Throughout, the function ensures user-friendly interaction by providing clear feedback messages and guidance, facilitating easy customization of text display preferences.",
+    "params": {
+      "ch": "A pointer to the Character object whose color settings are being configured.",
+      "argument": "A String containing arguments for configuring color settings, which may include a color name, 'reset', or 'help'."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function supports flexible input parsing through prefix matching and numeric options, making it user-friendly. It also ensures that toggling options update the character's flags and provide immediate visual feedback. Resetting restores default color configurations, which is useful for troubleshooting or personal preference changes.",
+    "rationale": "This function is used when a player or administrator wants to customize or reset their text display preferences, enhancing user experience by allowing personalized visual settings and quick toggling of color features.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1a273e9a4435ae1a4865ed3d7fdcecba03",
+    "etype": "member",
+    "kind": "function",
+    "name": "config_color",
+    "qualified_name": null,
+    "definition": "void config_color",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "config_8cc, void do_config(Character *ch, String argument)": "Called to configure color settings based on the remaining argument when 'color' is specified."
+    }
+  },
+  "void config_video(Character *ch, String argument)": {
+    "brief": "Enables a character to view and adjust their video display options such as flashing effects, dark mode, color codes, and VT100 emulation.",
+    "details": "The function manages the configuration of various video display settings for a character, including toggling flashing text effects, dark mode, color code visibility, and VT100 emulation mode. When invoked without arguments, it displays the current settings and available options. If the argument is 'help' or '?', it provides detailed explanations of each setting to assist the user. For specific configuration commands, it interprets the argument to toggle or modify the relevant flags within the character's video settings, providing feedback messages to confirm changes. The function supports multiple input formats and prefixes, such as partial keywords and numeric options, allowing flexible and user-friendly configuration management. Internally, it uses string prefix checks, argument parsing, and bitwise flag operations to modify the character's video preferences accordingly.",
+    "params": {
+      "ch": "A pointer to the Character object whose video display settings are being configured.",
+      "argument": "A String object containing the command arguments specifying which video option to configure or request help for."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function provides a user-friendly interface for customizing visual display options, supporting both toggling and detailed help descriptions. It relies on bitwise flag operations to modify the character's video preferences and uses string prefix matching for flexible command input.",
+    "rationale": "This function is used in command processing contexts where players or administrators want to customize their visual output, such as enabling or disabling flashing effects, dark mode, color codes, or VT100 emulation, to improve readability, accessibility, or personal preference.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1aa1b3e3969a07eb9769dc4722fe5e8120",
+    "etype": "member",
+    "kind": "function",
+    "name": "config_video",
+    "qualified_name": null,
+    "definition": "void config_video",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "config_8cc, void do_config(Character *ch, String argument)": "Called to configure video display options based on the remaining argument when 'video' is specified."
+    }
+  },
+  "void config_censor(Character *ch, String argument)": {
+    "brief": "Enables a character to view and modify their censorship settings for communication channels and spam messages.",
+    "details": "The function 'config_censor' allows a character to manage their censorship preferences by parsing the provided argument. When invoked without arguments, it displays the current status of the channel and spam censorship flags, indicating whether each is active or inactive. If the argument is 'help' or '?', it provides detailed instructions on how censorship settings work and how to configure them. For specific options like 'channels' or 'spam', the function can toggle the respective censorship flags\u2014adding or removing them\u2014and, in the case of 'channels', also supports listing the currently censored words. It interprets user input to determine the intended action, updates the character's censorship flags accordingly, and sends feedback messages to inform the user of the new state or available options.",
+    "params": {
+      "ch": "A pointer to the Character object whose censorship settings are being configured.",
+      "argument": "A String containing the user's input specifying which censorship option to view or modify."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses bitwise flag operations to toggle censorship options, ensuring efficient state management. It also provides user-friendly feedback messages, including color-coded status indicators, to enhance usability.",
+    "rationale": "This function is used in user command processing to allow players to customize their censorship preferences dynamically, improving user control over content filtering and moderation within the game environment.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1aeef7310c6eddb8f9d9c667ad4b394e2b",
+    "etype": "member",
+    "kind": "function",
+    "name": "config_censor",
+    "qualified_name": null,
+    "definition": "void config_censor",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "config_8cc, void do_config(Character *ch, String argument)": "Called to configure censorship settings based on the remaining argument when 'censor' is specified."
+    }
+  },
+  "void config_immortal(Character *ch, String argument)": {
+    "brief": "Provides an interface for immortal characters to view or modify their specific configuration options.",
+    "details": "The function config_immortal allows immortal characters to view or update their immortal-specific settings, primarily focusing on the 'immprefix' used in immortal chat messages and the 'immname' displayed in the WHO list. When called without arguments, it displays the current settings for both options. If 'help' or '?' is provided as an argument, it outputs guidance on how to use these options. When specific options are selected, the function processes the input to set or remove the respective configuration, performing validation such as ensuring the 'immprefix' includes the character's name and does not exceed length limits, and that 'immname' is within allowed length. It handles special inputs like 'none' to reset options and provides feedback messages accordingly. Argument parsing is managed through argument extraction and prefix checks, with safeguards against invalid inputs. The function directly interacts with the character's data, updating persistent fields and providing user feedback through formatted messages.",
+    "params": {
+      "ch": "A pointer to the Character object representing the player or entity configuring immortal options.",
+      "argument": "A String containing the command arguments specifying which option to configure ('immprefix' or 'immname') and associated parameters or subcommands."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces validation rules such as including the character's name in the 'immprefix' and length restrictions for both options. It also provides helpful guidance messages for users unfamiliar with the options or requesting help.",
+    "rationale": "This function is used in contexts where immortal characters need to customize their chat prefix or display name, enhancing communication clarity and personalization for game administrators and staff.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1a7fadcac58519ce7d570588eb346bc89b",
+    "etype": "member",
+    "kind": "function",
+    "name": "config_immortal",
+    "qualified_name": null,
+    "definition": "void config_immortal",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "config_8cc, void do_config(Character *ch, String argument)": "Called to configure immortal-specific options when 'immortal' is specified and the character is an immortal."
+    }
+  },
+  "void config_wiznet(Character *ch, String argument)": {
+    "brief": "Enables a character to view, toggle, and manage their wiznet notification options.",
+    "details": "The function processes user commands to configure wiznet settings for a character, allowing them to turn wiznet notifications on or off, view current status, or modify specific notification categories. It interprets various arguments such as 'help', '?', 'show', 'on', 'off', numeric indices, or option names to perform the corresponding actions. Internally, it parses the input argument, performs permission checks based on the character's rank, and updates the 'wiznet_flags' attribute by setting or clearing specific flags associated with each wiznet category. The function also provides detailed help messages, status reports, and descriptions of each wiznet option, facilitating user understanding and customization of wiznet notifications. It ensures that only authorized characters can modify certain options based on their rank and current settings, maintaining system integrity and user control.",
+    "params": {
+      "ch": "Pointer to the Character object whose wiznet options are being configured.",
+      "argument": "A String containing the command and arguments for configuring wiznet options."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function supports partial matching of option names and numeric indices for flexibility. It uses bitwise operations to toggle flags efficiently and respects permission levels to prevent unauthorized modifications. The 'wiznet_flags' attribute is manipulated using addition or subtraction of specific flag bits, reflecting the current notification preferences.",
+    "rationale": "This function is used in administrative or high-level configuration contexts, such as when an immortal character adjusts their wiznet notification preferences. It is invoked during command processing, typically through user input, to provide a flexible and user-friendly interface for managing in-game notifications and system alerts, ensuring that users receive relevant information based on their preferences and permissions.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1a6f0ee243bb93fcef8fde0bfc4d052988",
+    "etype": "member",
+    "kind": "function",
+    "name": "config_wiznet",
+    "qualified_name": null,
+    "definition": "void config_wiznet",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "config_8cc, void do_config(Character *ch, String argument)": "Called to configure wiznet options when 'wiznet' is specified and the character is an immortal."
+    }
+  },
+  "void do_config(Character *ch, String argument)": {
+    "brief": "Handles a character's configuration commands, allowing viewing and modification of various settings.",
+    "details": "The function 'do_config' manages a character's configuration commands by first displaying available configuration options when no arguments are provided. When arguments are supplied, it parses the first argument to determine which specific configuration category to modify, such as color, video, censor, immortal, or wiznet, taking into account whether the character is an NPC or has immortal privileges. It converts the argument to a numerical or keyword-based identifier and then delegates the configuration task to specialized functions like 'config_color', 'config_video', etc., based on the identified category. If the input does not match any valid option, it notifies the character of the invalid choice. This design promotes modularity by separating each configuration aspect into dedicated functions, ensuring clarity, maintainability, and ease of extension.",
+    "params": {
+      "ch": "A pointer to the Character object for whom the configuration is being processed.",
+      "argument": "A String containing the command and arguments for configuration."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses 'one_argument' to parse the first argument and 'String::is_prefix_of' to match command keywords, allowing flexible command input. It also respects character privileges, enabling certain options only for non-NPCs or immortal characters.",
+    "rationale": "This function is used when a player or administrator wants to view or modify their configuration settings, such as color, video, or notification preferences, providing a centralized command handler that delegates specific tasks to dedicated functions for each configuration category.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1a98df26b1c012874271868db5a96970ce",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_config",
+    "qualified_name": null,
+    "definition": "void do_config",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "config_8cc, void do_color(Character *ch, String argument)": "Invoked to apply the color configuration command for the character based on the argument provided.",
+      "act__info_8cc, void do_immname(Character *ch, String argument)": "Invoked with the character and the formatted command string to perform configuration changes based on the argument.",
+      "config_8cc, void do_wiznet(Character *ch, String argument)": "Invoked to process the 'wiznet' command with or without additional arguments, based on the input argument.",
+      "config_8cc, void do_censor(Character *ch, String argument)": "Invoked to process the configuration command for the character, using the formatted string as input.",
+      "config_8cc, void do_video(Character *ch, String argument)": "Invoked with the character and the formatted command string to apply the video configuration if the character is not an NPC."
+    }
+  },
+  "void do_color(Character *ch, String argument)": {
+    "brief": "Allows a player character to view or modify their color settings.",
+    "details": "The do_color function enables a player character to access or change their color configuration. It first checks if the character is an NPC; if so, it informs the user that NPCs cannot see colors and exits. For player characters, if no argument is provided, it invokes do_config with a default command to display current color settings. If an argument is given, it formats this argument into a color configuration command using Format::sprintf and then passes it to do_config for processing, thereby updating the character's color preferences accordingly. Internally, it uses a fixed-size buffer (MIL) for string formatting and relies on do_config to handle the actual configuration change. The function ensures that only player characters can modify color settings, providing a simple interface for viewing and updating color preferences through command arguments.",
+    "params": {
+      "ch": "A pointer to the Character object representing the player executing the command.",
+      "argument": "A String containing the color configuration command and its arguments."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses a fixed-size buffer (MIL) for string formatting, which requires careful handling to avoid buffer overflows. It delegates the actual configuration update to do_config, ensuring separation of concerns between command parsing and configuration management.",
+    "rationale": "This function is used when a player wants to view or change their color preferences, typically through in-game commands. It provides a straightforward way to access or modify color settings, enhancing user customization and experience.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1ab5b5dde39d3be3eafd1939a6f459252c",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_color",
+    "qualified_name": null,
+    "definition": "void do_color",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_video(Character *ch, String argument)": {
+    "brief": "Handles the 'video' configuration command for a character to modify display settings.",
+    "details": "The function begins by checking if the character is a non-player character (NPC); if so, it sends a message indicating that NPCs cannot see colors and terminates early. For player characters, it constructs a formatted 'video' command string using the provided argument, leveraging the Format::sprintf function to ensure proper formatting within a fixed buffer size. This command string is then passed to the do_config function, which processes various configuration commands, including video settings. This design ensures that only player characters can modify their display options, maintaining game consistency and respecting character capabilities, while utilizing existing configuration handling mechanisms for flexibility and code reuse.",
+    "params": {
+      "ch": "A pointer to the Character object for whom the video configuration is being processed.",
+      "argument": "A String containing the command and arguments for the video configuration."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces that only player characters can change display settings by checking for NPC status. It uses a fixed-size buffer for command formatting, which relies on the buffer size defined by MIL, ensuring safe string operations. The delegation to do_config centralizes configuration management, allowing for consistent handling of various settings.",
+    "rationale": "This function is used when a player wants to modify their display or color settings via the 'video' command, providing a controlled interface that ensures only appropriate characters can make such changes and that the command is processed uniformly through the existing configuration system.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1af51cf809607fc4e8518dd0dd25667d52",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_video",
+    "qualified_name": null,
+    "definition": "void do_video",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_censor(Character *ch, String argument)": {
+    "brief": "Constructs and executes a censor configuration command for a character.",
+    "details": "The function builds a command string by concatenating the 'censor' keyword with the provided argument, formatted using Format::sprintf into a fixed-size buffer to ensure safety and correctness. It then invokes do_config with this command string and the character pointer, effectively applying the specified censor settings through the existing configuration handling system. This design promotes code reuse and maintains consistency in command processing, abstracting the details of command formatting and execution from higher-level logic.",
+    "params": {
+      "ch": "A pointer to the Character object for whom the censor command is being executed.",
+      "argument": "A String specifying the particular censor setting or target."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "Uses a fixed-size buffer (MIL) for command string formatting to prevent buffer overflows. The function relies on do_config to interpret and apply the constructed command, ensuring that censor settings are managed uniformly within the configuration system.",
+    "rationale": "This function simplifies applying censor settings by abstracting command construction and delegation to the configuration handler, making it convenient to modify or extend censor-related commands in the future, especially in contexts where dynamic or user-specified censor options are needed.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1a101b05c09552715af9eb3881d955f2f5",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_censor",
+    "qualified_name": null,
+    "definition": "void do_censor",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_wiznet(Character *ch, String argument)": {
+    "brief": "Allows a player character to view or modify their Wiznet communication settings.",
+    "details": "The do_wiznet function manages Wiznet configuration commands issued by a character. It first verifies whether the character is an NPC; if so, it sends a message indicating that NPCs cannot use Wiznet and terminates. For player characters, if no arguments are provided, it invokes do_config with a default Wiznet setting to toggle or display current preferences. If arguments are supplied, it formats these into a Wiznet command string and passes it to do_config, enabling players to customize their Wiznet options or send messages through the system. This design ensures that only player characters can modify Wiznet settings and provides flexible command handling based on user input.",
+    "params": {
+      "ch": "A pointer to the Character object representing the player issuing the command.",
+      "argument": "A String containing the command arguments for Wiznet configuration or messaging."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function prevents NPCs from accessing Wiznet features to avoid system overload or unintended behavior. It leverages do_config for actual configuration changes, maintaining a centralized configuration management approach.",
+    "rationale": "This function is used when a player wants to view or change their Wiznet communication preferences or send messages through Wiznet, providing a controlled interface for privileged communication within the game.",
+    "state": "refined_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc_1ad0b475f7b1634a87627da83e30ac1e4e",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_wiznet",
+    "qualified_name": null,
+    "definition": "void do_wiznet",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "config.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "config_8cc",
+    "mid": "config_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "config.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

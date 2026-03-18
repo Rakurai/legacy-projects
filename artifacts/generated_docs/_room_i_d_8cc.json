@@ -1,0 +1,24 @@
+{
+  "RoomID.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_room_i_d_8cc",
+    "mid": "_room_i_d_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "RoomID.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

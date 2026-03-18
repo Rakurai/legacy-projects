@@ -1,0 +1,79 @@
+{
+  "s_spell_info": {
+    "brief": "A structure that encapsulates information about a spell or skill, including its category and proficiency level.",
+    "details": "The s_spell_info struct is designed to store essential data related to spells and skills within the game system. It contains the 'type' member, which categorizes the spell or skill using the skill::type enumeration, enabling type-safe identification and handling of various game actions, spells, and skills. The 'level' member indicates the character's proficiency or the required level for the spell or skill, supporting gameplay mechanics such as progression, access control, and effectiveness. This struct is commonly used in managing character abilities, effect processing, and serialization of spell or skill data during gameplay, ensuring a modular and extensible approach to game mechanics.",
+    "params": {},
+    "returns": null,
+    "tparams": {
+      "type": "An enumeration value indicating the category or specific type of spell, skill, or action.",
+      "level": "An integer representing the character's proficiency or level requirement for the spell or skill."
+    },
+    "throws": null,
+    "notes": "This struct is a simple data container with no member functions, emphasizing its role as a plain data holder. It relies on the skill::type enumeration for categorization, which supports modularity and future expansion.",
+    "rationale": "s_spell_info exists to provide a unified and extensible way to represent spell and skill data associated with characters. By encapsulating type and level information, it facilitates consistent handling, progression tracking, and effect management within the game system, aligning with the overall modular architecture.",
+    "state": "refined_summary",
+    "cid": "structs__spell__info",
+    "mid": "structs__spell__info",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "s_spell_info",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "type": {
+    "brief": "Stores the category type of a spell, skill, or action within the game system.",
+    "details": "The 'type' variable in the 's_spell_info' structure holds an enumeration value from 'skill::type' that specifies the category of the spell, skill, or action. It is initialized when the spell or skill is created and is used extensively throughout the codebase to identify and differentiate between various action types. This categorization supports filtering, sorting, and conditional logic in functions that list, compare, or process game actions, ensuring consistent and modular handling of different categories. The variable's value is integral to game mechanics, enabling flexible management of spells and skills based on their type.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The 'type' variable is often used in filtering and comparison operations to organize spells and skills by category, which aids in efficient game logic processing.",
+    "rationale": "This variable exists to provide a unified way to categorize and manage different spell, skill, and action types, supporting modular design and future expansion of game mechanics by enabling type-based handling and processing.",
+    "state": "refined_summary",
+    "cid": "structs__spell__info",
+    "mid": "structs__spell__info_1a9ee5ae978866020d22fc3edd0704e817",
+    "etype": "member",
+    "kind": "variable",
+    "name": "type",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "skills_8cc, int comp_spells(const void *sn1, const void *sn2)": "Accessed to determine the skill type of each spell info object for comparison.",
+      "skills_8cc, void do_spells(Character *ch, String argument)": "Used to store the type of each spell in the spell_list array when building the list of available spells based on group or skill criteria.",
+      "skills_8cc, void do_skills(Character *ch, String argument)": "Used to identify the skill's category and determine if it should be included in the list based on its type and remort guild restrictions."
+    }
+  },
+  "level": {
+    "brief": "Represents the proficiency or strength level of a specific spell or skill for the character.",
+    "details": "The 'level' variable indicates the proficiency or strength level of a specific spell or skill for the current character. It is initialized based on the character's attributes and is used to determine the availability, display, and ordering of spells and skills within various functions. This variable plays a key role in grouping spells by level, checking accessibility, and sorting spell information during gameplay interactions.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This variable is typically stored as an integer and is used extensively in functions that organize or filter spells and skills according to their level, ensuring proper game mechanics and user interface presentation.",
+    "rationale": "The 'level' variable exists to facilitate game mechanics related to spell and skill progression, enabling the system to accurately assess and display a character's capabilities based on their proficiency levels.",
+    "state": "refined_summary",
+    "cid": "structs__spell__info",
+    "mid": "structs__spell__info_1a3cd14ff848757e7a1bedaa734aa08e62",
+    "etype": "member",
+    "kind": "variable",
+    "name": "level",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "skills_8cc, int comp_spells(const void *sn1, const void *sn2)": "Used to compute the difference in levels between two spell info objects to establish ordering.",
+      "skills_8cc, void do_spells(Character *ch, String argument)": "Used to store the level of each spell in the spell_list array when building the list of available spells, and for displaying spell levels in the output.",
+      "skills_8cc, void do_skills(Character *ch, String argument)": "Used to group skills by their level for display purposes and to compare against the character's level to determine visibility and accessibility."
+    }
+  }
+}

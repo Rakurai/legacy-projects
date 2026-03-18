@@ -1,0 +1,24 @@
+{
+  "cJSON.hh": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "c_j_s_o_n_8hh",
+    "mid": "c_j_s_o_n_8hh",
+    "etype": "compound",
+    "kind": "file",
+    "name": "cJSON.hh",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

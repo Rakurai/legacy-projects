@@ -1,0 +1,50 @@
+{
+  "int load_config(const char *filename)": {
+    "brief": "Loads configuration settings from a specified JSON file and updates global variables accordingly.",
+    "details": "The function attempts to read and parse a JSON configuration file using JSON::read_file. If the file is successfully read, it retrieves specific configuration parameters such as database host, name, user, and password from the JSON object, updating corresponding global variables (though this extraction is currently commented out). After processing, it frees the JSON object memory with cJSON_Delete and logs the number of items loaded using Format::printf. If reading the file fails, it logs a bug report via Logging::bug. The function returns 0 upon successful loading and -1 if an error occurs during file reading or parsing.",
+    "params": {
+      "filename": "A constant character pointer representing the path to the JSON configuration file to be loaded."
+    },
+    "returns": "Returns 0 if the configuration is loaded successfully, or -1 if an error occurs during file reading or parsing.",
+    "tparams": null,
+    "throws": null,
+    "notes": "Currently, the extraction of individual configuration parameters from the JSON object is commented out, so the function primarily verifies file readability and reports the number of items loaded. Proper memory management is ensured by deleting the JSON object after processing.",
+    "rationale": "This function is used during application startup or configuration reloads to load settings from a JSON file, ensuring that the application has the necessary parameters configured before proceeding. Its design allows for easy extension to parse additional configuration options if needed.",
+    "state": "refined_summary",
+    "cid": "load__config_8cc",
+    "mid": "load__config_8cc_1a5ba22acdff5d198406a9d4aa0c73cb12",
+    "etype": "member",
+    "kind": "function",
+    "name": "load_config",
+    "qualified_name": null,
+    "definition": "int load_config",
+    "argsstring": "(const char *filename)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "comm_8cc, int main(int argc, char **argv)": "Called to load configuration settings from the specified CONFIG_FILE, and if it fails, logs an error and terminates the program."
+    }
+  },
+  "load_config.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "load__config_8cc",
+    "mid": "load__config_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "load_config.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

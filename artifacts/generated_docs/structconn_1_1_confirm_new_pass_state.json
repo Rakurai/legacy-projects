@@ -1,0 +1,52 @@
+{
+  "conn::ConfirmNewPassState": {
+    "brief": "Encapsulates the state responsible for confirming a new password during the connection's authentication process.",
+    "details": "The ConfirmNewPassState struct is a specialized state within the connection's state machine, tasked with managing the password confirmation step during account setup or password change procedures. It inherits from the base State class and overrides the handleInput method to process user input, which is expected to be a password confirmation string. This method compares the user's input against the previously entered new password to verify consistency. If the passwords match, the state transitions to the character race selection phase; otherwise, it prompts the user to re-enter a new password. This struct ensures that users correctly confirm their new passwords, contributing to secure and reliable account management within the system.",
+    "params": {},
+    "returns": null,
+    "tparams": {
+      "Descriptor": "A class providing context and connection-specific information for input handling.",
+      "String": "A string representing the password input entered by the user."
+    },
+    "throws": null,
+    "notes": "This struct implements a state pattern within the connection's state machine, facilitating modular handling of different connection phases. The handleInput method manages user input validation and state transitions based on password confirmation results.",
+    "rationale": "The ConfirmNewPassState exists to enforce password accuracy during account creation or modification, preventing user errors. It fits into the connection management architecture by encapsulating the password confirmation logic, thereby maintaining a clear separation of concerns and supporting secure user authentication workflows.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_confirm_new_pass_state",
+    "mid": "structconn_1_1_confirm_new_pass_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::ConfirmNewPassState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::ConfirmNewPassState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input during password confirmation, verifying the password and transitioning to subsequent setup states.",
+    "details": "This function processes the user's input when confirming a new password during account creation. It extracts the first argument from the input string and compares it to the stored password associated with the character. If the passwords do not match, it informs the user of the mismatch, prompts them to re-enter the password, and transitions back to the password entry state. If the passwords match, it re-enables input echoing on the connection, sends a confirmation message, and guides the user through the next steps, including introducing the character creation process and prompting for race selection. It displays available races from the race table, filtering out remort races, and transitions to the race selection state. The function manages user feedback, input handling, and state transitions to facilitate a smooth account setup experience.",
+    "params": {
+      "d": "A pointer to the Descriptor object representing the user's connection, providing access to character data and connection state management.",
+      "argument": "A String containing the user's input for password confirmation."
+    },
+    "returns": "A pointer to the next State object: State::getNewPass if passwords do not match, or State::getRace if they do.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on string comparison to verify password correctness and uses specific states to manage multi-step user interactions during account setup. It also ensures that echo mode is re-enabled after password input for security reasons.",
+    "rationale": "This function is used during the account creation or password change process to confirm the user's intended password before proceeding to character customization, ensuring password accuracy and guiding the user through subsequent setup steps.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_confirm_new_pass_state",
+    "mid": "structconn_1_1_confirm_new_pass_state_1a428ea98947bf6ffa82ec618b21e6315c",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::ConfirmNewPassState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

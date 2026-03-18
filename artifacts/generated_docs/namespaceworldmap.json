@@ -1,0 +1,48 @@
+{
+  "color_sector_map": {
+    "brief": "A constant map that associates specific RGB colors with corresponding environment sectors.",
+    "details": "The variable `worldmap::color_sector_map` is a static, immutable mapping that links particular `MapColor` instances to their respective `Sector` categories. It serves as a lookup table to determine the environment type represented by a given color, which is essential for interpreting color-coded map data. The map is initialized with predefined color-to-sector pairs, covering various terrain types such as city, forest, water, and roads. It is primarily used in functions that convert color information from map data into meaningful sector classifications, supporting rendering, environment queries, and interaction logic within the world map system.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The map uses `MapColor` objects as keys, which are optimized for comparison and hashing, ensuring efficient lookups. Being a constant map, it is read-only at runtime, preventing accidental modifications and ensuring consistency across the application.",
+    "rationale": "This mapping exists to enable quick and reliable translation of color data into environment sectors, facilitating features like map rendering, environment interaction, and sector-based logic. It supports the system's need to interpret visual map data into meaningful, standardized environment classifications.",
+    "state": "refined_summary",
+    "cid": "namespaceworldmap",
+    "mid": "namespaceworldmap_1a1fc7b99c6a753a4fe7879a9d8fda178a",
+    "etype": "member",
+    "kind": "variable",
+    "name": "color_sector_map",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "classworldmap_1_1_worldmap, const Sector worldmap::Worldmap::color_to_sector(const MapColor &color) const": "Queried with the provided color to find an associated sector; its find method is used to locate the color, and its cend method checks if the color exists in the map."
+    }
+  },
+  "worldmap": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "namespaceworldmap",
+    "mid": "namespaceworldmap",
+    "etype": "compound",
+    "kind": "namespace",
+    "name": "worldmap",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

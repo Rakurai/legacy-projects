@@ -1,0 +1,49 @@
+{
+  "conn::CopyoverRecoverState": {
+    "brief": "Represents the connection state responsible for managing recovery after a server copyover event.",
+    "details": "The CopyoverRecoverState struct extends the State class to manage the specific scenario of restoring network connections following a server copyover. It encapsulates the logic required to handle input during the recovery process, ensuring that the connection remains stable and consistent throughout system restarts or updates. The handleInput method processes incoming data or commands without changing the current state, thereby maintaining a controlled environment for recovery. This struct is integral to the system's ability to seamlessly restore active client connections, preserving gameplay continuity and system stability after server interruptions.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This state employs a design pattern where input handling during recovery does not trigger state transitions, ensuring robustness during system restoration. The handleInput method's behavior is tailored to maintain recovery integrity by ignoring or minimally processing user input to prevent interference with the recovery process.",
+    "rationale": "The CopyoverRecoverState exists to facilitate a smooth transition and recovery process after server copyovers, which are necessary for updates or restarts. By isolating recovery-specific input handling within this state, the system ensures that connection restoration is reliable and unaffected by user actions during critical recovery phases. This design supports the overall architecture by enabling resilient and maintainable connection management in a multiplayer environment.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_copyover_recover_state",
+    "mid": "structconn_1_1_copyover_recover_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::CopyoverRecoverState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::CopyoverRecoverState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles input during the copyover recovery process without altering the current state.",
+    "details": "This function receives input from a network descriptor during the copyover recovery phase. It intentionally does not process or modify the input or the internal state; instead, it simply returns a pointer to itself, indicating that the recovery state remains unchanged. This design implies that input handling in this state is either intentionally inert or managed through other mechanisms, ensuring the system maintains a stable recovery process without unintended state transitions or side effects.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the network connection context.",
+      "argument": "The input String to be processed, which may contain commands or data from the user."
+    },
+    "returns": "A pointer to the current CopyoverRecoverState object, signifying no change in state.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function's implementation emphasizes stability during the recovery process by avoiding any state changes or input processing, which is critical during system recovery phases.",
+    "rationale": "This method is used in scenarios where the system is recovering from a copyover, and input handling should not interfere with the recovery process. Its design ensures that the recovery state persists regardless of user input, providing a controlled environment for system restoration.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_copyover_recover_state",
+    "mid": "structconn_1_1_copyover_recover_state_1a13e6455f56c8c33e9b32429be2dbf19a",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::CopyoverRecoverState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

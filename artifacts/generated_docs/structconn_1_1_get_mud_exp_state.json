@@ -1,0 +1,52 @@
+{
+  "conn::GetMudExpState": {
+    "brief": "Encapsulates the connection state responsible for obtaining the player's MUD experience level during the login process.",
+    "details": "The GetMudExpState struct extends the base State class to manage the specific phase where the system prompts and processes the player's experience level input. It overrides the handleInput method to interpret the player's response, update the connection or character state accordingly, and transition to subsequent states such as password setup. This struct plays a crucial role in guiding new or returning players through the initial authentication and configuration steps, ensuring that the experience level is correctly captured before progressing further into the game. Its design supports a state-driven approach to connection management, enabling flexible and modular handling of different stages in the login sequence.",
+    "params": {},
+    "returns": null,
+    "tparams": {
+      "Descriptor": "Provides context for the current network connection and holds character data.",
+      "String": "Represents the player's input used to determine the experience level."
+    },
+    "throws": null,
+    "notes": "This struct follows a state pattern, encapsulating a specific phase in the connection workflow. The handleInput method is responsible for interpreting user input and managing state transitions, facilitating a clear separation of concerns within the connection handling system.",
+    "rationale": "GetMudExpState exists to modularize the login process, isolating the experience input phase from other connection stages. It ensures that experience level acquisition is handled consistently and allows for easy extension or modification of the login flow without affecting other connection states.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_mud_exp_state",
+    "mid": "structconn_1_1_get_mud_exp_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetMudExpState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetMudExpState::handleInput(Descriptor *, const String &)": {
+    "brief": "Processes player input during the experience selection phase and transitions to password setup.",
+    "details": "This function interprets the player's input character to determine their chosen experience level during the initial connection process. Depending on whether the input is '1', '2', or '3', it sends a corresponding narrative message to the player, updates their experience state to reflect the selected level, and prompts them to set a password for future visits. If the input is invalid, it prompts the player to answer with a valid choice. After handling valid input, the function disables input echoing on the network descriptor to securely accept the password and transitions the connection state to handle password entry. This process ensures a guided onboarding experience with appropriate feedback, state updates, and secure handling of sensitive information.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the player's network connection and associated character data.",
+      "argument": "A reference to the String object containing the player's input, used to determine the experience level."
+    },
+    "returns": "A pointer to the next State object, typically the password input state, to continue the connection process.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses specific experience constants to set the player's experience level, ensuring consistent progression states. It also provides tailored messages to enhance user engagement during onboarding.",
+    "rationale": "This function is used during the initial connection phase to set up a new player's experience level based on their input, guiding them through the onboarding process and ensuring secure password setup before proceeding to gameplay.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_mud_exp_state",
+    "mid": "structconn_1_1_get_mud_exp_state_1a757d5411b3b809faeabea3a4cd2fd117",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetMudExpState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

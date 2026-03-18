@@ -1,0 +1,52 @@
+{
+  "conn::GetNewPassState": {
+    "brief": "A state within the connection's state machine responsible for handling user input when setting a new password.",
+    "details": "GetNewPassState is a specialized subclass of State that manages the process of capturing, validating, and processing a new password input from the user during a network session. It overrides the handleInput method to interpret the user's input string, perform password validation checks such as length and complexity requirements, and determine the appropriate transition to the next state\u2014either prompting the user to re-enter a valid password or moving forward to the password confirmation stage. This struct is integral to the password change workflow, ensuring that users provide secure and correctly formatted passwords, thereby maintaining system security and consistency within the connection's state management system.",
+    "params": {},
+    "returns": null,
+    "tparams": {
+      "Descriptor": "Provides context and access to the current network connection and associated character data.",
+      "String": "Represents the user input, typically the new password entered by the user."
+    },
+    "throws": null,
+    "notes": "This struct follows the State design pattern, encapsulating a specific phase in the password setup process and enabling flexible state transitions based on user input validation.",
+    "rationale": "GetNewPassState exists to facilitate a secure and user-friendly password change process within the connection management system. By isolating the password input handling into a dedicated state, it promotes modularity, clarity, and maintainability of the connection's state machine, ensuring that password validation logic is centralized and easily adaptable to evolving security requirements.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_new_pass_state",
+    "mid": "structconn_1_1_get_new_pass_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetNewPassState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetNewPassState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input for setting a new password, validating it, and transitioning to confirmation.",
+    "details": "This function processes the user's input to extract the proposed new password, then checks if it meets the minimum length requirement of five characters. If the password is too short, it sends an error message to the user and remains in the current state to allow re-entry. If the password is sufficiently long, it updates the character's password data, provides a success message, and transitions to the password confirmation state, prompting the user to repeat the password for verification. The function ensures that only passwords of adequate length are accepted and manages the flow of the password setup process with appropriate messaging and state transitions.",
+    "params": {
+      "d": "The network connection descriptor associated with the user, providing access to the character data.",
+      "argument": "The input string from the user, containing the proposed new password."
+    },
+    "returns": "A pointer to the next connection state, either remaining in the current state if validation fails or moving to the password confirmation state upon success.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces a minimum password length of five characters for security reasons. It provides user feedback through formatted messages and manages state transitions to facilitate a smooth password setup process.",
+    "rationale": "This function is used during the password change process to validate user input, ensure password strength, and guide the user through the setup flow with clear messaging and appropriate state management.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_new_pass_state",
+    "mid": "structconn_1_1_get_new_pass_state_1af1731216f588e697dbb4eea0a1cb8ad6",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetNewPassState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

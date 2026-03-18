@@ -1,0 +1,50 @@
+{
+  "void unique_item(Object *item)": {
+    "brief": "Modifies an Object to make it unique by applying random attribute changes, effects, or value adjustments based on probabilistic conditions.",
+    "details": "The function 'unique_item' enhances an Object's uniqueness by applying various random modifications, which may include attribute boosts, effect applications, or value alterations. It begins with a probabilistic check to determine whether to proceed. If successful, it filters out specific item types that should not be modified, such as non-takeable or non-wearable items. For eligible items, it randomly decides whether to apply attribute effects, modify item values, adjust condition, weight, or cost, or lower the item's level. Attribute effects involve selecting a random attribute (e.g., strength, dexterity, intelligence, etc.) and assigning a random modifier within a range influenced by the item's level. Effects are added via affect structures, ensuring effects are properly merged or applied. Value modifications depend on item type, with specific ranges and probabilities for each attribute. When modifications are made, the function marks the item as changed, and optional logging or testing code can be enabled. The process ensures only appropriate items are affected, maintaining game balance while adding variability and uniqueness to objects, often used during object creation or reset routines to generate diverse item properties.",
+    "params": {
+      "item": "A pointer to the Object that is being considered for modification to become unique."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function applies modifications probabilistically, with different effects and value adjustments based on item type and level. It ensures that only suitable items are altered, preserving game balance. The affect application involves creating or merging effects to the object, supporting complex effect stacking. Logging or testing code can be enabled for debugging purposes.",
+    "rationale": "This function is used during object creation, reset, or special events to generate diverse, unique items with varying attributes and effects, enhancing gameplay variety and item differentiation.",
+    "state": "refined_summary",
+    "cid": "_object_8cc",
+    "mid": "_object_8cc_1aa0666047f3704a824911aa697eec77bf",
+    "etype": "member",
+    "kind": "function",
+    "name": "unique_item",
+    "qualified_name": null,
+    "definition": "void unique_item",
+    "argsstring": "(Object *item)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_area, void Area::reset()": "Called after object creation to potentially modify the object to be unique, adding variability."
+    }
+  },
+  "Object.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_object_8cc",
+    "mid": "_object_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "Object.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

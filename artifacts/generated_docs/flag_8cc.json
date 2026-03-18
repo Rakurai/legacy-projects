@@ -1,0 +1,268 @@
+{
+  "void do_flag(Character *ch, String argument)": {
+    "brief": "Modifies specific flags on game entities such as characters, objects, or rooms based on user commands.",
+    "details": "The `do_flag` function interprets user input to set, remove, or toggle various flags associated with game entities, including characters (players and NPCs), objects, and rooms. It begins by parsing the command arguments to identify the target entity type, the entity's name or identifier, the relevant flag field, and the flags to be modified. The function performs validation checks to ensure the existence of the target, verifies user permissions based on their rank and the entity type, and confirms the validity of the specified field and flags. Depending on the entity type, it retrieves the appropriate flag set, such as action flags, communication flags, or room properties, and applies the requested modifications according to the operation indicated (+, -, =). It provides immediate feedback to the user about each change, including success or error messages. Internally, the function ensures only permissible flags are altered, respecting entity-specific constraints and user privileges, thereby maintaining system integrity and consistency in flag management across the game world.",
+    "params": {
+      "ch": "A pointer to the Character object that is executing the command.",
+      "argument": "A String containing the command arguments, which specify the entity type, name or identifier, the field to modify, and the flags to change."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces permission checks based on user rank and entity type, preventing unauthorized modifications. It supports partial prefix matching for entity types and fields, facilitating flexible command inputs. Flag modifications are applied atomically, and feedback messages are provided for each operation to aid user understanding and debugging.",
+    "rationale": "This function is used in administrative or configuration commands to manage entity attributes dynamically, such as toggling visibility, permissions, or status flags, ensuring proper access control and consistent game state management during gameplay or moderation activities.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1a511ac94b6587b09782e6c41ed44e23eb",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_flag",
+    "qualified_name": null,
+    "definition": "void do_flag",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_typelist(Character *ch, String argument)": {
+    "brief": "Displays a list of available liquid or attack types based on the provided argument.",
+    "details": "The function 'do_typelist' outputs a list of specific game data types to a character, depending on the argument provided. If the argument is empty or unrecognized, it informs the character of valid options ('liquid' and 'attack'). When 'liquid' is specified, it iterates through the 'liq_table' and displays each liquid's index, name, and color. When 'attack' is specified, it iterates through the 'attack_table' and displays each attack's index, name, and noun. The function uses formatted output functions to send the list directly to the character, facilitating easy selection or reference within the game interface. It relies on string comparison to determine the list type and employs iteration over predefined tables to generate the output, ensuring consistency and ease of maintenance for game data listings.",
+    "params": {
+      "ch": "Pointer to the Character object that will receive the list output.",
+      "argument": "A String object indicating which list to display; valid options are 'liquid' or 'attack'."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function provides a simple interface for listing game data types, making it easier for players or administrators to reference available options. It defaults to informing the user of valid options if the input is empty or unrecognized, preventing errors or confusion.",
+    "rationale": "This function is used in command contexts where players or administrators need to view available liquid or attack types, such as during configuration, debugging, or gameplay decisions. It ensures quick access to current game data definitions, supporting user interaction and game balance adjustments.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1ae703af8955385ee3e898b682bcbcfea3",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_typelist",
+    "qualified_name": null,
+    "definition": "void do_typelist",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void do_flaglist(Character *ch, String argument)": {
+    "brief": "Displays available flag fields or detailed flags within a specific field for a character.",
+    "details": "The function `do_flaglist` provides a list of flag fields accessible to the character based on their rank. If no argument is provided, it lists all flag fields that the character has permission to see, displaying their names alongside a visual indicator from `field_cand`. When an argument is given, the function searches for a flag field whose name matches the argument prefix and, if found, displays all flags within that field, showing each flag's bit representation and name. The visibility of flag fields depends on the character's rank, ensuring that only authorized information is shown. The function leverages string prefix matching to identify the requested flag field and uses formatted output functions to present the information clearly. Internally, it iterates through the list of flag fields, checks permissions, and formats output accordingly, utilizing the `Flags` class for human-readable flag representations.",
+    "params": {
+      "ch": "A pointer to the Character object that will receive the flag list or flag field details.",
+      "argument": "A String object representing the name or prefix of the flag field to be displayed. If empty, all accessible flag fields are listed."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses rank-based permission checks to determine visibility of flag fields and flags. It employs prefix matching for flexible user input handling, allowing partial names to identify flag fields. The output formatting ensures clarity, displaying either a list of flag fields or detailed flags within a selected field.",
+    "rationale": "This function is used when a character needs to view available flag categories or inspect specific flags within a category, supporting administrative and debugging tasks, as well as user interface interactions for managing game attributes and permissions.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1a4ffefb76b939dfb4f4d73de487a747c5",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_flaglist",
+    "qualified_name": null,
+    "definition": "void do_flaglist",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "flag_8cc, void do_flag(Character *ch, String argument)": "Displays available flag fields or flags, called when input is incomplete or invalid."
+    }
+  },
+  "int fsearch_player(Character *ch, int fieldptr, const Flags &marked)": {
+    "brief": "Searches for characters in the game world that match specific flag criteria and displays the results.",
+    "details": "The function iterates through all characters in the game world, filtering out NPCs, characters not in a room, or those not visible to the searching character. For each valid character, it selects the relevant flag set based on the provided field identifier and checks if all flags in the 'marked' set are present using the Flags::has_all_of method. If the character matches, it increments a counter and formats the character's location and description into an output string, limiting the total displayed results to 500 entries. After processing, if any matches are found, the results are sent to the searcher's output buffer via page_to_char. The function returns the total count of matching characters. If an invalid fieldptr is provided, the function returns 0 without performing a search.",
+    "params": {
+      "marked": "Flags object specifying the set of flags that must be be present in the target characters.",
+      "ch": "Pointer to the character performing the search.",
+      "fieldptr": "Integer indicating which flag field to examine (e.g., player, pcdata, wiznet)."
+    },
+    "returns": "The total number of characters matching the specified flag criteria.",
+    "tparams": null,
+    "throws": "None explicitly thrown; the function returns 0 if an invalid fieldptr is provided.",
+    "notes": "The function limits the number of displayed results to 500 to prevent excessive output. It relies on the Flags class for efficient flag comparisons and uses formatted strings for output presentation. Visibility checks ensure that only characters perceivable by the searcher are included.",
+    "rationale": "This function is used when a game administrator or player needs to locate characters with specific attributes or statuses, such as active flags, permissions, or group memberships, facilitating management, moderation, or gameplay mechanics involving character filtering.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1a8b686aa7f8ce968d16754c8774a8336c",
+    "etype": "member",
+    "kind": "function",
+    "name": "fsearch_player",
+    "qualified_name": null,
+    "definition": "int fsearch_player",
+    "argsstring": "(Character *ch, int fieldptr, const Flags &marked)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "flag_8cc, void fsearch_char(Character *ch, int fieldptr, const Flags &marked, bool mobile, bool player)": "Invoked to perform a search for player characters matching the specified flags and criteria, returning the count."
+    }
+  },
+  "int fsearch_mobile(Character *ch, int fieldptr, const Flags &marked)": {
+    "brief": "Searches for NPC characters in the game world that match specified flag criteria and are visible to a given character.",
+    "details": "The function iterates through all characters in the game world, filtering for NPCs that are in rooms visible to the character performing the search. For each valid NPC, it selects the relevant flag set based on the provided field pointer and checks if all the specified flags in \\u0027marked\\u0027 are present using the Flags::has_all_of method. It also verifies that the NPC is visible to the character via can_see_char and can_see_room functions. Matching NPCs are then formatted into a string with their room location, vnum, and short description, and appended to the output string. The process limits the output to a maximum of 500 matches to prevent excessive data. If any matches are found, the resulting list is sent to the character\\u0027s output buffer using page_to_char. The function returns the total count of matching NPCs, which can be used for further processing or display.",
+    "params": {
+      "marked": "Flags object containing the set of flags that NPCs must have to be included in the results.",
+      "ch": "Pointer to the character performing the search; used to determine visibility and to receive the output.",
+      "fieldptr": "Integer identifier for the specific flag field to compare (e.g., act, off, form)."
+    },
+    "returns": "The total number of NPCs matching the specified flags and visibility criteria.",
+    "tparams": null,
+    "throws": "None explicitly thrown; function assumes valid input parameters and that the character and game world are properly initialized.",
+    "notes": "The function enforces a maximum of 500 matches to optimize performance and prevent excessive output. It relies on the Flags class for efficient flag comparisons and on visibility functions to ensure only perceivable NPCs are included. The use of formatted strings ensures consistent and readable output for each match.",
+    "rationale": "This function is useful when a game administrator or script needs to identify NPCs with specific attributes or behaviors within the game world, especially for debugging, monitoring, or gameplay mechanics that depend on NPC states and flags.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1a39fc3a31b78fd54db3af27f3a2f3384a",
+    "etype": "member",
+    "kind": "function",
+    "name": "fsearch_mobile",
+    "qualified_name": null,
+    "definition": "int fsearch_mobile",
+    "argsstring": "(Character *ch, int fieldptr, const Flags &marked)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "flag_8cc, void fsearch_char(Character *ch, int fieldptr, const Flags &marked, bool mobile, bool player)": "Invoked to perform a search for mobile entities matching the specified flags and criteria, returning the count."
+    }
+  },
+  "void fsearch_char(Character *ch, int fieldptr, const Flags &marked, bool mobile, bool player)": {
+    "brief": "Performs a search for characters and/or NPCs matching specified flags and displays the results to a character.",
+    "details": "The function fsearch_char conducts searches for player characters and/or NPCs within the game world based on provided flag criteria. It calls fsearch_mobile to find NPCs and fsearch_player to find players, depending on the boolean parameters 'mobile' and 'player'. The number of matches found for each category is counted, and a formatted message is constructed to inform the character of the results. If the number of matches exceeds 500, the output indicates that only 500 are shown. The final message, which includes details for both categories if applicable, is sent to the character via page_to_char, allowing for large outputs to be paginated and viewed comfortably. The function dynamically constructs the output message based on the search results, ensuring clear communication of the number of matches and handling cases with no matches appropriately.",
+    "params": {
+      "marked": "Flags object containing the set of flags that target characters must have to be included in the search.",
+      "mobile": "Boolean indicating whether to include NPCs in the search.",
+      "player": "Boolean indicating whether to include player characters in the search.",
+      "ch": "Pointer to the Character object that will receive the search results.",
+      "fieldptr": "Integer specifying which flag field to examine during the search."
+    },
+    "returns": "This function does not return a value; it outputs the search results directly to the character.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles large result sets by limiting the displayed matches to 500 and explicitly informs the user when this limit is reached. It constructs the output message dynamically based on the number of matches, providing clear feedback whether no matches are found or multiple matches are present. The use of formatted strings ensures consistent messaging, and the function relies on auxiliary search functions to perform the actual filtering based on flags.",
+    "rationale": "This function is used when a character or administrator needs to locate other characters or NPCs matching specific criteria, such as for management, moderation, or gameplay purposes. It provides a flexible way to filter entities based on flags and presents the results in a user-friendly paginated format, making it suitable for use in command handlers or administrative tools.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1ab62c54e4e1fb01336fc1cefd5c96f0a5",
+    "etype": "member",
+    "kind": "function",
+    "name": "fsearch_char",
+    "qualified_name": null,
+    "definition": "void fsearch_char",
+    "argsstring": "(Character *ch, int fieldptr, const Flags &marked, bool mobile, bool player)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "flag_8cc, void do_flagsearch(Character *ch, String argument)": "Called at the end to perform character or mobile flag searches based on validated parameters."
+    }
+  },
+  "void fsearch_room(Character *ch, int fieldptr, const Flags &marked)": {
+    "brief": "Searches for rooms in the game world that are visible to a character and match specified flag criteria.",
+    "details": "The function iterates through all areas and their associated rooms in the game world, checking for each room whether the character can see it and whether the room's flags include all the specified flags in 'marked'. It uses the 'fieldptr' parameter to determine which set of flags to evaluate, currently supporting the 'FIELD_ROOM' constant. Matching rooms are collected up to a maximum of 500, and their details\u2014including virtual number and name\u2014are formatted into an output string. If no matching rooms are found, a message is sent indicating this; otherwise, the total count and a subset message are appended, and the results are displayed to the character via paging. This process efficiently filters and presents relevant room information based on visibility and flag criteria, supporting gameplay mechanics such as location searches and environment filtering.",
+    "params": {
+      "marked": "A Flags object containing the flags that rooms must have to be included in the results.",
+      "ch": "A pointer to the Character object performing the search.",
+      "fieldptr": "An integer indicating which room attribute or flag set to evaluate (e.g., FIELD_ROOM)."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function limits the number of displayed rooms to 500 to prevent excessive output. It currently supports only the 'FIELD_ROOM' flag field, but can be extended for other criteria. The search respects the character's visibility permissions via 'can_see_room'.",
+    "rationale": "This function is used when a character needs to locate or filter rooms based on specific attributes or flags, such as searching for all rooms with a particular property or status, facilitating gameplay features like area exploration, administrative filtering, or debugging.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1a33612448a86ad2194386aff18c929976",
+    "etype": "member",
+    "kind": "function",
+    "name": "fsearch_room",
+    "qualified_name": null,
+    "definition": "void fsearch_room",
+    "argsstring": "(Character *ch, int fieldptr, const Flags &marked)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "flag_8cc, void do_flagsearch(Character *ch, String argument)": "Called at the end to perform room flag searches based on validated parameters."
+    }
+  },
+  "void fsearch_obj(Character *ch, int fieldptr, const Flags &marked)": {
+    "brief": "Searches the game world for objects matching specific flag criteria and displays their locations and descriptions to the character.",
+    "details": "The function fsearch_obj iterates through the global list of all objects in the game world, checking each object against a set of specified flags based on the provided field pointer, which determines whether to examine extra flags, wear flags, or weapon-related values. For each object that matches the criteria, it traces the object's containment hierarchy to identify its current location\u2014whether carried by a character, stored in a locker or strongbox, or placed in a room\u2014and verifies if the searching character can see that location and the object itself. It then formats detailed information about each matching object, including its location, vnum, description, and owner, appending this data to an output buffer. To prevent excessive output, the list is capped at 500 objects. After processing, it reports the total number of matches found, indicating if the list is truncated, and sends the results to the character's output buffer. If no objects match, an appropriate message is displayed. The function relies on various helper functions for visibility checks, string formatting, and output management, ensuring efficient and user-friendly search results.",
+    "params": {
+      "marked": "Flags object containing the set of flags that objects must have to be included in the results.",
+      "ch": "Pointer to the Character object that will receive the search results.",
+      "fieldptr": "Integer indicating which object field (extra flags, wear flags, or weapon value) to check against the 'marked' flags."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function limits the output to 500 objects to prevent spamming. It performs multiple visibility checks to ensure the character can see each object's location and owner, respecting game mechanics like invisibility or stealth. The search criteria are flexible, allowing filtering based on different object attributes via the 'fieldptr' parameter.",
+    "rationale": "This function is used in administrative or gameplay contexts where players or administrators need to locate objects with specific properties across the game world, such as for debugging, inventory management, or quest-related searches.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1a4b40c560b8b3d6e6f9329cb8c0dd43be",
+    "etype": "member",
+    "kind": "function",
+    "name": "fsearch_obj",
+    "qualified_name": null,
+    "definition": "void fsearch_obj",
+    "argsstring": "(Character *ch, int fieldptr, const Flags &marked)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "flag_8cc, void do_flagsearch(Character *ch, String argument)": "Called at the end to perform object flag searches based on validated parameters."
+    }
+  },
+  "void do_flagsearch(Character *ch, String argument)": {
+    "brief": "Performs a flag-based search for characters, objects, or rooms based on user-specified criteria.",
+    "details": "The `do_flagsearch` function allows a character to search for game entities\u2014such as characters, NPCs, objects, or rooms\u2014that match specific flag conditions provided through command arguments. It begins by parsing the input to identify the entity type (mob, char, player, obj, room), the relevant flag field, and the set of flags to match. The function validates the flag field against known categories and checks the character's permission level to access certain data, ensuring they have sufficient rank to perform the search. Depending on the entity type, it invokes specialized search functions (`fsearch_char`, `fsearch_obj`, `fsearch_room`) which perform the actual filtering based on the specified flags and display the results directly to the character. The function also handles various error conditions, such as missing arguments, invalid flag fields, or insufficient privileges, providing clear feedback to guide correct usage.",
+    "params": {
+      "ch": "A pointer to the Character object that initiates the search and receives the output or error messages.",
+      "argument": "A String containing the user input that specifies the entity type, flag field, and flags to match."
+    },
+    "returns": "This function does not return a value; it outputs search results or error messages directly to the character.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function supports searching across multiple entity types with permission checks based on character rank. It interprets partial prefixes for entity types and flag fields, allowing flexible command input. The search results are displayed directly to the character, facilitating administrative and gameplay utility.",
+    "rationale": "This function is used when a character or administrator needs to locate entities with specific attributes or permissions, such as filtering NPCs, players, objects, or rooms based on flags. It is particularly useful for moderation, debugging, or gameplay management where targeted searches are necessary.",
+    "state": "refined_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc_1a447f1b6b8a0dc34de8122b00748531b3",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_flagsearch",
+    "qualified_name": null,
+    "definition": "void do_flagsearch",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "flag.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "flag_8cc",
+    "mid": "flag_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "flag.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

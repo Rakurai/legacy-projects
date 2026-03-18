@@ -1,0 +1,24 @@
+{
+  "BreakConnectState.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_break_connect_state_8cc",
+    "mid": "_break_connect_state_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "BreakConnectState.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

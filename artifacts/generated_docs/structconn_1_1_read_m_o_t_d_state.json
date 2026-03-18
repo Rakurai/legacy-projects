@@ -1,0 +1,51 @@
+{
+  "conn::ReadMOTDState": {
+    "brief": "Represents the state responsible for reading and displaying the Message of the Day (MOTD) during a network connection setup.",
+    "details": "ReadMOTDState is a specialized subclass of State that manages the process of reading and presenting the Message of the Day (MOTD) to a user during the initial connection phase. It encapsulates the logic needed to handle user input related to the MOTD display, primarily through the handleInput method. This method interacts with a Descriptor object to access connection-specific data, such as user information and connection parameters, and processes input received from the user. Upon completion of the MOTD reading, handleInput transitions the connection to the subsequent state in the connection workflow, facilitating a smooth onboarding experience. This struct is integral to the connection state machine, ensuring proper sequencing of connection initialization, user acknowledgment, and transition to active communication states.",
+    "params": {},
+    "returns": null,
+    "tparams": {
+      "": "None"
+    },
+    "throws": null,
+    "notes": "This struct relies on polymorphic behavior through its handleInput method, enabling flexible handling of input across different connection states. It follows the state pattern to manage connection flow control, promoting modularity and maintainability.",
+    "rationale": "ReadMOTDState exists to modularize the process of displaying the Message of the Day during connection setup, separating concerns from other connection phases. It fits into the system architecture as a distinct state within the connection's state machine, ensuring a clear and manageable flow of connection initialization, user acknowledgment, and transition to active gameplay or command processing states.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_read_m_o_t_d_state",
+    "mid": "structconn_1_1_read_m_o_t_d_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::ReadMOTDState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::ReadMOTDState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input during the Message of the Day display, shows the MOTD, and transitions to the next state.",
+    "details": "This function processes input received while in the ReadMOTD state of a network connection. It sets the output color to white and bold for the character associated with the descriptor, then displays the current Message of the Day (MOTD) if it is not empty. It then prompts the user to hit Enter to continue. After displaying the MOTD and prompt, it resets the text color to white and non-bold, and transitions the connection to the readNewMOTD state, preparing for subsequent interactions. The function does not utilize the input argument, serving primarily as a trigger to proceed after the MOTD display.",
+    "params": {
+      "d": "A pointer to the Descriptor object associated with the current connection, providing access to the character and connection context.",
+      "argument": "A constant reference to a String object representing the input from the user, which is not utilized in this function."
+    },
+    "returns": "A pointer to the State object representing the readNewMOTD state, indicating the next state after handling input.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on global variables such as Game::motd and connection state variables like readNewMOTD to manage flow. It ensures consistent visual formatting by setting and resetting text styles around message output.",
+    "rationale": "This function is used during the initial connection phase to display the Message of the Day to the player and then transition to the next state, facilitating a smooth onboarding process and ensuring players acknowledge the MOTD before proceeding.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_read_m_o_t_d_state",
+    "mid": "structconn_1_1_read_m_o_t_d_state_1acb219720e74162550c16f262b0206313",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::ReadMOTDState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

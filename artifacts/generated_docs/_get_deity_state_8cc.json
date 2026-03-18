@@ -1,0 +1,24 @@
+{
+  "GetDeityState.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_get_deity_state_8cc",
+    "mid": "_get_deity_state_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "GetDeityState.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

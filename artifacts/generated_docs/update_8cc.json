@@ -1,0 +1,707 @@
+{
+  "void advance_level(Character *ch)": {
+    "brief": "Calculates and applies attribute-based increases to a character's health, mana, stamina, practice, and training points upon leveling up.",
+    "details": "This function handles the process of leveling up a character by computing incremental gains in core attributes such as hit points, mana, stamina, as well as practice and training points. The increases are derived from the character's attributes\u2014constitution, intelligence, strength, wisdom, and charisma\u2014using predefined application tables and random ranges within guild-specific minimum and maximum bounds. The function ensures that each core attribute gain is at least one point, with variability introduced through random number generation to simulate natural growth. Additionally, there is a probabilistic chance, influenced by the character's charisma, for the character to receive double training points. The function updates the character's last level timestamp, applies the calculated increases to their base attributes, and provides a detailed message summarizing the gains, including current and maximum values for health, mana, stamina, practice, and training points.",
+    "params": {
+      "ch": "A pointer to the Character object whose level is being advanced."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses randomness to introduce variability in attribute gains, making each level-up experience unique. The chance for double training points is determined by a character's charisma-based chance value. It also updates the character's last level timestamp to track progression history.",
+    "rationale": "This function is used during the level advancement process to enhance a character's core attributes and resources based on their attributes and guild-specific parameters, providing a balanced and dynamic progression system.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1ad72a13bc9ae1a2712cc521dd3ec0cabb",
+    "etype": "member",
+    "kind": "function",
+    "name": "advance_level",
+    "qualified_name": null,
+    "definition": "void advance_level",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "wiz__coder_8cc, void do_advance(Character *ch, String argument)": " Called during level promotion to handle additional logic associated with increasing a character's level."
+    }
+  },
+  "void npc_advance_level(Character *ch)": {
+    "brief": "Increments an NPC's base hit points, mana, and stamina based on its core attributes.",
+    "details": "This function first verifies whether the provided character is an NPC by calling the is_npc() method. If the character is not an NPC, the function exits early without making changes. For NPCs, it retrieves the character's core attributes\u2014constitution, intelligence, and strength\u2014using macro functions GET_ATTR_CON, GET_ATTR_INT, and GET_ATTR_STR, respectively. These attribute values are then added to the character's base hit points, mana, and stamina by updating their respective ATTR_BASE values at the APPLY_HIT, APPLY_MANA, and APPLY_STAM indices. This process effectively enhances the NPC's core attributes during level-up or similar events, ensuring that only non-player characters are affected and that their attributes are scaled appropriately based on their innate qualities.",
+    "params": {
+      "ch": "A pointer to the Character object whose attributes are to be increased if it is an NPC."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function directly modifies the character's base attributes, which may influence subsequent calculations of hit points, mana, and stamina. It relies on attribute macros to ensure consistent and bounded attribute retrieval. The function is typically invoked during NPC level-up procedures to dynamically scale NPC capabilities based on their core attributes.",
+    "rationale": "Used in NPC level-up or enhancement routines, this function ensures that NPCs grow stronger in proportion to their innate attributes, supporting balanced and scalable game mechanics for non-player characters.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1aa9c7725a4af696184d80c5ed229617ee",
+    "etype": "member",
+    "kind": "function",
+    "name": "npc_advance_level",
+    "qualified_name": null,
+    "definition": "void npc_advance_level",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void gain_exp(Character *ch, int gain)": "Called to handle the pet's level-up process, similar to the character's level advancement."
+    }
+  },
+  "void demote_level(Character *ch)": {
+    "brief": "Decreases a character's level by reducing their attributes, resources, and skill points based on their attributes and guild-specific ranges.",
+    "details": "This function implements a level demotion by subtracting attribute-dependent values from the character's current hit points, mana, stamina, practice points, and training points. It calculates the reductions using the character's constitution, intelligence, strength, wisdom, and charisma attributes, combined with guild-specific minimum and maximum ranges, with some randomness introduced through number_range functions. The function also incorporates a chance-based mechanic, influenced by the character's charisma, which can double the training point deduction. It updates the character's last_level timestamp to reflect the demotion and provides a detailed message to the player, displaying the exact losses in health, mana, stamina, practice, and training points. The attribute values are constrained to minimum thresholds to maintain game balance after the demotion process.",
+    "params": {
+      "ch": "A pointer to the Character object that is being demoted."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that attribute-based reductions do not drop below predefined minimum values, preserving game balance. The use of randomness introduces variability in the demotion impact, making each demotion slightly different. The message formatting provides clear feedback to the player about the specific losses incurred during demotion.",
+    "rationale": "This function is used during level demotion processes, such as when a player is penalized or chooses to revert to a lower level, ensuring that their attributes and resources are appropriately decreased to reflect the change in status.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a9e890969c1dea14408471f83f4a150b4",
+    "etype": "member",
+    "kind": "function",
+    "name": "demote_level",
+    "qualified_name": null,
+    "definition": "void demote_level",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "wiz__coder_8cc, void do_advance(Character *ch, String argument)": " Called during level demotion to handle additional logic associated with reducing a character's level."
+    }
+  },
+  "void gain_exp(Character *ch, int gain)": {
+    "brief": "Increases a character's experience points and handles level progression, including notifications, rewards, and group updates.",
+    "details": "The function adds the specified amount of experience to the character, provided the character is a player and has not reached the maximum hero level. It ensures the experience does not fall below the minimum required for the current level. When the total experience exceeds the threshold for the next level, the character levels up, triggering congratulatory messages, fireworks for hero level attainment, and broadcasting a level-up announcement to all connected players. Upon leveling up, the character's group affiliations are updated if they reach hero or avatar levels. If the character has a pet, it may also gain a level based on specific conditions related to the character's level increase. The function updates experience points, manages level transitions, broadcasts notifications, restores the character if needed, and saves the character's data to persistent storage. Internal behaviors include broadcasting fireworks, updating group memberships, and handling pet level gains to enhance gameplay experience and maintain consistent progression mechanics.",
+    "params": {
+      "ch": "Pointer to the Character object whose experience is being gained and potentially leveled up.",
+      "gain": "Integer amount of experience points to add to the character."
+    },
+    "returns": "This function has no return value; it performs in-place updates to the character's experience, level, and related states.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function prevents NPCs from gaining experience and stops processing if the character has already reached the maximum hero level. It also handles special notifications and group updates when reaching hero or avatar levels. Pet experience gain is conditional, occurring only when the character's level increases by an odd number, ensuring pets grow proportionally to their owners. The fireworks display and broadcast messages are designed to enhance player feedback during level-ups.",
+    "rationale": "This function is used whenever a character gains experience points through gameplay actions such as quests, kills, or other events. It ensures proper progression, rewards, and notifications are handled automatically, maintaining consistent game mechanics and enhancing player engagement during level advancement.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a1f771c968d0aaa86663896d8d7fa83b2",
+    "etype": "member",
+    "kind": "function",
+    "name": "gain_exp",
+    "qualified_name": null,
+    "definition": "void gain_exp",
+    "argsstring": "(Character *ch, int gain)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__move_8cc, void do_enter(Character *ch, String argument)": "Adjusts the character's experience points based on their actions during portal travel.",
+      "act__move_8cc, void recall(Character *ch, bool clan)": "Adjusts the character's experience points if they are in combat and being teleported from the arena.",
+      "magic_8cc, void spell_energy_drain(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": " Called to reduce the victim's experience points if they are outside arena zones, representing energy drain effects.",
+      "fight_8cc, void do_flee(Character *ch, String argument)": " Called to adjust the character's experience points based on the outcome of fleeing, such as losing exp.",
+      "quest_8cc, void do_quest(Character *ch, String argument)": "Called to increase the character's experience points upon quest completion, affecting their level progression.",
+      "fight_8cc, void kill_off(Character *ch, Character *victim)": "Called to award experience points to a character after a kill, potentially triggering level-up notifications.",
+      "fight_8cc, void one_hit(Character *ch, Character *victim, skill::type attack_skill, bool secondary)": "Called when the victim is damaged or affected, to award experience points and handle level-ups.",
+      "wiz__gen_8cc, void do_adjust(Character *ch, String argument)": "Called to modify the target character's experience points by the specified amount, affecting their level progression.",
+      "fight_8cc, int group_gain(Character *ch, Character *victim)": "Called to award experience points to characters unless they have the REVOKE_EXP flag set.",
+      "skills_8cc, void check_improve(Character *ch, skill::type sn, bool success, int multiplier)": "Invoked to award experience points to the character upon successful skill learning or improvement."
+    }
+  },
+  "void gain_condition(Character *ch, int iCond, int value)": {
+    "brief": "Adjusts a character's specific condition (such as hunger, thirst, or drunkenness) by a given amount, with special handling for immortals and NPCs.",
+    "details": "The function modifies the specified condition for a character, taking into account various factors such as character type and current condition state. For immortal characters, hunger and thirst are automatically set to maximum (100). For player characters, it first checks if the current condition is valid (not -1) and then updates the condition within the range of 0 to 48 using the URANGE macro. If the condition reaches zero and the character is not in chat mode, it provides appropriate feedback messages indicating hunger, thirst, or sobriety. The function ignores modifications if the adjustment value is zero, if the character is an NPC, or if the player data is null, ensuring safe and consistent updates to character conditions.",
+    "params": {
+      "iCond": "Identifier of the condition type (e.g., hunger, thirst, drunkenness).",
+      "ch": "Pointer to the character whose condition is to be modified.",
+      "value": "Amount to adjust the condition by; positive to increase, negative to decrease."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function enforces condition limits and provides user feedback only when conditions reach zero and the character is not in chat mode. It also handles special cases for immortal characters by setting hunger and thirst directly to maximum, bypassing normal adjustments.",
+    "rationale": "This function is used whenever a character's condition needs to be changed due to game events, such as eating, drinking, or environmental effects, ensuring consistent condition management and player feedback.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a91284d5711ce74249670d50b9c1eefce",
+    "etype": "member",
+    "kind": "function",
+    "name": "gain_condition",
+    "qualified_name": null,
+    "definition": "void gain_condition",
+    "argsstring": "(Character *ch, int iCond, int value)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void char_update()": "Used to modify conditions like drunk, full, hunger, and thirst based on various flags and timers.",
+      "update_8cc, void underwater_update()": "Called to increase the character's thirst and fullness conditions based on the water's properties when underwater.",
+      "effects_8cc, void fire_effect(void *vo, int level, int dam, int target, int evolution)": "Adjusts a character's thirst condition after being affected by fire, representing dehydration or damage.",
+      "effects_8cc, void cold_effect(void *vo, int level, int dam, int target, int evolution)": " Used to decrease the hunger condition of non-player characters when affected by the cold effect.",
+      "act__obj_8cc, void do_quaff(Character *ch, String argument)": " Called to increase the character's fullness condition after successfully quaffing a potion.",
+      "act__obj_8cc, void do_eat(Character *ch, String argument)": "Updates the character's hunger and fullness conditions based on consumed items.",
+      "act__obj_8cc, void do_drink(Character *ch, String argument)": "Called to modify the character's conditions (drunk, full, hunger, thirst) based on the drink's effects."
+    }
+  },
+  "void update_handler()": {
+    "brief": "Performs periodic updates for the game world, managing timers, subsystem updates, and scheduled events.",
+    "details": "This function orchestrates the main update cycle of the game server by decrementing various internal pulse counters associated with different subsystems such as quests, music, mobile entities, violence, duels, teleportation, underwater effects, age progression, janitorial tasks, and world time. When a counter reaches zero, the corresponding update function is invoked, and the counter is reset to its predefined interval, ensuring regular and synchronized updates. Additionally, it updates global game time and weather conditions, processes character and object updates, manages scheduled server reboots by checking the reboot timer and active connections, and triggers auxiliary updates like auctions, aggression, and other game mechanics. The function ensures all subsystems progress in a coordinated manner, maintaining consistent timing and state updates across the entire game environment, supporting smooth gameplay and system stability.",
+    "params": {},
+    "returns": "Void; this function performs side effects such as updating game states, timers, and scheduled tasks without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses static counters to schedule subsystem updates at different intervals, allowing for efficient timing control. It also includes a mechanism for automatic server reboot when scheduled, waiting for all active players to disconnect before shutting down. The function integrates multiple subsystems, ensuring their updates are synchronized with the game pulse cycle.",
+    "rationale": "This function is essential for maintaining the real-time progression of the game world, ensuring that all timed events, character states, environmental conditions, and server maintenance tasks occur reliably and in a coordinated manner during each game loop cycle.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a994e676d4b39293dd7e1ef0229000076",
+    "etype": "member",
+    "kind": "function",
+    "name": "update_handler",
+    "qualified_name": null,
+    "definition": "void update_handler",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "comm_8cc, void game_loop_unix(int control)": " Called once per game loop cycle to handle periodic updates for game systems and subsystems."
+    }
+  },
+  "save_number": {
+    "brief": "Counter that tracks the number of save operations performed.",
+    "details": "The `save_number` variable is initialized to zero at program start and is incremented each time a save operation occurs, effectively serving as a sequential counter. It is utilized within functions such as `char_update()` to identify and manage which characters or data segments should be automatically saved during each update cycle. Its persistent value allows the system to monitor the progression of save events, supporting features like version control, change tracking, or conditional save logic based on the number of saves performed.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The variable is stored as a simple integer and is intended to be incremented atomically during save procedures to maintain an accurate count across the application's runtime.",
+    "rationale": "This counter exists to provide a straightforward mechanism for tracking save events, enabling other parts of the system to make decisions based on the number of saves, such as triggering specific behaviors after a certain number of saves or managing save-related resources.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a66a46f13b6e1b36159fa8901d9ebcdc5",
+    "etype": "member",
+    "kind": "variable",
+    "name": "save_number",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void char_update()": "A counter used to determine which characters should be auto-saved during the update cycle."
+    }
+  },
+  "void squestmob_found(Character *ch, Character *mob)": {
+    "brief": "Handles the event when a player character finds a quest mob, triggering appropriate interactions and updates.",
+    "details": "Handles the event when a quest mob is found by a player, providing context-specific interactions and updating quest state.\nThis function manages the discovery of a quest-related mob by a player character. It first checks if the player has already found the quest mob and logs a bug if so, resetting the flag. Depending on the mob's act flags, it executes different scripted interactions: for mage, cleric, thief, or default warrior types, it performs a series of speech and action commands to simulate a teaching or interaction sequence. After the interaction, it announces completion to the player, logs the event via wiznet, removes the mob from the game world, and updates the player's quest state flag.",
+    "params": {
+      "mob": "Pointer to the Character object representing the mob that was found.",
+      "ch": "Pointer to the Character object representing the player who found the mob."
+    },
+    "returns": "Void; the function performs side effects including messaging, state updates, and character extraction without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1ae8fe915f192402601d86c8f35b108236",
+    "etype": "member",
+    "kind": "function",
+    "name": "squestmob_found",
+    "qualified_name": null,
+    "definition": "void squestmob_found",
+    "argsstring": "(Character *ch, Character *mob)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "int hit_gain(Character *ch)": {
+    "brief": "Calculates the amount of hit points a character regenerates based on their current state, conditions, and environment.",
+    "details": "This function determines the hit point regeneration gain for a character by considering multiple factors including character type (NPC or player), current position, active effects, and environmental conditions. For NPCs, the gain is primarily based on their level, with additional adjustments if they have regeneration effects active, and is modified according to their posture (sleeping, resting, fighting). For player characters, the gain depends on their constitution attribute, level, guild-specific maximum health, current hunger and thirst conditions, and their skill level in fast healing. The calculation incorporates environmental influences such as the room's healing rate and the object the character is standing on if it is furniture, as well as active status effects like poison, plague, haste, slow, regeneration, and divine regeneration, which can significantly modify the gain. The final computed gain is capped to ensure it does not exceed the difference between the character's maximum hit points and current hit points, preventing overhealing.",
+    "params": {
+      "ch": "A pointer to the Character object for which the hit point regeneration is being calculated."
+    },
+    "returns": "The amount of hit points to be regenerated, bounded by the character's maximum hit points minus current hit points.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function applies multiple modifiers sequentially, including effects from active spells, conditions, and environment, to produce a comprehensive regeneration value. It also ensures that regeneration does not exceed the character's maximum health capacity.",
+    "rationale": "This function is used during game updates to determine how much health a character recovers over time, factoring in their current state, active effects, and surroundings, making it essential for realistic and balanced health regeneration mechanics.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a391d083128e9b4ac31ab9b0cb8197aa0",
+    "etype": "member",
+    "kind": "function",
+    "name": "hit_gain",
+    "qualified_name": null,
+    "definition": "int hit_gain",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void char_update()": "Calculates hit point regeneration, used to increase a character's hit points each tick."
+    }
+  },
+  "int mana_gain(Character *ch)": {
+    "brief": "Calculates the amount of mana a character gains during regeneration based on their attributes, position, conditions, environment, and active effects.",
+    "details": "This function computes the mana gain for a character by considering various factors. For NPCs, the gain is a base value adjusted by their current position, with sleeping characters gaining more and fighting characters less. For player characters, the gain depends on their wisdom, intelligence, level, and skill in meditation, with additional modifications if they are hungry or thirsty. The calculation further accounts for the character's guild-specific mana regeneration rates, the room's mana rate, furniture effects, and active status effects such as poison, plague, haste, slow, and divine regeneration. The resulting gain is scaled by the room's mana rate and furniture modifiers, then adjusted for active effects. The final value is capped to ensure it does not exceed the character's maximum mana capacity, maintaining game balance and consistency.",
+    "params": {
+      "ch": "A pointer to the Character object for which the mana gain is being calculated."
+    },
+    "returns": "An integer representing the amount of mana gained during regeneration, limited by the character's maximum mana.",
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1ad035504b353adc8f323ff1d413cdf716",
+    "etype": "member",
+    "kind": "function",
+    "name": "mana_gain",
+    "qualified_name": null,
+    "definition": "int mana_gain",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void char_update()": "Calculates mana regeneration, used to increase a character's mana each tick."
+    }
+  },
+  "int stam_gain(Character *ch)": {
+    "brief": "Calculates the amount of stamina a character regenerates based on their current state, attributes, and conditions.",
+    "details": "This function computes the stamina gain for a character by evaluating multiple factors including whether the character is an NPC or a player, their current position, room healing rate, and active effects such as poison, plague, haste, slow, and regeneration. For NPCs, the gain is derived from their level and position, with specific adjustments for fighting or resting states. For player characters, the calculation incorporates their constitution, dexterity, level, guild-specific stamina maximums, and conditions like hunger and thirst. The stamina gain is further scaled by the room's healing rate and furniture effects if applicable. Effects like poison and plague significantly reduce gain, while haste, regeneration, and divine regeneration increase it. The final value is capped to ensure it does not exceed the character's maximum stamina limit, maintaining game balance.",
+    "params": {
+      "ch": "Pointer to the Character object for which stamina gain is being calculated."
+    },
+    "returns": "An integer representing the amount of stamina the character gains, limited by their maximum stamina.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function accounts for various active effects that modify stamina regeneration, including negative effects like poison and plague, and positive effects like haste and regeneration. It also considers environmental factors such as room healing rate and furniture effects, providing a comprehensive calculation tailored to the character's current state.",
+    "rationale": "This function is used during periodic updates (e.g., each game tick) to determine how much stamina a character regains, supporting gameplay mechanics that depend on stamina regeneration, such as action execution, movement, and combat readiness.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a36eb5d71bdcc1320268a5ceddd4cc5a8",
+    "etype": "member",
+    "kind": "function",
+    "name": "stam_gain",
+    "qualified_name": null,
+    "definition": "int stam_gain",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void char_update()": "Calculates stamina regeneration, used to increase a character's stamina each tick."
+    }
+  },
+  "void mobile_update()": {
+    "brief": "Updates the state of all mobile entities (characters) in the game world.",
+    "details": "The function retrieves the singleton instance of the game world using Game::world() and iterates through its list of all character entities stored in char_list. For each character, it calls the update() method, which advances the character's internal state, behavior, and position as needed. This process is typically performed during each game cycle or pulse to ensure that all mobile entities behave correctly and remain synchronized within the game environment. The function operates without returning a value and is designed to be called periodically to maintain game consistency.",
+    "params": null,
+    "returns": "void",
+    "tparams": null,
+    "throws": "none",
+    "notes": "This function relies on the global singleton World instance and the character list it maintains. It assumes that each character's update() method handles all necessary internal state changes, making this function a high-level trigger for per-cycle character updates.",
+    "rationale": "Used during game update cycles, such as pulses or ticks, to ensure all mobile entities are consistently updated, maintaining game logic, character behaviors, and world state synchronization.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1a8759aece98ca62a8f88f1e70fa63b144",
+    "etype": "member",
+    "kind": "function",
+    "name": "mobile_update",
+    "qualified_name": null,
+    "definition": "void mobile_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called when pulse_mobile reaches zero to update mobile entities in the game world."
+    }
+  },
+  "void char_update()": {
+    "brief": "Updates the state of all characters in the game world periodically, handling effects, health regeneration, timers, and cleanup tasks.",
+    "details": "This function performs a comprehensive tick-based update for every character in the game. It increments a global save counter and manages link-dead timers, causing characters to disconnect or move to a limbo room if inactive. It processes ongoing effects such as necromancer timers, plague, and poison, applying damage and removing effects when their durations expire. The function also manages health, mana, and stamina regeneration based on current conditions, attributes, and special flags like remort effects. It handles special character states such as familiar loss, guild-specific abilities like Lay on Hands, and updates worn light objects, including extinguishing lights when their timers run out. Additionally, it triggers NPC programs, manages character death or removal when timers or conditions dictate, and handles effect expiration messages. Autosave and autoquit operations are performed for connected characters based on their timers and connection status. Overall, it ensures consistent progression of character states, effects, and game world conditions each tick, maintaining game stability and flow.",
+    "params": {
+      "void": "No parameters; operates on global game state and character list."
+    },
+    "returns": "Void; the function performs side effects such as updating character states, applying effects, and managing game world conditions without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function carefully manages character removal and effect expiration to prevent dangling references. It also ensures that effects like plague and poison are processed before character removal, and that messages are appropriately displayed when effects wear off. The design supports both NPC and player characters, with special handling for immortal and duel characters to prevent unintended disconnections or state changes.",
+    "rationale": "This function is invoked regularly (each game tick) to advance the game state, ensuring that effects, health, timers, and environmental conditions are consistently updated. It is essential for maintaining real-time game dynamics, effect durations, and character lifecycle management, providing a stable and immersive gameplay experience.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1ae1f156dc1503b2a8efe0a6f4cc425176",
+    "etype": "member",
+    "kind": "function",
+    "name": "char_update",
+    "qualified_name": null,
+    "definition": "void char_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called within pulse_point to update character states and statuses.",
+      "debug_8cc, void do_debug(Character *ch, String argument)": "Called in the 'tick' subfunction to update all characters' states and effects each tick.\","
+    }
+  },
+  "void descrip_update()": {
+    "brief": "Updates activity timers for all network descriptors, manages idle disconnections, and sets auto-AFK status based on inactivity.",
+    "details": "The function iterates through the global linked list of all active network descriptors, incrementing each descriptor's timer to track activity duration. For descriptors with active (playing) characters, it checks if the character is an immortal or engaged in a duel; if so, it caps the timer at 99 and skips further processing for that descriptor. When a descriptor's timer reaches 12, it initiates a disconnection sequence for non-immortal, non-duel characters who are not currently in the limbo room: it saves their character data if they are above level 1, announces their disappearance to the room, and moves them to the limbo room, clearing fighting status if necessary. At timer value 7, it sets non-NPC characters to auto-AFK mode, broadcasting an appropriate message. If a descriptor's timer exceeds 30, it closes the network socket, disconnecting the character. This process ensures proper cleanup of idle or disconnected players, updates their statuses, and enforces inactivity timeouts, maintaining server stability and resource management.",
+    "params": {
+      "d": "Pointer to the current Descriptor object in the iteration.",
+      "d_next": "Pointer to the next Descriptor object, used to safely iterate through the list.",
+      "ch": "Pointer to the Character associated with the current descriptor."
+    },
+    "returns": "Void; performs side effects such as updating timers, moving characters, setting AFK status, and closing sockets.",
+    "tparams": null,
+    "throws": "null",
+    "notes": "This function handles automatic disconnection of idle players, character state updates, and AFK status management based on inactivity timers. It ensures that idle or disconnected players are properly cleaned up and moved to a safe state, preventing resource leaks and maintaining game stability.",
+    "rationale": "This function is invoked periodically (e.g., in the main game loop) to manage inactive connections, enforce timeouts, and update player statuses, thereby supporting server health, resource management, and consistent player experience.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1a4791a10d7c581b616c5377badf44ee70",
+    "etype": "member",
+    "kind": "function",
+    "name": "descrip_update",
+    "qualified_name": null,
+    "definition": "void descrip_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called within pulse_point to update descriptions of game entities."
+    }
+  },
+  "void obj_update()": {
+    "brief": "Updates all game objects by processing effects, timers, decay, and removal, ensuring game state consistency.",
+    "details": "This function traverses the entire list of objects in the game world, performing several maintenance tasks. It begins by sorting each object's affects by duration and type to identify effects that have expired. When an affect's duration reaches zero, it notifies characters in the vicinity about the effect wearing off, using context-sensitive messages based on the affect's type and the object's state. Expired affects are then removed from the object. The function proceeds to decrement timers and decay counters for each object, skipping objects involved in auctions. When an object's timers reach zero, it triggers decay or destruction sequences, displaying appropriate messages depending on the object type (e.g., crumbling into dust, turning to dust, or imploding). For objects that are being removed, their contents are either transferred to the environment, moved into the container, or destroyed, with special handling for nested objects and floating items. The function also manages the visual and gameplay effects of decay, including updating character inventories and room contents, ensuring a consistent and immersive game environment.",
+    "params": {
+      "": "Operates on the global object list within the game world; no parameters."
+    },
+    "returns": "Void; performs side effects such as notifications, object removal, and state updates.",
+    "tparams": null,
+    "throws": "null",
+    "notes": "The function skips objects involved in ongoing auctions to prevent interference with auction mechanics. It handles nested objects carefully, preserving their containment relationships during decay and removal. Sorting affects by duration and type optimizes the identification of effects that have worn off, reducing redundant messaging. The decay messages are context-sensitive, providing immersive feedback to players and NPCs. The function ensures proper cleanup of objects and their contents, maintaining game state integrity.",
+    "rationale": null,
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1ad59a06afce9d5a3c826f7c2beced2e38",
+    "etype": "member",
+    "kind": "function",
+    "name": "obj_update",
+    "qualified_name": null,
+    "definition": "void obj_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called within pulse_point to update object states.",
+      "debug_8cc, void do_debug(Character *ch, String argument)": "Called in the 'tick' subfunction to process object timers, affects, and decay each tick.\","
+    }
+  },
+  "void room_update()": {
+    "brief": "Updates all game rooms by managing effect durations, removing expired affects, and applying fading effects to ongoing effects.",
+    "details": "The `room_update()` function iterates through every area and their associated rooms within the game world. For each room, it first sorts the list of active affects twice\u2014initially by duration and then by type\u2014to group related effects for proper processing. It then examines each affect to identify those with a zero duration, indicating they have expired. If such affects are found and the room has occupants, it retrieves the expiration message associated with the affect and displays it to all occupants using the `act()` function. The function then removes all affects with zero duration from the room's affect list. After handling expired affects, it proceeds to decrement the duration of remaining affects and, where applicable, reduces their level to simulate fading over time, using `affect::fn_fade_spell`. This ensures ongoing effects diminish appropriately, maintaining consistency in spell durations and effects. The process ensures that players are notified of spell wear-off, expired effects are cleaned up, and ongoing effects are properly managed throughout the game world.",
+    "params": {
+      "": "No parameters; operates on all rooms in the game world."
+    },
+    "returns": "Void; the function performs side effects on the game state without returning a value.",
+    "tparams": null,
+    "throws": "None",
+    "notes": "The function relies on sorting affects twice to group related effects, which is a workaround for managing multiple effects of the same type. It also handles effects with indefinite duration (represented by -1) by skipping decrementing their duration. The use of `affect::lookup()` allows retrieval of context-specific expiration messages, enhancing player feedback.",
+    "rationale": "This function is invoked periodically (e.g., every game tick) to ensure that all room effects are up-to-date, expired effects are removed, and ongoing effects are properly faded, maintaining consistent game mechanics and player experience.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1a49b9448fb77051d9aebe44166273a05a",
+    "etype": "member",
+    "kind": "function",
+    "name": "room_update",
+    "qualified_name": null,
+    "definition": "void room_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called within pulse_point to update room states.",
+      "debug_8cc, void do_debug(Character *ch, String argument)": "Called in the 'tick' subfunction to update room states, affects, and visual effects each tick.\","
+    }
+  },
+  "void aggr_update()": {
+    "brief": "Updates NPC aggression by initiating combat with eligible players in appropriate rooms based on various conditions.",
+    "details": "The aggr_update() function performs a comprehensive update of NPC aggression behaviors across the game world. It begins by counting all active player descriptors to determine the total number of player-inhabited rooms, then constructs a list of unique rooms occupied by players, excluding NPCs and disconnected or non-playing descriptors. For each identified room, it first handles quest-related interactions by checking for quest mobs and triggering relevant scripts. It then processes mobile program actions for NPCs present in the room, executing any associated scripts. The function skips aggression in rooms flagged as safe or law-protected. In eligible rooms, it counts potential aggressors and victims based on specific criteria, then randomly selects one aggressor and one victim for possible combat engagement. Before initiating combat, it verifies several conditions, including visibility, level differences, alignment restrictions, and aggression flags. If all conditions are satisfied, it calls multi_hit to start the attack. This process ensures NPC aggression occurs only under appropriate circumstances, respecting game rules, character states, and special interactions such as quests and scripts. The function thus manages dynamic NPC behavior, integrating scripting, quest mechanics, and environment rules seamlessly during each update cycle.",
+    "params": {},
+    "returns": "Void; performs side effects such as initiating combat and updating character states without returning a value.",
+    "tparams": null,
+    "throws": "None explicitly; potential bugs are logged via Logging::bug if inconsistencies occur during mob or victim selection.",
+    "notes": "The function integrates multiple subsystems, including quest handling, mobile scripting, and combat initiation, ensuring NPC aggression is contextually appropriate and synchronized with game state. It also respects room safety and law flags to prevent unwanted aggression in protected areas.",
+    "rationale": "This function is invoked periodically (e.g., each game pulse) to simulate realistic NPC aggression behaviors, ensuring that NPCs react dynamically to players based on proximity, visibility, and game rules. It supports immersive and balanced gameplay by controlling when and how NPCs initiate combat, including special interactions like quest mobs and scripted behaviors.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1ab7c28530544d153c1205510f907646a1",
+    "etype": "member",
+    "kind": "function",
+    "name": "aggr_update",
+    "qualified_name": null,
+    "definition": "void aggr_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called at the end to update aggregate or miscellaneous game states."
+    }
+  },
+  "void quest_update()": {
+    "brief": "Updates quest and skill quest timers for all active player characters in the game.",
+    "details": "The function iterates through the global linked list of network descriptors, focusing on those that are actively connected and in a playing state. For each such descriptor, it retrieves the associated character and, if the character is a player (not an NPC), it decrements their quest and skill quest countdown timers. When these timers reach zero, the function resets the corresponding quest flags, notifies the player, and invokes cleanup functions to reset quest-related data and entities. Additionally, it provides warning messages when timers are nearing expiration, encouraging players to complete their quests promptly. This process ensures that quest states are accurately maintained and players are appropriately informed of their quest statuses. The function handles both regular quests and special skill quests, managing their respective timers and notifications independently, and ensures that quest cooldowns are enforced to regulate quest frequency.",
+    "params": {
+      "d": "Pointer to the current descriptor in the linked list during iteration.",
+      "ch": "Pointer to the character associated with the current descriptor."
+    },
+    "returns": "Void; the function performs updates and notifications without returning a value.",
+    "tparams": null,
+    "throws": "null",
+    "notes": "The function skips NPC characters and only updates timers for player characters. It also manages separate timers for regular quests and skill quests, providing appropriate notifications when timers are about to expire. Cleanup functions are called when quests or skill quests expire to reset related data and remove associated quest objects or mobs.",
+    "rationale": "This function is called periodically (e.g., during game pulse updates) to maintain accurate quest timers, notify players of their quest statuses, and enforce cooldowns between quests. It ensures a consistent and fair questing experience by automatically managing quest state transitions and providing timely feedback to players.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1a4a3dc3fc528abcd7cc0b58ba2a4a7cee",
+    "etype": "member",
+    "kind": "function",
+    "name": "quest_update",
+    "qualified_name": null,
+    "definition": "void quest_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called when the quest timers are updated during game pulse to refresh quest and skill quest states."
+    }
+  },
+  "void underwater_update()": {
+    "brief": "Updates characters in underwater rooms by applying drowning effects, managing hydration and fullness conditions, and providing relevant feedback messages.",
+    "details": "The `underwater_update()` function iterates through all active characters in the game world, focusing on those who are not NPCs and are located in rooms flagged as underwater (`ROOM_UNDER_WATER`). For each such character, it retrieves their swimming skill level using `get_skill_level()`. If the skill is at maximum (100), a message indicates they would drown without their underwater breathing skill. If the skill is below maximum, the function reduces their thirst and fullness conditions proportionally based on the properties of the water, referencing `liq_table`. It then calculates drowning damage based on the character's current hit points (`hit`) and their swimming skill, with higher damage for characters with fewer hit points. Characters with more than 100 hit points receive drowning damage and are notified of their drowning status, with a message indicating their skill helps slow the drowning if their skill is above zero, and an attempt to improve the skill via `check_improve()`. Characters with 100 or fewer hit points lose consciousness and receive lethal damage. Damage is inflicted using the `damage()` function with water damage type (`DAM_WATER`). Throughout, appropriate messages are sent to characters via `stc()`, and conditions are adjusted with `gain_condition()`. This process simulates drowning mechanics for characters in underwater environments, considering their skills, current health, and environmental effects.",
+    "params": {
+      "ch": "Pointer to the Character object being updated; used internally to access attributes, send messages, and apply damage."
+    },
+    "returns": "Void; the function performs side effects on character states and does not return a value.",
+    "tparams": null,
+    "throws": "null",
+    "notes": "The function assumes that characters in underwater rooms are subject to drowning mechanics, with skill levels influencing their survivability. It also manages hydration and fullness conditions based on water properties, integrating environmental effects with character status. The damage calculation scales with current hit points and skill, providing a nuanced drowning simulation.",
+    "rationale": "This function is used during periodic updates (e.g., game pulses) to simulate the dangers of underwater environments, ensuring characters are affected appropriately by drowning mechanics, which enhances realism and gameplay challenge in aquatic scenarios.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1a9e5992d55272d0f74a3e42993323e667",
+    "etype": "member",
+    "kind": "function",
+    "name": "underwater_update",
+    "qualified_name": null,
+    "definition": "void underwater_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called when pulse_underwater reaches zero to update underwater environment or entities."
+    }
+  },
+  "void janitor_update()": {
+    "brief": "Performs periodic maintenance by marking eligible objects for cleanup and saving their state in the game world.",
+    "details": "The function janitor_update() begins by checking if the game is running on the designated server port (DIZZYPORT). If not, it exits early. When running on the correct port, it iterates through the global list of objects in the game world. For each object, it filters out those that are not in a room, already contain other objects, have active timers, or are scheduled for cleanup. It also skips objects associated with certain reset commands or located in rooms with active player characters to avoid disrupting gameplay. For remaining objects, it excludes specific item types such as furniture, money, player corpses, fountains, portals, jukeboxes, anvils, wedding rings, and tokens, which are considered static or essential. For objects deemed eligible, it applies a 10% chance to assign a cleanup timer, randomly set between 80 and 240 game ticks (roughly 1 to 3 hours). After processing all objects, it calls objstate_save_items() to serialize and save the current state of objects for persistence. This routine helps maintain a clean and consistent game environment by scheduling cleanup of unused objects without interfering with active gameplay.",
+    "params": {
+      "obj": "A pointer to an Object structure representing each game object during iteration."
+    },
+    "returns": "None; the function performs side effects such as marking objects for cleanup and saving game state.",
+    "tparams": null,
+    "throws": "null",
+    "notes": "The cleanup scheduling uses a probabilistic approach (10% chance) to prevent mass cleanup spikes. The function skips objects associated with reset commands or located in rooms with active players to avoid disrupting ongoing interactions. The object types excluded from cleanup are considered static or essential to gameplay, ensuring critical items remain unaffected.",
+    "rationale": "This function is used during periodic game maintenance cycles to automatically identify and schedule cleanup for unused or abandoned objects, helping to optimize server performance and prevent clutter without impacting active players or essential game elements.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1ab2d814d483901d8b26a0fb82cf45aec4",
+    "etype": "member",
+    "kind": "function",
+    "name": "janitor_update",
+    "qualified_name": null,
+    "definition": "void janitor_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called when pulse_janitor reaches zero to perform cleanup or maintenance tasks."
+    }
+  },
+  "bool eligible_aggressor(Character *ch)": {
+    "brief": "Determines if a character is an eligible aggressor based on specific conditions.",
+    "details": "This function checks multiple criteria to ascertain whether a character can act as an aggressor in the game. It verifies that the character is an NPC, is awake, has either aggressive or alignment-based aggression flags set, is not currently engaged in combat, and is not affected by calming or charm effects. These conditions collectively ensure that only suitable NPCs are considered for initiating aggression, supporting the game's combat and behavior logic by filtering out incapacitated, non-aggressive, or controlled characters.",
+    "params": {
+      "ch": "A pointer to the Character object being evaluated for aggression eligibility."
+    },
+    "returns": "True if the character is an NPC, awake, has aggression flags set, is not fighting, and is free of calming or charm effects; otherwise, false.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function combines multiple state checks, including flags and effects, to accurately determine aggression eligibility. It relies on the character's awake status and specific action flags, making it suitable for use in aggression management routines such as combat initiation or AI decision-making.",
+    "rationale": "This function is used in scenarios where the game needs to identify NPCs that are capable of initiating aggression, such as in room-based combat updates or AI behavior routines, ensuring only appropriate characters are considered for aggressive actions.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a27ef9dfd4844cc6983e9a2c5b2f952e0",
+    "etype": "member",
+    "kind": "function",
+    "name": "eligible_aggressor",
+    "qualified_name": null,
+    "definition": "bool eligible_aggressor",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void aggr_update()": "Function used to determine if a character qualifies as an aggressor in the room."
+    }
+  },
+  "bool eligible_victim(Character *ch)": {
+    "brief": "Determines if a character is eligible to be targeted as a victim based on specific criteria.",
+    "details": "This function assesses whether a given character can be considered a valid victim by checking multiple conditions. It first verifies that the character is not an NPC using the is_npc() method, and then confirms that the character does not possess immortal privileges via the IS_IMMORTAL macro. If either condition is true, the character is deemed ineligible. The commented-out code indicates that additional criteria, such as being on a coach item, might have been contemplated but are currently inactive. When none of these exclusion conditions apply, the function concludes that the character is eligible for victimization and returns true.",
+    "params": {
+      "ch": "Pointer to the Character object being evaluated for victim eligibility."
+    },
+    "returns": "True if the character is eligible to be a victim; false otherwise.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function explicitly excludes NPCs and immortal characters from being victims. The presence of commented code suggests potential future or conditional criteria for victim eligibility.",
+    "rationale": "This function is used in contexts such as combat or aggression updates to filter out characters that should not be targeted, ensuring game mechanics respect role distinctions and privilege levels.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a64b2f882988696ee9124502711e28738",
+    "etype": "member",
+    "kind": "function",
+    "name": "eligible_victim",
+    "qualified_name": null,
+    "definition": "bool eligible_victim",
+    "argsstring": "(Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void aggr_update()": "Function used to determine if a character qualifies as a victim in the room."
+    }
+  },
+  "void tele_update()": {
+    "brief": "Processes teleportation for characters in rooms flagged for teleportation by moving them to their designated or random destination rooms and updating their views.",
+    "details": "The function iterates through all characters in the game world. For each character located in a room with the ROOM_TELEPORT flag, it initiates a 'look' command with the argument 'tele' to display teleportation effects. It then determines the destination room: if the current room's teleport destination is valid, it retrieves that specific room; otherwise, it selects a random suitable room using get_random_room. The character is then removed from their current room via char_from_room and moved to the destination room via char_to_room. A message indicating the character's appearance is broadcasted to the room with act, and an automatic 'look' command is issued to update the character's view after teleportation. This process ensures characters are visually and logically moved within the game world during teleport events, maintaining immersion and consistency in environment updates.",
+    "params": {
+      "room": "A pointer to the Room object representing the destination room after teleportation, determined within the function."
+    },
+    "returns": "Void; the function performs side effects of moving characters and displaying messages, with no return value.",
+    "tparams": null,
+    "throws": "None.",
+    "notes": "The function handles both specified teleport destinations and fallback to random rooms if no valid destination is set. It ensures characters are properly removed from their current room and placed into the new one, with visual effects and environment updates synchronized accordingly.",
+    "rationale": "This function is used during teleportation events or periodic updates to move characters from rooms marked for teleportation, ensuring seamless and immersive environment transitions during gameplay.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1abb70dccb3aa563198aa20855d06167e7",
+    "etype": "member",
+    "kind": "function",
+    "name": "tele_update",
+    "qualified_name": null,
+    "definition": "void tele_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Invoked when pulse_tele reaches zero to handle teleportation or teleport-related updates."
+    }
+  },
+  "void age_update()": {
+    "brief": "Updates the global quest double counter and increments playtime for all active player characters.",
+    "details": "This function iterates through the linked list of all network descriptors to identify those that are actively connected and engaged in gameplay. For each such descriptor, it increments the \\u201Cquest_double\\u201D counter if it is active, which can be used to manage special game events like doubled quest rewards. It then determines the associated character, preferring the \\u201Coriginal\\u201D if present, otherwise using the current character. If the character is a player (not an NPC), it increments their total playtime (\\u201Cplayed\\u201D) by one second, reflecting ongoing activity. This process ensures that only connected, active players have their session durations updated, and the quest double timer is accurately maintained. The function is typically called periodically, such as on each game tick, to keep gameplay statistics current and to facilitate event timing mechanisms.",
+    "params": null,
+    "returns": "void",
+    "tparams": null,
+    "throws": "null",
+    "notes": "The function carefully checks connection status and character type to avoid updating NPCs or disconnected players. It also handles the case where the game may have previously crashed during playtime updates, ensuring stability. The increment of \\u201Cquest_double\\u201D supports timed game events, making this function integral to event management and player activity tracking.",
+    "rationale": "This function is used in periodic game updates to maintain accurate session durations for players and to manage special event timers like quest reward multipliers. It ensures that only active, connected players are counted, supporting gameplay features that depend on real-time activity tracking and event timing.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1ab9a6b173b3b70f7bcd6a36a1686b8d5f",
+    "etype": "member",
+    "kind": "function",
+    "name": "age_update",
+    "qualified_name": null,
+    "definition": "void age_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Invoked when pulse_age reaches zero to update age-related game state."
+    }
+  },
+  "void wait_update()": {
+    "brief": "Decrements the 'daze' and 'wait' counters for all characters in the game world to advance their status effects and delays.",
+    "details": "This function retrieves the singleton instance of the game world and iterates through its list of active characters. For each character, it checks if the 'daze' counter is greater than zero and decrements it if so, then performs the same check and decrement for the 'wait' counter. This process effectively advances the internal timers associated with characters' status effects and action delays by one unit, typically corresponding to a game tick or update cycle. By updating these counters, the function ensures that temporary effects and delays are properly managed and synchronized with the game's progression.",
+    "params": null,
+    "returns": "None",
+    "tparams": null,
+    "throws": "None",
+    "notes": "This function directly modifies character state counters without returning any value. It is typically called once per game tick or update cycle to progress character statuses.",
+    "rationale": "Used in game update loops to ensure that status effects and delays for all characters are properly decremented each cycle, maintaining consistent timing for effects and actions.",
+    "state": "refined_summary",
+    "cid": "update_8cc",
+    "mid": "1ad9d248475f2fecd436ddfc6e453ae97e",
+    "etype": "member",
+    "kind": "function",
+    "name": "wait_update",
+    "qualified_name": null,
+    "definition": "void wait_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called at the end of the handler to process wait states or delays."
+    }
+  },
+  "update.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "update.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "reboot_time": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "update_8cc",
+    "mid": "update_8cc_1a77451db43ed1d6f2d0bda5aa12af2ca1",
+    "etype": "member",
+    "kind": "variable",
+    "name": "reboot_time",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

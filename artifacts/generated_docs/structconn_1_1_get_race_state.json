@@ -1,0 +1,49 @@
+{
+  "conn::GetRaceState": {
+    "brief": "A state within the connection's state machine that manages user input for selecting a character's race during character creation.",
+    "details": "GetRaceState is a specialized struct derived from the State base class, designed to handle user interactions specifically related to race selection in the character creation process. It overrides the handleInput method to interpret user input strings as race choices, validate them against available options, and update the character's racial attributes accordingly. Upon successful selection, it transitions the connection to the next state, typically for rolling character statistics; if the input is invalid, it prompts the user to retry. This struct ensures a structured and validated flow for race selection, facilitating an immersive and consistent character customization experience within the larger system architecture.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct employs the State design pattern, encapsulating race selection logic within a dedicated state object to promote modularity and maintainability in the connection's state machine.",
+    "rationale": "GetRaceState exists to modularize the race selection step within the character creation workflow, providing a clear separation of concerns. It integrates with the Descriptor class to manage user input and character data, ensuring that race choices are validated and correctly applied before proceeding to subsequent character setup stages. This design supports a flexible and extendable state machine architecture for handling various stages of character creation and other user interactions.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_race_state",
+    "mid": "structconn_1_1_get_race_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::GetRaceState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::GetRaceState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles user input during race selection, setting character attributes, applying racial effects, and transitioning to the next character creation step.",
+    "details": "This function processes input from a user during the character creation process, specifically for selecting a race. If the input begins with 'help', it provides relevant help information about races or other related topics. If the input is a race name, it performs a lookup to validate the race. For valid races, it initializes the character's race, sets base attributes according to race data, applies racial effects, assigns form and body part flags, sets starting points and size, adds default skills, and displays the character's current stats. It then prompts the user to decide whether to roll for new stats, transitioning to the 'rollStats' state if the user agrees. Invalid inputs prompt the user to re-enter their race choice. The function ensures that racial traits and effects are correctly applied, and that the character's attributes are initialized based on race data, supporting a consistent character creation experience.",
+    "params": {
+      "d": "Pointer to the Descriptor object managing the connection and associated character data.",
+      "argument": "The input string from the user, which may be a command or race name."
+    },
+    "returns": "Pointer to the next connection state; remains in the current state if input is invalid, or transitions to 'rollStats' after successful race selection.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that only valid, non-remort races are selectable. It applies racial effects via 'affect::add_racial_to_char' and initializes character stats and traits based on race data. The process supports flexible user input, including help commands and race name prefixes, enhancing user experience during character creation.",
+    "rationale": "This function is used during character creation to allow players to select their race, ensuring that racial attributes, effects, and skills are correctly assigned. It provides a structured flow for race selection, validation, and initial attribute setup, which is essential for creating a consistent and immersive character customization process.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_get_race_state",
+    "mid": "structconn_1_1_get_race_state_1a65f20aa1b6fb0cc79b1ae5ad3e231b80",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::GetRaceState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

@@ -1,0 +1,72 @@
+{
+  "GemValueFields": {
+    "brief": "Constants defining index positions for gem attribute data within data structures.",
+    "details": "The GemValueFields group provides integer constants that serve as index identifiers for accessing specific attributes of gem data within arrays or similar data structures. Specifically, GEM_VALUE_TYPE indicates the position of the gem's type information, while GEM_VALUE_QUALITY specifies the index for the gem's quality attribute. These constants promote clarity and maintainability by standardizing how gem attributes are accessed and manipulated throughout the system, ensuring consistent handling of gem-related data.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The constants are organized to support structured and predictable access patterns for gem attributes, reducing errors and improving code readability.",
+    "rationale": "This group exists to centralize and standardize the indexing scheme for gem attribute data, facilitating reliable data handling and simplifying updates or extensions to gem data structures within the larger system architecture.",
+    "state": "refined_summary",
+    "cid": "group___gem_value_fields",
+    "mid": "group___gem_value_fields",
+    "etype": "compound",
+    "kind": "group",
+    "name": "GemValueFields",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "GEM_VALUE_TYPE": {
+    "brief": "Index constant for accessing the gem's type within its value array.",
+    "details": "GEM_VALUE_TYPE is a compile-time constant that specifies the position of the gem's type information within the gem's value array. Initialized to zero, it indicates that the first element in the array stores the gem's type, facilitating consistent and efficient retrieval of this attribute across various functions. This constant is primarily used in functions like gem::compile_effects to extract the gem's type, which influences subsequent effect calculations and processing based on the gem's classification.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "As a fixed index, GEM_VALUE_TYPE assumes a consistent data structure for the gem's value array, simplifying access patterns and reducing potential errors related to array indexing.",
+    "rationale": "The constant exists to provide a clear, maintainable way to access the gem's type information within its value array, supporting consistent behavior and simplifying code that depends on the gem's classification for effect determination.",
+    "state": "refined_summary",
+    "cid": "group___gem_value_fields",
+    "mid": "group___gem_value_fields_1gae60665a2fe2dba240740b2972bd7648a",
+    "etype": "member",
+    "kind": "variable",
+    "name": "GEM_VALUE_TYPE",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "namespacegem, void gem::compile_effects(Object *eq)": "Used as an index to retrieve the gem's type from its value array, which then indexes into type_table for effect parameters."
+    }
+  },
+  "GEM_VALUE_QUALITY": {
+    "brief": "An integer constant that specifies the index for accessing a gem's quality attribute in data structures.",
+    "details": "GEM_VALUE_QUALITY is a compile-time constant set to 1, serving as a standardized index to access or modify the quality attribute of a gem within various data structures, such as type tables or effect arrays. Its consistent use across the codebase ensures reliable referencing when processing gem effects, attributes, or related data. This constant simplifies code maintenance and reduces errors by providing a clear, fixed position for the quality information within gem-related data representations.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This constant is typically used in functions that process gem effects, such as selecting modifiers or attributes based on the gem's quality value, ensuring uniformity in data access patterns.",
+    "rationale": "The constant exists to provide a clear, maintainable way to reference the gem's quality attribute, facilitating consistent handling of gem data and effects throughout the codebase.",
+    "state": "refined_summary",
+    "cid": "group___gem_value_fields",
+    "mid": "group___gem_value_fields_1ga8862439203f2d95a1251a859fb8e0cfc",
+    "etype": "member",
+    "kind": "variable",
+    "name": "GEM_VALUE_QUALITY",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "namespacegem, void gem::compile_effects(Object *eq)": "Used as an index to select the modifier from the type_table based on the gem's quality value."
+    }
+  }
+}

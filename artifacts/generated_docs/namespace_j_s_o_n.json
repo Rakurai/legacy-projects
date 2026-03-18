@@ -1,0 +1,258 @@
+{
+  "void JSON::addStringToObject(cJSON *obj, const String &key, const String &str)": {
+    "brief": "Inserts a string value into a JSON object under a specified key.",
+    "details": "This inline function serves as a wrapper around the cJSON_AddStringToObject macro, facilitating the addition of string data to a JSON object. It accepts a pointer to a cJSON object, along with key and value parameters encapsulated as String objects. Both String objects are converted to C-style strings via the c_str() method before being passed to the macro, ensuring compatibility with the cJSON library. This abstraction streamlines the process of modifying JSON structures within the codebase, promoting code clarity and reducing potential errors associated with manual string conversions.",
+    "params": {
+      "obj": "A pointer to the cJSON object to which the string will be added.",
+      "key": "The key for the string entry, provided as a String object.",
+      "str": "The string value to be added, provided as a String object."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the String class's c_str() method for conversion, ensuring compatibility with the cJSON API. It simplifies repetitive tasks of adding string data to JSON objects, especially in contexts involving multiple string attributes such as character or object serialization.",
+    "rationale": "Designed for use in functions that serialize complex objects or character data into JSON format, this function helps maintain consistent and error-free insertion of string attributes across various parts of the codebase, as seen in functions like fwrite_char, fwrite_obj, and fwrite_player.",
+    "state": "refined_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n_1a7575d805c37216c8e36978ead5f54852",
+    "etype": "member",
+    "kind": "function",
+    "name": "addStringToObject",
+    "qualified_name": null,
+    "definition": "void JSON::addStringToObject",
+    "argsstring": "(cJSON *obj, const String &key, const String &str)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "save_8cc, cJSON * fwrite_obj(Object *obj)": "Adds string attributes such as description, name, short description, and extra descriptions to JSON.",
+      "save_8cc, cJSON * fwrite_player(Character *ch)": "Helper function used to add string attributes to JSON objects for various character data.",
+      "save_8cc, cJSON * fwrite_char(Character *ch)": "Adds string data (like act flags, clan name, description, race, revoke flags, and prompt) to the JSON object.\","
+    }
+  },
+  "void JSON::get_boolean(cJSON *obj, bool *target, const String &key)": {
+    "brief": "Retrieves a boolean value associated with a specified key from a JSON object and stores it in the provided variable.",
+    "details": "This function searches for a JSON item within the given JSON object using a case-insensitive key lookup via cJSON_GetObjectItem. If the item exists and is not null, it interprets the item's integer value (cJSON::valueint) as a boolean, setting the target variable to true if the value is non-zero, and false otherwise. This method assumes that boolean values are stored as integers (e.g., 1 for true, 0 for false) within the JSON data. The function does not handle type validation beyond checking for null, so it relies on the JSON data conforming to expected conventions for boolean representation.",
+    "params": {
+      "obj": "Pointer to the JSON object containing the key-value pair.",
+      "key": "The key string used to locate the desired JSON item within the object.",
+      "target": "Pointer to the boolean variable where the retrieved value will be stored."
+    },
+    "returns": "None; the function updates the boolean pointed to by target based on the JSON value.",
+    "tparams": null,
+    "throws": "None; the function silently does nothing if the key is not found or the item is null.",
+    "notes": "The function assumes boolean values are stored as integers within the JSON data, which is common in JSON representations. It performs a case-insensitive key search, making it robust against key casing variations.",
+    "rationale": null,
+    "state": "refined_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n_1a847152e803283b5a89b5a414f23a09f6",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_boolean",
+    "qualified_name": null,
+    "definition": "void JSON::get_boolean",
+    "argsstring": "(cJSON *obj, bool *target, const String &key)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "void JSON::get_short(cJSON *obj, void *target, const String &key)": {
+    "brief": "Retrieves an integer value associated with a specified key from a JSON object and stores it in the provided target location.",
+    "details": "This inline function searches for a child item within the given JSON object using the provided key, which is converted from a String to a C-style string. If the item is found and is not null, it extracts the integer value from the JSON item (assuming it is of numeric type) and assigns it to the memory location pointed to by the target pointer. The function performs a simple check for the existence of the item before assignment, ensuring safe operation when the key is present. It does not handle type validation beyond checking for null, so it assumes the JSON value is numeric and correctly formatted as an integer. If the key is missing or the value is null, the function silently does nothing, leaving the target unchanged.",
+    "params": {
+      "obj": "Pointer to the cJSON object containing the data from which to retrieve the value.",
+      "key": "The key string used to locate the specific JSON item within the object.",
+      "target": "Pointer to the memory location where the retrieved integer value will be stored."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": "No exceptions are thrown; the function silently does nothing if the key is not found or the value is null.",
+    "notes": "The function assumes that the JSON value associated with the key is an integer or numeric type convertible to an integer. It does not perform explicit type checking or conversion, so misuse with incompatible JSON types may lead to undefined behavior or incorrect data retrieval.",
+    "rationale": "This function is used when extracting integer values from JSON objects, especially in contexts such as configuration parsing or data loading where specific numeric fields need to be read and stored in variables for further processing.",
+    "state": "refined_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n_1aabca6d21c17f72c5519c2e677ebca1f9",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_short",
+    "qualified_name": null,
+    "definition": "void JSON::get_short",
+    "argsstring": "(cJSON *obj, void *target, const String &key)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "save_8cc, Object * fread_obj(cJSON *json, int version)": "Retrieves short integer values from JSON objects, used for affect properties.",
+      "save_8cc, void fread_player(Character *ch, cJSON *json, int version)": "Extracts short integer values from JSON objects for condition and 'HMSP' fields.",
+      "save_8cc, void fread_char(Character *ch, cJSON *json, int version)": "Extracts short integer values from JSON objects for affect attributes and character stats."
+    }
+  },
+  "void JSON::get_int(cJSON *obj, int *target, const String &key)": {
+    "brief": "Retrieves an integer value from a JSON object associated with a specified key and stores it in the provided target variable.",
+    "details": "This inline function searches for a child item within the given cJSON object using the provided key, performing a case-insensitive match. If the item is found and is not null, it extracts the integer value from the JSON item and assigns it to the target variable pointed to by the caller. The function assumes that the JSON item corresponding to the key is of numeric type, specifically an integer, and does not perform explicit type checking or error handling if the item is missing or of an incompatible type. It provides a simple and efficient way to extract integer data from JSON objects, commonly used in parsing configuration data, game attributes, or API responses where the presence of the key is expected but not guaranteed.",
+    "params": {
+      "obj": "Pointer to the cJSON object containing the key-value pair.",
+      "key": "The string key used to locate the desired JSON item within the object.",
+      "target": "Pointer to an integer where the retrieved value will be stored if the key exists."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a case-insensitive search for the key and does not handle type mismatches or missing keys explicitly. It is intended for use when the presence of the key is expected, and the JSON data is trusted to contain an integer value for that key.",
+    "rationale": "This function is useful in scenarios where JSON data structures contain numeric attributes such as configuration parameters, character stats, or identifiers, and quick, straightforward extraction is needed without extensive error handling.",
+    "state": "refined_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n_1adb0d315f48601974b139cad9622fbb4d",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_int",
+    "qualified_name": null,
+    "definition": "void JSON::get_int",
+    "argsstring": "(cJSON *obj, int *target, const String &key)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "objstate_8cc, int objstate_load_items()": "Used to extract integer values from JSON objects, such as 'version' and 'room' identifiers.",
+      "save_8cc, void do_finger(Character *ch, String argument)": "Extracts integer values from JSON objects for character attributes like level, guild, and combat stats.",
+      "save_8cc, Object * fread_obj(cJSON *json, int version)": "Retrieves integer values from JSON objects, used for various object attributes and flags.",
+      "save_8cc, void fread_player(Character *ch, cJSON *json, int version)": "Retrieves integer values from JSON objects for various numeric attributes.",
+      "save_8cc, void fread_char(Character *ch, cJSON *json, int version)": "Retrieves integer values from JSON objects for various character attributes and flags."
+    }
+  },
+  "void JSON::get_long(cJSON *obj, long *target, const String &key)": {
+    "brief": "Retrieves a long integer value from a JSON object associated with a specified key.",
+    "details": "This function searches for a child item within the provided JSON object using the given key, performing a case-insensitive comparison. If the item is found, it assigns the integer value of that JSON element to the target long integer pointer. The function does not handle type validation explicitly; it assumes that the JSON item is of a numeric type or compatible with \\u0027valueint\\u0027. If the key is not found, the target remains unchanged. This utility simplifies extracting long integer values from JSON data structures, especially when parsing configuration or data files. It is commonly used in scenarios where JSON data contains timestamp fields, identifiers, or other numeric parameters that need to be read into native long variables for further processing.",
+    "params": {
+      "obj": "Pointer to the cJSON object from which to retrieve the item.",
+      "key": "The string key used to locate the desired JSON item within the object.",
+      "target": "Pointer to a long integer where the retrieved value will be stored if the key exists."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": "None; the function silently ignores missing keys and does not throw exceptions.",
+    "notes": "The function assumes that the JSON item associated with the key is of a numeric type or can be safely interpreted as an integer. It does not perform explicit type validation or error handling, so misuse with incompatible JSON types may lead to incorrect data retrieval.",
+    "rationale": "Used in contexts where JSON data contains numeric fields such as timestamps, IDs, or counters that need to be extracted into native long variables for application logic, as demonstrated in functions like 'fread_player' for reading timestamp fields.",
+    "state": "refined_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n_1a4d4f7f60407b7414f47d4e5e53048541",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_long",
+    "qualified_name": null,
+    "definition": "void JSON::get_long",
+    "argsstring": "(cJSON *obj, long *target, const String &key)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "save_8cc, void fread_player(Character *ch, cJSON *json, int version)": "Retrieves long integer values for timestamp fields in 'Note'."
+    }
+  },
+  "void JSON::get_flags(cJSON *obj, Flags *target, const String &key)": {
+    "brief": "Retrieves a string value from a JSON object by key and updates a Flags object accordingly.",
+    "details": "This function searches for a JSON object item within the provided 'obj' using the specified 'key'. If the item is found and contains a string value, it initializes or updates the 'target' Flags object by parsing this string. The function relies on 'cJSON_GetObjectItem' to locate the item case-insensitively and assumes the JSON value is of string type. If the key is not found or the value is not a string, the 'target' remains unchanged. This utility simplifies extracting flag configurations stored as strings within JSON data structures, facilitating dynamic configuration or state updates based on JSON input.",
+    "params": {
+      "obj": "Pointer to the JSON object from which to retrieve the flag string.",
+      "key": "The key used to locate the relevant JSON item within 'obj'.",
+      "target": "Pointer to the Flags object to be updated with the retrieved flags."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function assumes that the JSON value associated with the specified key is a string. If the value is of a different type or the key does not exist, the Flags object remains unchanged. This function is useful for extracting flag configurations stored as strings within JSON data, enabling flexible and dynamic flag management.",
+    "rationale": "This function is typically used in scenarios where flag settings are stored as string representations within JSON configurations or data exchanges, allowing for easy parsing and updating of internal flag states based on external JSON input.",
+    "state": "refined_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n_1ae88ce2d8410fd8e588c1d2e0aa1ba63c",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_flags",
+    "qualified_name": null,
+    "definition": "void JSON::get_flags",
+    "argsstring": "(cJSON *obj, Flags *target, const String &key)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "save_8cc, void do_finger(Character *ch, String argument)": "Retrieves flag data from JSON objects for player and character flags, stored in 'cgroup' and 'plr'."
+    }
+  },
+  "void JSON::get_string(cJSON *obj, String *target, const String &key)": {
+    "brief": "Retrieves a string value associated with a specified key from a JSON object and assigns it to a target String.",
+    "details": "This function searches for a child item within the given JSON object using the provided key, performing a case-insensitive search via cJSON_GetObjectItem. If the item is found and is not null, it extracts the string value from the JSON element's valuestring field and assigns it to the target String object. This process ensures that the target String contains the value associated with the key, if present, facilitating easy extraction of string data from JSON structures. The function does not handle type checking, so it assumes the retrieved item is a string or null.",
+    "params": {
+      "obj": "The JSON object from which to retrieve the string value.",
+      "key": "The key string used to search for the corresponding JSON object item.",
+      "target": "A pointer to the String object where the retrieved string value will be assigned."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a case-insensitive search for the key and silently does nothing if the key is not found or the value is null. It assumes that the JSON item associated with the key is a string; if not, the behavior is undefined. This function is useful for extracting string data from JSON objects when the key's case may vary or when working with loosely structured JSON data.",
+    "rationale": "This function is used in contexts where JSON data needs to be parsed for string values, such as extracting character details or configuration parameters, ensuring robust and straightforward data retrieval from JSON objects.",
+    "state": "refined_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n_1a3ddaebaf84211e2e2b560cec81461dee",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_string",
+    "qualified_name": null,
+    "definition": "void JSON::get_string",
+    "argsstring": "(cJSON *obj, String *target, const String &key)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "save_8cc, void do_finger(Character *ch, String argument)": "Extracts string data from JSON objects for character details such as name, race, email, and titles."
+    }
+  },
+  "cJSON * JSON::read_file(const String &filename)": {
+    "brief": "Reads a JSON file from disk, parses its contents, and returns a cJSON object representing the data.",
+    "details": "This function opens the specified file in binary mode and determines its size by seeking to the end and using ftell. It then allocates a buffer large enough to hold the file contents plus a null terminator. After reading the entire file into the buffer, it null-terminates the string and closes the file. The buffer is then parsed into a cJSON structure using cJSON_Parse. If parsing fails, an error message is logged with details from cJSON_GetErrorPtr, and nullptr is returned. On success, the function frees the temporary buffer and returns the parsed cJSON object. Throughout the process, proper error handling and resource management ensure robustness against file I/O errors, memory allocation failures, and invalid JSON content.",
+    "params": {
+      "filename": "A constant reference to a String object representing the path to the JSON file to be read."
+    },
+    "returns": "A pointer to a cJSON object representing the parsed JSON data if successful; nullptr otherwise.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function reads the entire file into memory before parsing, which may be inefficient for very large files. It relies on standard C file I/O functions and manual memory management. Error conditions are logged using Logging::bugf, aiding debugging and maintenance.",
+    "rationale": "This function is used when loading configuration files, user data, or other JSON-formatted resources from disk, ensuring that the entire JSON content is read and parsed into an in-memory structure for further processing.",
+    "state": "refined_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n_1a181adfcf2de30b2677fc8fb43425c469",
+    "etype": "member",
+    "kind": "function",
+    "name": "read_file",
+    "qualified_name": null,
+    "definition": "cJSON * JSON::read_file",
+    "argsstring": "(const String &filename)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "objstate_8cc, int objstate_load_items()": "Called to read and parse the JSON file containing object data into a cJSON structure.",
+      "save_8cc, void do_finger(Character *ch, String argument)": "Reads and parses the JSON file containing player data, returning a JSON object for data extraction.",
+      "load__config_8cc, int load_config(const char *filename)": "Called at the beginning to read and parse the JSON configuration file into a cJSON object.",
+      "save_8cc, bool load_char_obj(Descriptor *d, const String &name)": "Reads the character's JSON file and parses it into a JSON object for data extraction."
+    }
+  },
+  "JSON": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "namespace_j_s_o_n",
+    "mid": "namespace_j_s_o_n",
+    "etype": "compound",
+    "kind": "namespace",
+    "name": "JSON",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "c_j_s_o_n_8c, cJSON * cJSON_ParseWithOpts(const char *value, const char **return_parse_end, int require_null_terminated)": "Serves as a namespace for related functions and constants used within the function, but not directly referenced in the code snippet.",
+      "c_j_s_o_n_8c, cJSON * cJSON_Parse(const char *value)": "Used as a namespace qualifier, indicating that cJSON_ParseWithOpts belongs to the JSON namespace."
+    }
+  }
+}

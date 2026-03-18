@@ -1,0 +1,63 @@
+{
+  "Actable": {
+    "brief": "An abstract interface for objects that can be uniquely identified by a string identifier.",
+    "details": "The Actable class serves as a foundational interface for entities within the system that require a unique string-based identifier. It declares a pure virtual function, identifier(), which must be implemented by derived classes to provide their specific identifier. This setup enables polymorphic handling of various objects such as characters, items, or other entities, allowing them to be referenced, targeted, and manipulated consistently across different system components. The class is primarily used in contexts involving messaging, actions, and interaction targeting, where a reliable and unique identification mechanism is essential for correct behavior and system integrity. Its design promotes extensibility and uniformity in how objects are recognized and interacted with throughout the application.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This class is designed as an interface with a single pure virtual method, following the interface segregation principle. It is intended to be inherited by diverse entity classes that need to be identified uniquely, supporting polymorphism in action handling and messaging systems.",
+    "rationale": "The Actable class exists to provide a common interface for identifiable objects, facilitating consistent referencing and interaction within the system's action and messaging frameworks. By enforcing the implementation of the identifier() method, it ensures that all derived entities can be reliably distinguished, which is crucial for correct message targeting, action processing, and system extensibility.",
+    "state": "refined_summary",
+    "cid": "class_actable",
+    "mid": "class_actable",
+    "etype": "compound",
+    "kind": "class",
+    "name": "Actable",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act_8hh, void act(const String &format, Character *actor, std::nullptr_t arg1, const Actable *arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": " Represents the target entity involved in the action, passed to the inner act call to specify the recipient or object of the message.",
+      "act_8hh, void act(const String &format, Character *actor, const Actable *arg1, const Actable &arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Passed as arg1 to identify the target object or entity involved in the action, affecting message targeting and context.",
+      "act_8hh, void act(const String &format, Character *actor, const Actable &arg1, const Actable *arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Passed as a generic target or object involved in the action, used to identify or interact with specific game entities.",
+      "act_8hh, void act(const String &format, Character *actor, const char *arg1, const Actable &arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Passed as 'arg2' to the 'act' function, representing the object or entity involved in the action, with its interface used to identify or interact with it.",
+      "act_8hh, void act(const String &format, Character *actor, const Actable *arg1, std::nullptr_t arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Serves as an argument to specify a target or object involved in the action, influencing message dispatching or interaction logic.",
+      "act_8hh, void act(const String &format, Character *actor, const Actable &arg1, const Actable &arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": " Passed as references (arg1 and arg2) representing objects or entities involved in the action, used for context and message targeting.",
+      "act_8hh, void act(const String &format, Character *actor, const Actable &arg1, const char *arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Passed as a reference argument to be used as a target or object within the act function, affecting message targeting.",
+      "act_8hh, void act(const String &format, Character *actor, const Actable &arg1, std::nullptr_t arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Passed as a reference argument to specify the target of the action, used in the inner act call to identify the recipient or object.",
+      "act_8hh, void act(const String &format, Character *actor, std::nullptr_t arg1, const Actable &arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Passed as a target object for the action, representing an entity that can be identified and acted upon within the environment.",
+      "act_8hh, void act(const String &format, Character *actor, const Actable *arg1, const char *arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Passed as an argument to specify the target entity of the action, used in message targeting and visibility checks within the act function.",
+      "act_8hh, void act(const String &format, Character *actor, const char *arg1, const Actable *arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Optional target object that can be acted upon, passed to the inner act function to specify the recipient or target of the action.",
+      "act_8hh, void act(const String &format, Character *actor, const Actable *arg1, const Actable *arg2, int type, int min_pos=POS_RESTING, bool censor=false, Room *room=nullptr)": "Used as generic pointers (arg1, arg2) cast to specific types (Character, String, Object) to provide various possible targets or sources for the action."
+    }
+  },
+  "virtual const std::string Actable::identifier() const =0": {
+    "brief": "Retrieves the unique identifier for the object.",
+    "details": "This pure virtual function returns a constant string that uniquely identifies the object. It must be implemented by any derived class to provide a specific identifier relevant to the context of the object.",
+    "params": {},
+    "returns": "A constant string representing the unique identifier of the object.",
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "generated_summary",
+    "cid": "class_actable",
+    "mid": "class_actable_1a314989f698e986138ae182eb58d73411",
+    "etype": "member",
+    "kind": "function",
+    "name": "identifier",
+    "qualified_name": null,
+    "definition": "virtual const std::string Actable::identifier",
+    "argsstring": "() const =0",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_object, virtual const std::string Object::identifier() const": "Not used within this function; only the 'name' variable is accessed.",
+      "class_string, virtual const std::string String::identifier() const": "Called to return the string representation of the object, used as the function's output.",
+      "class_character, virtual const std::string Character::identifier() const": "Called to retrieve the object's unique identifier string, returning the value of 'name'."
+    }
+  }
+}

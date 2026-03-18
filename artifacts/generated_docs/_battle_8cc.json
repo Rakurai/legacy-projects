@@ -1,0 +1,52 @@
+{
+  "battle": {
+    "brief": "An instance of the Battle class that manages the current combat state within the game.",
+    "details": "The variable `battle` is an object of the Battle class, which encapsulates the state, parameters, and behaviors associated with an ongoing or upcoming battle scenario in the game. It stores information such as whether a battle is active, the level range of participants, associated fees, and start status. This variable is initialized at the beginning of a combat session and is referenced across multiple functions to control game logic, enforce rules, and manage combat flow. Its consistent use allows the game to accurately track and respond to battle conditions, ensuring proper handling of arena engagements, attack permissions, and post-battle procedures.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The `battle` variable is typically used as a global or shared state indicator for combat scenarios, enabling various parts of the codebase to coordinate battle-related logic efficiently.",
+    "rationale": "This variable exists to centralize and manage the state of ongoing battles, facilitating consistent game behavior during combat, including safety checks, attack permissions, and post-battle processing.",
+    "state": "refined_summary",
+    "cid": "_battle_8cc",
+    "mid": "_battle_8cc_1aa373765eee9f4e095773c54369e5e2bd",
+    "etype": "member",
+    "kind": "variable",
+    "name": "battle",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__move_8cc, void recall(Character *ch, bool clan)": "Global variable indicating if a battle is ongoing, used to determine if the character is in combat during recall.",
+      "fight_8cc, void do_battle(Character *ch, String argument)": "Stores the current battle state, including issued status, level range, fee, and start status, used throughout the function for control flow.\",",
+      "fight_8cc, void kill_off(Character *ch, Character *victim)": "Referenced to check if a battle is ongoing, particularly when deducting arena fees after a kill.",
+      "fight_8cc, bool check_attack_ok(Character *ch, Character *victim)": "Referenced to check if the battle has started in the arena sector type, influencing attack permission.",
+      "fight_8cc, bool is_safe_spell(Character *ch, Character *victim, bool area)": "Referenced to prevent attacks in the middle of a battle in arena zones, affecting combat permissions."
+    }
+  },
+  "Battle.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_battle_8cc",
+    "mid": "_battle_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "Battle.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

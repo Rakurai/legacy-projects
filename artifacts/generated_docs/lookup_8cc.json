@@ -1,0 +1,427 @@
+{
+  "Clan * clan_vnum_lookup(const Vnum &vnum)": {
+    "brief": "Finds and returns the Clan associated with a given virtual number (vnum).",
+    "details": "This function performs a linear search through the linked list of all Clan objects, starting from the node immediately after 'clan_table_head' and continuing until 'clan_table_tail'. For each Clan, it checks whether the provided vnum falls within the Clan's defined territorial range, specified by 'area_minvnum' and 'area_maxvnum'. If a Clan's range includes the vnum, it returns a pointer to that Clan object. If no matching Clan is found after traversing the list, the function returns nullptr, indicating that the vnum does not belong to any known clan. This approach ensures an efficient lookup within a dynamically maintained list of clans, relying on the range boundaries for identification.",
+    "params": {
+      "vnum": "The virtual number to look up, representing an identifier within the game's virtual number space."
+    },
+    "returns": "A pointer to the Clan object whose area range includes the specified vnum, or nullptr if none matches.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function assumes that the clan list is properly linked and that each Clan's 'area_minvnum' and 'area_maxvnum' are correctly set to define its territorial boundaries. The linear search may become less efficient with a very large number of clans, but it provides straightforward and reliable lookup within the current data structure.",
+    "rationale": "This function is used whenever the game needs to determine which clan a particular vnum belongs to, such as during character or object validation, territorial checks, or clan-based permissions. Its simplicity and direct traversal make it suitable for real-time lookup in the context of game mechanics involving territorial control and entity management.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1aa9e24c2c72931d4b5d001f2d90d7043c",
+    "etype": "member",
+    "kind": "function",
+    "name": "clan_vnum_lookup",
+    "qualified_name": null,
+    "definition": "Clan * clan_vnum_lookup",
+    "argsstring": "(const Vnum &vnum)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "special_8cc, bool spec_clanguard(Character *ch)": "Called to retrieve the clan object associated with the character's vnum, used to verify the character's clan existence and validity before proceeding.",
+      "act__obj_8cc, bool clan_eq_ok(Character *ch, Object *obj, const String &action)": "Called with the object's vnum to retrieve the clan associated with the object for validation.",
+      "magic_8cc, void spell_identify(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": "Called to determine if an object belongs to a clan by its vnum, and display the clan name if applicable."
+    }
+  },
+  "Clan * clan_lookup(const String &name)": {
+    "brief": "Searches for and returns the first Clan object whose name starts with the specified prefix.",
+    "details": "The function performs a linear traversal of the linked list of Clan objects, beginning from the node immediately after 'clan_table_head' and continuing until it reaches 'clan_table_tail'. For each Clan, it uses the String::is_prefix_of method to check if the provided name is a prefix of the Clan's name, employing case-insensitive comparison and respecting minimum prefix length requirements. If the input name is empty, the function returns nullptr immediately. This method enables flexible and efficient partial name matching, supporting various game features such as clan lookup commands and administrative functions that require clan identification based on partial input.",
+    "params": {
+      "name": "The String object representing the prefix to search for in the clan names."
+    },
+    "returns": "A pointer to the Clan object whose name matches the given prefix, or nullptr if no such clan is found or if the input name is empty.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the linked list structure of Clan objects, with 'clan_table_head' and 'clan_table_tail' marking the boundaries. The use of case-insensitive prefix matching allows for more user-friendly searches, accommodating partial and case-insensitive inputs.",
+    "rationale": "This function is used in various game functionalities where partial clan name inputs are provided, such as command parsing, clan management, and administrative operations. Its design supports flexible and efficient clan lookups based on user input or script commands, enhancing usability and responsiveness in clan-related features.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a42a4ffb716e99b2edce4914d362541d8",
+    "etype": "member",
+    "kind": "function",
+    "name": "clan_lookup",
+    "qualified_name": null,
+    "definition": "Clan * clan_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "save_8cc, void do_finger(Character *ch, String argument)": "Used to find a clan object based on the clan name retrieved from the JSON data.",
+      "bank_8cc, void do_clandeposit(Character *ch, String argument)": "Called to find the target clan based on the provided clan name argument for administrative deposits.",
+      "wiz__gen_8cc, void do_clanqp(Character *ch, String argument)": "Called to find a clan by name when an explicit clan name is provided by an immortal character.",
+      "bank_8cc, void do_clanwithdraw(Character *ch, String argument)": "Finds a clan object based on the provided clan name argument, used to identify the target clan for admin withdrawals.",
+      "wiz__gen_8cc, void do_guild(Character *ch, String argument)": "Used to find the clan object corresponding to the provided clan name prefix.",
+      "channels_8cc, void do_iclantalk(Character *ch, String argument)": "Used to retrieve the clan object based on the provided clan name argument, determining if the clan exists.",
+      "save_8cc, void fread_char(Character *ch, cJSON *json, int version)": "Called to resolve a clan name string from JSON into an internal clan index.",
+      "clan-edit_8cc, void do_cedit(Character *ch, String argument)": "Called to retrieve clan data based on the provided clan name for further operations.",
+      "class_room_prototype, RoomPrototype::RoomPrototype(Area &, const Vnum &, FILE *)": "Called when the 'C' flag is read to assign the clan member variable based on the string read from the file.",
+      "_war_8cc, void do_war(Character *ch, String argument)": "Called to find clan objects based on user input for war declarations, joins, and unjoins.",
+      "act__info_8cc, void do_who(Character *ch, String argument)": "Returns a clan pointer if argument matches a clan name, used to restrict display to a specific clan.\",",
+      "act__info_8cc, void do_clanlist(Character *ch, String argument)": "Finds the clan object based on the argument, determining whether to list all clans or clan members.",
+      "_war_8cc, void format_war_list(Character *ch, War *war, bool current)": "Used to retrieve clan information by name to determine if clan scores should be taken from clan data or from war's final scores.",
+      "_war_8cc, void war_stop(War *war)": "Called to retrieve clan objects based on the names stored in 'chal' and 'def' arrays for further processing.",
+      "save_8cc, bool check_parse_name(const String &name)": "Called to determine if the name matches an existing clan, influencing the validation result."
+    }
+  },
+  "int position_lookup(const String &name)": {
+    "brief": "Locates the index of a position in the position table based on a given name.",
+    "details": "This function performs a linear search through the global position table to find an entry whose name matches the provided name. The matching process is case-insensitive and checks whether the input name is a prefix of the table entry's name, allowing for partial matches. It utilizes the String class's case-insensitive comparison and prefix checking methods to efficiently identify a match. If a matching entry is found, the function returns its index; otherwise, it returns -1, indicating no match was found. This approach enables flexible and user-friendly position name lookups, especially when partial or case-insensitive inputs are provided.",
+    "params": {
+      "name": "The position name to search for, compared case-insensitively and as a prefix against each entry in the position table."
+    },
+    "returns": "The index of the matching position in the table if found; otherwise, -1.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a linear search, which may impact performance with large position tables. It relies on the String class's case-insensitive and prefix comparison methods to facilitate flexible matching.",
+    "rationale": "This function is useful in scenarios where position names are read from external sources or user input, requiring flexible matching that tolerates case differences and partial inputs. It is commonly used during initialization or parsing routines to convert position names into internal indices for further processing.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1af3cac77d4a43137fd6a5e60461e0f7eb",
+    "etype": "member",
+    "kind": "function",
+    "name": "position_lookup",
+    "qualified_name": null,
+    "definition": "int position_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_mobile_prototype, MobilePrototype::MobilePrototype(Area &, const Vnum &, FILE *)": " Used to convert position names read from the file into internal position constants for start_pos and default_pos."
+    }
+  },
+  "int sex_lookup(const String &name)": {
+    "brief": "Finds the index of a sex category in the predefined list that matches the given name.",
+    "details": "The function searches through the global 'sex_table', which contains predefined sex categories, to identify an entry that matches the provided name. It compares the first character of the input name with each entry's name in a case-insensitive manner and checks if the input name is a prefix of the entry's name. If a match is found, it returns the index of that entry; if no match exists, it returns -1. This approach ensures efficient and reliable lookup by leveraging the String class's case-insensitive comparison and prefix methods, facilitating consistent character attribute handling across the codebase.",
+    "params": {
+      "name": "The name string to search for within the sex table, compared case-insensitively."
+    },
+    "returns": "The index of the matching sex entry if found; otherwise, -1.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a case-insensitive comparison and prefix matching, which allows for flexible input matching, such as abbreviations or partial names, provided they match the start of a valid sex category.",
+    "rationale": "This function is used whenever the code needs to convert a user-provided or file-read sex name into an internal index, ensuring consistent internal representation and validation of character sex attributes.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1ad0787fdad842fbff61abfd1eade19f51",
+    "etype": "member",
+    "kind": "function",
+    "name": "sex_lookup",
+    "qualified_name": null,
+    "definition": "int sex_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_mobile_prototype, MobilePrototype::MobilePrototype(Area &, const Vnum &, FILE *)": " Used to convert the sex name read from the file into an internal sex index, with validation for correctness."
+    }
+  },
+  "int size_lookup(const String &name)": {
+    "brief": "Finds the index of a size category in the size table based on a case-insensitive prefix match.",
+    "details": "The function performs a linear search through the global size_table to identify an entry whose name matches the provided name parameter. It compares the first character case-insensitively and then checks if the input name is a prefix of the size entry's name. If a match is found, it returns the corresponding index; if no match exists, it returns -1. This approach allows for flexible, case-insensitive prefix matching, facilitating size lookups based on partial or case-variant inputs.",
+    "params": {
+      "name": "The size name string to search for, matched case-insensitively and as a prefix of size table entries."
+    },
+    "returns": "The index of the matching size entry if found; otherwise, -1.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function assumes that the size_table is a predefined, constant list of size categories. It performs a linear search, which is efficient given the typically small size of size_table. The case-insensitive comparison ensures robustness against input variations.",
+    "rationale": "This function is used when converting size names read from external sources, such as files or user input, into internal size indices for further processing or validation, as seen in size-dependent object initialization.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1ab18cff484d60ebda5c7309f693288aec",
+    "etype": "member",
+    "kind": "function",
+    "name": "size_lookup",
+    "qualified_name": null,
+    "definition": "int size_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_mobile_prototype, MobilePrototype::MobilePrototype(Area &, const Vnum &, FILE *)": " Used to convert size names read from the file into internal size indices, with validation for correctness."
+    }
+  },
+  "String condition_lookup(int condition)": {
+    "brief": "Converts a numeric condition value into a human-readable descriptive string.",
+    "details": "This function takes an integer representing an item's condition and maps it to a descriptive string based on specific threshold ranges. It uses a series of conditional checks, starting from the highest threshold (100 or more) down to values below -1, to determine the appropriate condition label such as 'perfect', 'good', 'average', 'worn', 'damaged', 'broken', 'ruined', or 'indestructable'. The implementation ensures that both positive and negative condition values are handled correctly, providing meaningful and consistent descriptions for various states. This allows for clear communication of item conditions in user interfaces, messages, or reports within the application.",
+    "params": {
+      "condition": "An integer representing the item's condition value to be evaluated."
+    },
+    "returns": "A String object containing the descriptive string of the condition, such as 'perfect', 'good', 'average', etc.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function prioritizes higher condition thresholds first, ensuring that the most favorable condition labels are assigned when multiple thresholds are met. Negative condition values are also categorized, with 'indestructable' assigned to values between -1 and 0, inclusive.",
+    "rationale": "This function is used whenever a human-readable description of an item's condition is needed, such as in repair reports, identification spells, or status messages, providing a consistent way to interpret and display condition data across various parts of the codebase.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a855b66dd4de5f5870494d6a106ddedc6",
+    "etype": "member",
+    "kind": "function",
+    "name": "condition_lookup",
+    "qualified_name": null,
+    "definition": "String condition_lookup",
+    "argsstring": "(int condition)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "special_8cc, void do_repair(Character *ch, String argument)": "Called to convert the object's condition value into a human-readable string for display.",
+      "special_8cc, void obj_repair(Character *ch, Object *obj)": " Converts the object's numeric condition into a descriptive string for messaging purposes.",
+      "magic_8cc, void spell_identify(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": "Used to get a descriptive string of the object's condition based on its condition value."
+    }
+  },
+  "String sector_lookup(Sector type)": {
+    "brief": "Retrieves the human-readable name corresponding to a specified sector type.",
+    "details": "The function performs a linear search through the global sector_table to find an entry whose type matches the provided Sector enumeration value. Upon finding a match, it returns the associated name as a String object. If no matching entry is found after examining all entries, it returns the string \"unknown\". This approach facilitates quick translation from internal sector type identifiers to user-friendly names, supporting display and interaction features within the environment system. The function relies on the sector_table being a predefined, accessible collection that maps sector types to their descriptive names.",
+    "params": {
+      "type": "The sector type identifier to look up, represented by the Sector enumeration."
+    },
+    "returns": "The human-readable name of the sector as a String, or \"unknown\" if the type is not found.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a linear search, which is efficient for small tables but may be less optimal for larger datasets. It assumes that sector_table is properly initialized and contains all relevant sector mappings.",
+    "rationale": "This function is used whenever a human-readable sector name is needed for display, such as in prompts or room descriptions, enabling consistent and user-friendly environment descriptions.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a8c183810693b08c9cf3594b2c88ca833",
+    "etype": "member",
+    "kind": "function",
+    "name": "sector_lookup",
+    "qualified_name": null,
+    "definition": "String sector_lookup",
+    "argsstring": "(Sector type)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "scan_8cc, void scan_room(Room *room, Character *ch, int depth, int door, Exit *pexit)": "Called with the room's sector type to retrieve a human-readable sector name for display.",
+      "comm_8cc, void bust_a_prompt(Character *ch)": "Called to get the string representation of the sector type of the current room for display in the prompt."
+    }
+  },
+  "int race_lookup(const String &name)": {
+    "brief": "Finds the index of a race in the race table based on its name, supporting case-insensitive prefix matching.",
+    "details": "This function searches through the global race table to identify a race whose name matches the provided input. It performs a case-insensitive comparison of the first character and checks if the input name is a prefix of the race's name, enabling flexible and partial name matching. If a match is found, it returns the corresponding index within the race table; if no match is found, it defaults to returning 0, which typically indicates a default or unknown race. This implementation allows for efficient race lookups based on user input, configuration files, or other data sources, facilitating dynamic race identification and associated gameplay mechanics.",
+    "params": {
+      "name": "The name of the race to look up, provided as a String. The comparison is case-insensitive and supports prefix matching."
+    },
+    "returns": "The index of the matching race within the race table, or 0 if no match is found.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a linear search, which is efficient given the typically small size of the race table. It relies on the race table being properly initialized and containing valid race names. The default return value of 0 is used to signify no match, which often corresponds to a default or placeholder race.",
+    "rationale": "This function is used whenever the game needs to identify a race based on user input, data files, or other external sources, ensuring consistent and flexible race recognition across various gameplay and initialization contexts.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1ab4060c6aaa85974209c9610990ae93da",
+    "etype": "member",
+    "kind": "function",
+    "name": "race_lookup",
+    "qualified_name": null,
+    "definition": "int race_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_mset(Character *ch, String argument)": "Called to convert race name strings into internal race indices for assignment.",
+      "save_8cc, bool load_char_obj(Descriptor *d, const String &name)": "Called to assign a default race if none is loaded, and used during race initialization.",
+      "structconn_1_1_get_race_state, State * conn::GetRaceState::handleInput(Descriptor *, const String &)": "Called to determine the race index based on the input argument, affecting subsequent character customization.\",",
+      "remort_8cc, void do_remort(Character *ch, String argument)": "Called to find the race index based on the argument provided, validating race choice.",
+      "save_8cc, void fread_char(Character *ch, cJSON *json, int version)": "Used to convert a race name string from JSON into a race index.",
+      "act__info_8cc, void do_who(Character *ch, String argument)": "Converts race name arguments into race indices for filtering characters by race.\",",
+      "attribute_8cc, int get_max_stat(const Character *ch, int stat)": "Called to determine if the character's race is 'human', which then increases the max stat by 1.",
+      "handler_8cc, int get_max_train(Character *ch, int stat)": "Called to determine if the character's race is 'human' for adjusting the max stat value when the guild's prime stat matches.",
+      "class_mobile_prototype, MobilePrototype::MobilePrototype(Area &, const Vnum &, FILE *)": " Used to convert race names read from the file into internal race indices, influencing subsequent flag adjustments."
+    }
+  },
+  "int weapon_lookup(const String &name)": {
+    "brief": "Finds the index of a weapon in the weapon table based on its name.",
+    "details": "The function performs a linear search through the global weapon table to identify a weapon whose name matches the provided input. It compares the first character of the input name with the first character of each weapon's name in a case-insensitive manner, then checks if the input name is a prefix of the weapon's full name. If a match is found, it returns the index of that weapon in the table. If no match is found after traversing the entire table, it returns -1. This method supports partial and case-insensitive matching, facilitating flexible user input handling for weapon selection.",
+    "params": {
+      "name": "The name of the weapon to look up. The comparison is case-insensitive and supports prefix matching."
+    },
+    "returns": "The index of the matched weapon in the weapon table, or -1 if no match is found.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function assumes that the weapon table is a globally accessible, ordered list of weapon entries. It performs a linear search, which is efficient for small tables but may be less optimal for larger datasets. The case-insensitive comparison relies on the custom String class's features.",
+    "rationale": "This function is used whenever the system needs to resolve a weapon name input into an internal index, such as during weapon selection, validation, or object creation processes. Its flexible matching logic improves user experience by allowing partial and case-insensitive inputs.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a042cd369e277fa41ca87e962dab02fb0",
+    "etype": "member",
+    "kind": "function",
+    "name": "weapon_lookup",
+    "qualified_name": null,
+    "definition": "int weapon_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__info_8cc, void do_pit(Character *ch, String argument)": "Finds the index of a weapon type based on user input to filter weapon objects.",
+      "act__obj_8cc, void do_forge(Character *ch, String argument)": " Validates the weapon type argument and retrieves its index for object creation.",
+      "structconn_1_1_get_weapon_state, State * conn::GetWeaponState::handleInput(Descriptor *, const String &)": "Called with the argument to determine the selected weapon index, affecting subsequent validation and logic flow."
+    }
+  },
+  "int get_weapon_type(const String &name)": {
+    "brief": "Determines the weapon type code based on the provided weapon name.",
+    "details": "This function searches through a centralized weapon table to find a weapon whose name matches the input string. It performs a case-insensitive comparison of the first character and checks if the input name is a prefix of any weapon's name in the table. If a match is found, it returns the corresponding weapon type code. If no match is identified, it defaults to returning the constant representing an exotic weapon type, ensuring a safe fallback for unknown or unspecified weapon names. This approach allows for flexible and efficient weapon type retrieval based on partial or case-insensitive input.",
+    "params": {
+      "name": "The name of the weapon to look up, provided as a String object."
+    },
+    "returns": "The integer code representing the matched weapon type, or WEAPON_EXOTIC if no match is found.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a case-insensitive comparison of only the first character before checking for a prefix match, optimizing for quick initial filtering. It relies on the global weapon table, which should be maintained to ensure accurate and comprehensive weapon data.",
+    "rationale": "This function is used whenever the system needs to identify a weapon's type based on user input or item data, such as during object initialization or weapon crafting, facilitating consistent categorization and handling of weapons within the game logic.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a994491c3b260a7724926455947d1b99b",
+    "etype": "member",
+    "kind": "function",
+    "name": "get_weapon_type",
+    "qualified_name": null,
+    "definition": "int get_weapon_type",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__obj_8cc, void do_forge(Character *ch, String argument)": " Determines the weapon type code based on the input string for setting object properties.",
+      "class_object_prototype, ObjectPrototype::ObjectPrototype(Area &, const Vnum &, FILE *)": "Called to determine the weapon type code based on the item name during object initialization."
+    }
+  },
+  "int item_lookup(const String &name)": {
+    "brief": "Finds and returns the item type identifier based on a given item name.",
+    "details": "The function performs a linear search through the global item table, comparing the first character of the input name with each item's name in a case-insensitive manner. It then checks whether the input name is a prefix of the item's name, allowing for partial matches. If both conditions are met, it returns the corresponding item type identifier. If no matching item is found after examining all entries, it returns -1 to indicate that the item does not exist in the table. This prefix-based lookup supports flexible and efficient retrieval of item types based on partial or full names, which is useful in various game systems such as item creation, parsing, and user commands.",
+    "params": {
+      "name": "The name of the item to look up, provided as a String object."
+    },
+    "returns": "The item type identifier if a matching item is found; otherwise, -1.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on case-insensitive comparison and prefix matching, enabling partial name lookups. It performs a linear search, which is efficient for small to moderate-sized item tables but may be less optimal for very large tables.",
+    "rationale": "This function is used whenever the system needs to identify an item type based on user input or data files, such as during object creation or parsing item names from scripts or configuration files.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a3c62fa0724d3c7070abfbe2a1eb04a28",
+    "etype": "member",
+    "kind": "function",
+    "name": "item_lookup",
+    "qualified_name": null,
+    "definition": "int item_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_object_prototype, ObjectPrototype::ObjectPrototype(Area &, const Vnum &, FILE *)": "Used to convert a string read from file into an item type enumeration for 'item_type'."
+    }
+  },
+  "int attack_lookup(const String &name)": {
+    "brief": "Finds the index of an attack in the attack table based on its name.",
+    "details": "The function performs a linear search through the attack_table, comparing each attack's name with the provided input name in a case-insensitive manner. It first checks if the initial character matches (ignoring case) and then verifies whether the input name is a prefix of the attack's full name. If a match is found, it returns the corresponding index; if no match is found after traversing the entire table, it returns 0, indicating no match. This method allows for flexible, prefix-based lookup of attack names, supporting partial and case-insensitive searches to facilitate user input and internal referencing.",
+    "params": {
+      "name": "The attack name to search for, represented as a String object."
+    },
+    "returns": "The index of the matching attack in the attack table, or 0 if no match is found.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function defaults to returning 0 when no match is found, which may correspond to a 'no attack' or default attack entry. It performs a case-insensitive prefix match, enabling flexible name searches. The linear search approach suggests that the attack_table is expected to be relatively small or that performance is not critical for this lookup.",
+    "rationale": "This function is used whenever attack names need to be resolved to their internal index representations, such as during attack initialization, weapon forging, or damage calculation. Its prefix matching allows for user-friendly input, supporting partial attack name entries in commands or configuration files.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a654de8b02a3f2e8476cb54feac0ba8bf",
+    "etype": "member",
+    "kind": "function",
+    "name": "attack_lookup",
+    "qualified_name": null,
+    "definition": "int attack_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__obj_8cc, void do_forge(Character *ch, String argument)": " Sets the attack type for the forged weapon based on its weapon type.",
+      "class_object_prototype, ObjectPrototype::ObjectPrototype(Area &, const Vnum &, FILE *)": "Called to determine attack type value when item_type is ITEM_WEAPON.",
+      "class_mobile_prototype, MobilePrototype::MobilePrototype(Area &, const Vnum &, FILE *)": " Used to determine the attack type index from the attack name read from the file for the damage type."
+    }
+  },
+  "Guild guild_lookup(const String &name)": {
+    "brief": "Looks up and returns the guild enum corresponding to a given name prefix.",
+    "details": "This function performs a linear search through the predefined list of guilds stored in \\u201cguild_table\\u201d to find a guild whose name matches the provided \\u201cname\\u201d as a prefix. It iterates from the first to the last guild, utilizing the String::is_prefix_of method to check if \\u201cname\\u201d is a prefix of each guild's name, considering the minimum prefix length. If a matching prefix is found, it returns the associated Guild enum value; if no match is found, it returns Guild::none. This approach allows for flexible, partial name matching, which is useful in command parsing and user input handling.",
+    "params": {
+      "name": "The name of the guild to look up, provided as a String object. It can be a full or partial prefix of the guild's name."
+    },
+    "returns": "The Guild enum value corresponding to the matched guild prefix, or Guild::none if no match is found.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the String::is_prefix_of method, which supports case-insensitive and flexible prefix matching. It performs a linear search, so performance may vary with the number of guilds. This function is typically used in command parsing, character creation, and input validation scenarios where partial guild names are accepted.",
+    "rationale": "This function is useful when user inputs or scripts specify guilds by partial names or prefixes, enabling flexible matching and reducing input errors during guild selection or command processing.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a7756f716f4602547d8967897eb388697",
+    "etype": "member",
+    "kind": "function",
+    "name": "guild_lookup",
+    "qualified_name": null,
+    "definition": "Guild guild_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "set-stat_8cc, void do_mset(Character *ch, String argument)": "Used to find the guild index based on the provided class name string.",
+      "class_room_prototype, RoomPrototype::RoomPrototype(Area &, const Vnum &, FILE *)": "Called when the 'G' flag is read to assign the guild member variable; triggers an error and exits if the lookup fails.",
+      "class_object_prototype, ObjectPrototype::ObjectPrototype(Area &, const Vnum &, FILE *)": "Used to find the guild index from a string read from file; logs bug and exits if invalid.",
+      "act__info_8cc, void do_who(Character *ch, String argument)": "Used to identify if an argument matches a guild, setting class restrictions accordingly.\",",
+      "skills_8cc, void do_levels(Character *ch, String argument)": "Converts an argument string into a guild identifier, used to validate and select guild-specific data.",
+      "act__comm_8cc, void do_testpose(Character *ch, String argument)": "Called to convert the class name argument into a guild identifier, which determines the set of poses to use.",
+      "structconn_1_1_get_guild_state, State * conn::GetGuildState::handleInput(Descriptor *, const String &)": "Called to determine the guild associated with the input argument, affecting subsequent logic."
+    }
+  },
+  "int liq_lookup(const String &name)": {
+    "brief": "Finds the index of a liquid in the table that matches the given name prefix, case-insensitively.",
+    "details": "This function performs a linear search through the global liquid table to identify the first entry whose name begins with the same initial character as the provided 'name' (ignoring case) and where 'name' is a prefix of the liquid's name. It utilizes the String class's case-insensitive prefix comparison method to efficiently perform this check. If a matching liquid is found, its index within the table is returned; otherwise, the function returns -1 to indicate no match. This method enables quick and flexible lookup based on partial, case-insensitive name inputs, which is particularly useful for parsing user commands or game interactions involving liquids.",
+    "params": {
+      "name": "The String object representing the name to search for in the liquid table."
+    },
+    "returns": "The index of the matching liquid in the table if found; otherwise, -1.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a case-insensitive prefix match, which allows for partial name matching. It only compares the first character before performing the prefix check, optimizing for quick rejection of non-matching entries. This behavior supports flexible user input handling in gameplay scenarios.",
+    "rationale": "Used in contexts such as item initialization and character actions where identifying a liquid by name\u2014possibly partial or case-insensitive\u2014is necessary, facilitating user-friendly command parsing and game logic processing.",
+    "state": "refined_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc_1a76aa4b7a65999dbe8eca324dfa691df4",
+    "etype": "member",
+    "kind": "function",
+    "name": "liq_lookup",
+    "qualified_name": null,
+    "definition": "int liq_lookup",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_object_prototype, ObjectPrototype::ObjectPrototype(Area &, const Vnum &, FILE *)": "Called to find the liquid index when reading ITEM_DRINK_CON or ITEM_FOUNTAIN; defaults to 0 if not found.",
+      "act__obj_8cc, void do_drink(Character *ch, String argument)": "Function used to find the index of a liquid by name, used for special cases like vampires drinking blood."
+    }
+  },
+  "lookup.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "lookup_8cc",
+    "mid": "lookup_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "lookup.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

@@ -1,0 +1,192 @@
+{
+  "distance": {
+    "brief": "An array of descriptive strings indicating different proximity levels for characters or objects.",
+    "details": "The `distance` array consists of four constant character pointers, each referencing a string that describes a specific proximity level, ranging from immediate vicinity to a distant location. These descriptors are used in various functions, such as `scan_char`, to generate human-readable messages about how close or far away entities are, and in range-limiting logic like `do_shoot` to define maximum effective distances. This standardized set of descriptions ensures consistent communication of spatial relationships within the game environment.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The array is designed for read-only use, providing fixed descriptive labels for different distance categories. Its structure supports easy expansion if additional proximity levels are needed in the future.",
+    "rationale": "The `distance` array exists to provide a uniform set of descriptive labels for varying proximity levels, enabling clear and consistent messaging and range calculations across different parts of the codebase.",
+    "state": "refined_summary",
+    "cid": "scan_8cc",
+    "mid": "scan_8cc_1afd1a91bfe530d013bb966e35d561688c",
+    "etype": "member",
+    "kind": "variable",
+    "name": "distance",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "fight_8cc, void do_shoot(Character *ch, String argument)": " Defines the maximum shooting range, used to limit the number of rooms checked in the direction.",
+      "scan_8cc, void scan_char(Character *victim, Character *ch, int depth, int door)": " Used to retrieve the distance string corresponding to the current depth, which is included in the output message."
+    }
+  },
+  "void scan_list(Room *scan_room, Character *ch, int depth, int door)": {
+    "brief": "Iterates through all characters in a specified room and displays information about those visible to the scanning character.",
+    "details": "The function traverses the list of occupants within the provided 'scan_room', skipping the character 'ch' itself. For each occupant, it utilizes 'can_see_char' to determine if 'ch' has visibility of that character, considering game mechanics such as stealth or invisibility. If the occupant is visible, it calls 'scan_char' to present detailed information about the occupant, including their relative distance ('depth') and direction ('door'), which influences the description and orientation in the output. The function gracefully handles null room pointers by early exit and relies on 'scan_char' for output, making it a comprehensive method for revealing room occupants to a character based on visibility rules.",
+    "params": {
+      "door": "Integer representing the direction index, used to determine direction name in 'scan_char' when 'depth' is non-zero.",
+      "depth": "Integer indicating the distance level from 'ch' for the scan, used in 'scan_char'.",
+      "ch": "Pointer to the Character object performing the scan.",
+      "scan_room": "Pointer to the Room object to be scanned."
+    },
+    "returns": "Void; the function outputs information about visible characters through side effects.",
+    "tparams": null,
+    "throws": "None; the function handles null room pointers gracefully and does not throw exceptions.",
+    "notes": "This function relies on 'can_see_char' to enforce visibility rules, supporting gameplay mechanics like stealth and invisibility. It delegates detailed output to 'scan_char', ensuring consistent presentation of occupant information. The iteration uses linked list traversal via 'people' in the Room class, facilitating efficient occupant management.",
+    "rationale": "Used when a character needs to perceive their surroundings, such as during exploration or combat, by providing a filtered list of visible occupants based on game visibility mechanics.",
+    "state": "refined_summary",
+    "cid": "scan_8cc",
+    "mid": "scan_8cc_1af04ef97a2ef44ddaf10debce4a9ed226",
+    "etype": "member",
+    "kind": "function",
+    "name": "scan_list",
+    "qualified_name": null,
+    "definition": "void scan_list",
+    "argsstring": "(Room *scan_room, Character *ch, int depth, int door)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "scan_8cc, void do_oldscan(Character *ch, String argument)": "Used to display characters present in a room to the scanning character, called for each room in the scan.",
+      "scan_8cc, void scan_room(Room *room, Character *ch, int depth, int door, Exit *pexit)": "Called to iterate through and display information about all characters present in the room, visible to 'ch'."
+    }
+  },
+  "void scan_room(Room *room, Character *ch, int depth, int door, Exit *pexit)": {
+    "brief": "Displays a detailed description of a room to a character, including its name, sector type, and visible occupants.",
+    "details": "This function provides an in-depth view of a specified room to a character. It begins by informing the character of their current location or the direction they are looking towards, indicating 'here' if no specific exit is provided. It then checks if an exit exists and whether it is closed; if so, it notifies the character that the door is closed. If the room is accessible, it verifies whether the character can see inside based on lighting conditions and other visibility factors. When the room is visible, it displays the room's name and its sector type, retrieved via a lookup function for user-friendly descriptions. Subsequently, it scans the room for occupants and displays information about each character present who is visible to the scanning character. The function relies on helper functions for direction naming, exit flag checks, visibility determination, and sector name lookup. All output is sent directly to the character's display buffer with appropriate formatting and color coding for clarity, supporting immersive and informative environment descriptions.",
+    "params": {
+      "door": "Integer representing the direction index; used to identify the specific exit direction from the room.",
+      "depth": "Integer indicating the depth level for scanning occupants within the room, used for nested or detailed scans.",
+      "pexit": "Pointer to the Exit object associated with the room, used to check the state of the exit (e.g., closed or open).",
+      "room": "Pointer to the Room object representing the room to be examined.",
+      "ch": "Pointer to the Character object who is receiving the room description."
+    },
+    "returns": "Void; the function outputs descriptive information directly to the character's output buffer without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles different visibility scenarios, including dark rooms and closed exits, ensuring accurate and context-sensitive descriptions. It uses color formatting for enhanced readability and relies on several helper functions for direction naming, sector lookup, and visibility checks, promoting modularity and code reuse.",
+    "rationale": "This function is used whenever a character needs a comprehensive view of their surroundings, such as during exploration, inspection, or when entering new rooms. It provides essential environmental context, including room details and occupant information, supporting immersive gameplay and informed decision-making.",
+    "state": "refined_summary",
+    "cid": "scan_8cc",
+    "mid": "scan_8cc_1a4f1ef813ea50faa70baf78eba1fb50fd",
+    "etype": "member",
+    "kind": "function",
+    "name": "scan_room",
+    "qualified_name": null,
+    "definition": "void scan_room",
+    "argsstring": "(Room *room, Character *ch, int depth, int door, Exit *pexit)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "scan_8cc, void do_oldscan(Character *ch, String argument)": "Called to display the description and contents of a room to the character during directional scans.",
+      "scan_8cc, void scan_list(Room *scan_room, Character *ch, int depth, int door)": "Used as a parameter to specify which room's occupants are being scanned and to pass to 'scan_char' for detailed display.\",",
+      "scan_8cc, void do_scan(Character *ch, String argument)": "Displays the description and contents of a room to the character, called during the scan process for each visible room."
+    }
+  },
+  "void scan_char(Character *victim, Character *ch, int depth, int door)": {
+    "brief": "Displays a formatted, color-coded message about a victim character's presence, distance, and direction relative to the observer.",
+    "details": "The function 'scan_char' first determines whether the victim is an NPC or a player by calling 'Character::is_npc()' and sets the output color accordingly using 'new_color' with the appropriate color slot\u2014either for mobiles or players. It then constructs a message that includes the victim's name or description, obtained via the 'PERS' macro, along with a distance descriptor from the 'distance' array indexed by 'depth'. If 'depth' is non-zero, it appends the direction name retrieved through 'Exit::dir_name' using the 'door' index. The message is sent directly to the character 'ch' using 'ptc', which formats the output with the victim's details. Finally, the function resets the output color to white with 'set_color' to maintain consistent display styling. This process provides a clear, visually distinct indication of nearby characters' locations, enhancing spatial awareness during gameplay.",
+    "params": {
+      "victim": "Pointer to the character being observed, whose presence and location are being reported.",
+      "door": "Integer representing the direction index, used to retrieve the direction name if 'depth' is non-zero.",
+      "depth": "Integer indicating the distance level of the victim from 'ch', used to select the appropriate distance description.",
+      "ch": "Pointer to the character who will receive the message about the victim."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses color slots to differentiate between NPCs and players, enhancing visual clarity. It also resets the text color after output to ensure consistent styling across messages.",
+    "rationale": "Used in scenarios where the game needs to inform a character about other characters' presence and relative location, such as during exploration or combat, providing spatial context in a text-based environment.",
+    "state": "refined_summary",
+    "cid": "scan_8cc",
+    "mid": "scan_8cc_1ac61e92f96e7aa1071bc36b8312561e12",
+    "etype": "member",
+    "kind": "function",
+    "name": "scan_char",
+    "qualified_name": null,
+    "definition": "void scan_char",
+    "argsstring": "(Character *victim, Character *ch, int depth, int door)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "scan_8cc, void scan_list(Room *scan_room, Character *ch, int depth, int door)": "Called for each visible character in the room to display their information based on the current 'depth' and 'door' parameters."
+    }
+  },
+  "void do_scan(Character *ch, String argument)": {
+    "brief": "Allows a character to perform a comprehensive scan of their surroundings or a specific direction to observe visible rooms and exits.",
+    "details": "The `do_scan` function enables a character to examine their environment either broadly or in a specified direction. If no argument is provided, it performs a full scan of the current room and all accessible exits, displaying detailed descriptions for each. When a direction argument (such as north, east, south, west, up, or down) is given, it validates the input and conducts a depth-limited scan (up to three rooms deep) along that path. The scan halts if an exit is closed or if no further rooms are accessible, ensuring realistic line-of-sight behavior. Internally, it parses the input argument to determine the scan scope, verifies visibility permissions with `can_see_room`, and outputs descriptive information using `act` and `scan_room`. This approach provides players with detailed environmental awareness, supporting navigation and strategic decision-making.",
+    "params": {
+      "ch": "Pointer to the Character performing the scan.",
+      "argument": "Optional string specifying the direction to scan; if empty, scans all directions and the current room."
+    },
+    "returns": "Void; the function outputs scan results through messages and does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles both broad and targeted scans, with depth-limited exploration for directional scans. It respects visibility restrictions and door states, providing realistic environmental feedback.",
+    "rationale": "This function is used when a player or NPC needs situational awareness, such as exploring unknown areas, checking for threats, or planning movement. Its flexible design supports both general and focused scans, making it essential for navigation and strategic gameplay.",
+    "state": "refined_summary",
+    "cid": "scan_8cc",
+    "mid": "scan_8cc_1a4ba3e39cdeeba0d85d084b329e7e2457",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_scan",
+    "qualified_name": null,
+    "definition": "void do_scan",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "magic_8cc, void spell_farsight(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": " Invoked to perform a scanning action for the character, using target_name to specify what or where to scan."
+    }
+  },
+  "void do_oldscan(Character *ch, String argument)": {
+    "brief": "Performs a comprehensive scan of a character's surroundings, either in all directions or along a specified path.",
+    "details": "This function allows a character to survey their environment by revealing details about the current room and adjacent areas. If no direction argument is provided, it scans all accessible directions, displaying occupants and room descriptions for the current location and neighboring rooms, while respecting visibility and access restrictions. When a specific direction is given (such as 'north' or 'up'), it peeks along that path up to three levels deep, checking for open exits and visibility conditions at each step. The function manages messaging to the character and others in the environment, indicating the direction of the scan, and handles special cases such as dark rooms or closed doors that may block further sight. It combines environmental descriptions, occupant information, and directional context to give a detailed overview of the surroundings, supporting exploration and situational awareness.",
+    "params": {
+      "ch": "Pointer to the Character performing the scan.",
+      "argument": "Optional String specifying the direction to scan (e.g., 'north', 'up'). If empty, performs a full environment scan in all directions."
+    },
+    "returns": "Void; outputs descriptive information about the environment through side effects.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function considers room visibility and door states, such as closed or dark rooms, which can limit the scan's effectiveness. It performs multiple checks for each step in a directional scan to ensure accurate and realistic perception, and uses helper functions like 'scan_list' and 'scan_room' to display occupant details and room descriptions.",
+    "rationale": "This function is useful for players or NPCs who need situational awareness, such as during exploration, combat, or strategic planning. It provides a detailed environmental overview, helping users understand their surroundings and potential threats or points of interest in the game world.",
+    "state": "refined_summary",
+    "cid": "scan_8cc",
+    "mid": "scan_8cc_1a25203113f8f51b660b3e2b873cfc2de0",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_oldscan",
+    "qualified_name": null,
+    "definition": "void do_oldscan",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "scan.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "scan_8cc",
+    "mid": "scan_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "scan.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

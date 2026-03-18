@@ -1,0 +1,48 @@
+{
+  "GetNameState.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_get_name_state_8cc",
+    "mid": "_get_name_state_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "GetNameState.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "bool check_parse_name(const String &name)": {
+    "brief": "Checks whether a given name string is valid according to game-specific rules.",
+    "details": "This function evaluates the provided name string to determine if it adheres to the game's naming conventions and restrictions. It verifies that the name does not match any reserved words or existing clan names, enforces length constraints (between 2 and 12 characters), and ensures the name contains only alphabetic characters. Additionally, it implements anti-caps measures to prevent names with excessive uppercase letters or sequences of 'I' and 'L' characters. The function returns true if the name passes all these checks, indicating it is acceptable for use; otherwise, it returns false.",
+    "params": {
+      "name": "A reference to a String object representing the name to validate."
+    },
+    "returns": "A boolean value indicating whether the name is valid (true) or invalid (false) based on the implemented rules.",
+    "tparams": null,
+    "throws": "null",
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "_get_name_state_8cc",
+    "mid": "_get_name_state_8cc_1a1ddc53fe32f25632647c88fc0f915dc2",
+    "etype": "member",
+    "kind": "function",
+    "name": "check_parse_name",
+    "qualified_name": null,
+    "definition": "bool check_parse_name",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

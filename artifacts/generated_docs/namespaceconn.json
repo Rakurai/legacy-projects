@@ -1,0 +1,289 @@
+{
+  "bool conn::attempt_reconnect(Descriptor *d, const String &name)": {
+    "brief": "Attempts to reconnect a link-dead player to their character if such a character exists in the game world.",
+    "details": "This function searches through the global list of characters in the game world to find a character that matches the provided name, is not an NPC, and currently has no active network descriptor (indicating a link-dead state). When a suitable character is found, it reassigns the descriptor to this character, resets the connection timer, and notifies the character of the reconnection. It also informs other characters in the same room about the reconnection, logs the event, and broadcasts a message to high-level administrators via wiznet. The character's location is reaffirmed by moving them into their current room, and the link-dead flag is cleared from their player flags. If no matching character is found, the function returns false, indicating the reconnection attempt was unsuccessful.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the current network connection attempting reconnection.",
+      "name": "The name of the character to reconnect, used to identify the correct player in the game world."
+    },
+    "returns": "True if a matching link-dead character was successfully reconnected; false otherwise.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function ensures that only non-NPC characters with no active descriptor are considered for reconnection, preventing NPCs or already connected players from being affected. It also handles updating the character's location in the game world to maintain consistency, and broadcasts relevant notifications to both the reconnecting player and other nearby players.",
+    "rationale": "This function is used during the login or reconnection process to restore a player's session after an unexpected disconnection, facilitating seamless gameplay continuity for players who experience network interruptions.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1a9c274f099a36b06576e257c5fb9a0ffe",
+    "etype": "member",
+    "kind": "function",
+    "name": "attempt_reconnect",
+    "qualified_name": null,
+    "definition": "bool conn::attempt_reconnect",
+    "argsstring": "(Descriptor *d, const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_get_old_pass_state, State * conn::GetOldPassState::handleInput(Descriptor *, const String &)": "Tries to re-establish a previous connection for the character, influencing subsequent state transition.\",",
+      "structconn_1_1_break_connect_state, State * conn::BreakConnectState::handleInput(Descriptor *, const String &)": "Called to attempt re-establishing a connection for the character, influencing the subsequent state transition."
+    }
+  },
+  "bool conn::check_player_exist(Descriptor *d, const String &name)": {
+    "brief": "Checks if a player with the specified name already exists either in active connections or in storage.",
+    "details": "This function determines whether a player name is already in use by examining both active connection descriptors and stored player data. It first iterates through the global list of active descriptors to identify any character currently being created or in a non-playing state with a matching name, sending a notification if such a character is found. If no active creation is detected, it ensures the storage list is loaded and searches for the name within stored player data. If a match is found in storage, it informs the descriptor accordingly. This comprehensive check prevents duplicate character names by verifying both active and stored records before allowing new character creation.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the current connection attempting to create a character.",
+      "name": "The name of the player to check for existence, encapsulated in a String object."
+    },
+    "returns": "True if a character with the specified name is currently being created or stored, indicating the name is unavailable; false otherwise.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function performs a case-insensitive comparison of names and handles both active creation states and persistent storage data. It ensures that no duplicate character names are allowed during character creation, maintaining data integrity across active sessions and stored records.",
+    "rationale": "This function is used during the character creation process to verify name availability, preventing conflicts and ensuring unique character identifiers within the game environment. It is typically invoked before finalizing a new character's creation to enforce name uniqueness across active and stored data.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1a7fa344a437ac3f36e7fcaf182b3b7cf2",
+    "etype": "member",
+    "kind": "function",
+    "name": "check_player_exist",
+    "qualified_name": null,
+    "definition": "bool conn::check_player_exist",
+    "argsstring": "(Descriptor *d, const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_get_name_state, State * conn::GetNameState::handleInput(Descriptor *, const String &)": "Called to verify if a player with the given name already exists; if true, the function remains in the current state."
+    }
+  },
+  "bool conn::check_deny(const String &name)": {
+    "brief": "Checks if a given name is listed in the denies database table.",
+    "details": "This function performs a database query to determine whether the specified name exists in the 'denies' table. It constructs a COUNT(*) SQL query with the provided name as a parameter, utilizing the 'db_countf' utility to execute the query. If the count of matching entries is greater than zero, the function returns true, indicating that the name is denied. The function handles any database errors internally, returning false if an error occurs or if no matching entries are found. The implementation relies on the String class's case-insensitive comparison features to ensure accurate matching regardless of text case.",
+    "params": {
+      "name": "The name to be checked against the denies list."
+    },
+    "returns": "True if the name is present in the denies list; false otherwise or if an error occurs.",
+    "tparams": null,
+    "throws": "None explicitly thrown; errors during database query are handled internally, resulting in a false return value.",
+    "notes": "The function's reliance on 'db_countf' ensures consistent database querying and error handling. It is typically used in access control checks, such as verifying whether a user or entity is explicitly denied access based on their name.",
+    "rationale": "This function is used in scenarios where the system needs to enforce deny rules based on names, such as during connection handling or command validation, to prevent unauthorized or restricted entities from proceeding.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1a0dead7c56ed5378577f22f879ae1a9fe",
+    "etype": "member",
+    "kind": "function",
+    "name": "check_deny",
+    "qualified_name": null,
+    "definition": "bool conn::check_deny",
+    "argsstring": "(const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_get_name_state, State * conn::GetNameState::handleInput(Descriptor *, const String &)": "Used to determine if access should be denied based on the character's name, leading to connection termination if true."
+    }
+  },
+  "bool conn::check_ban(const String &site, int type)": {
+    "brief": "Determines whether a given site matches any active ban rules based on specified criteria.",
+    "details": "The function executes a database query to retrieve all ban entries of a particular type by filtering the 'bans' table using bitwise operations on the 'flags' field. It then iterates through each result row, extracting the associated flags and site string. Depending on whether the ban applies to prefixes, suffixes, or infixes\u2014determined by the flags\u2014it performs the corresponding string comparison with the input site. If any of these conditions are satisfied, the function concludes that the site is banned and returns true. This approach allows for flexible and efficient matching of complex ban rules, supporting prefix, suffix, and infix bans, and ensures accurate detection of banned sites based on multiple criteria.",
+    "params": {
+      "type": "An integer representing the specific ban type to filter database entries.",
+      "site": "The site string to verify against the ban list."
+    },
+    "returns": "True if the site matches any active ban rule; otherwise, false.",
+    "tparams": null,
+    "throws": "This function does not explicitly throw exceptions but may return false if the database query fails or no matching ban entries are found.",
+    "notes": "The function uses bitwise flag checks to determine the nature of each ban (prefix, suffix, or infix). It performs string comparisons accordingly, which allows for nuanced ban rules such as banning all sites with a certain suffix or prefix. The implementation ensures that multiple matching rules are evaluated efficiently within a single database query and iteration.",
+    "rationale": "This function is used in connection handling to verify if a client's site is banned before allowing further interaction, as seen in input handling routines. It provides a flexible mechanism to enforce complex ban policies based on site patterns, which is essential for maintaining security and moderation in the system.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1ac7d18dad7949b06d186248d1d2f3006e",
+    "etype": "member",
+    "kind": "function",
+    "name": "check_ban",
+    "qualified_name": null,
+    "definition": "bool conn::check_ban",
+    "argsstring": "(const String &site, int type)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_get_name_state, State * conn::GetNameState::handleInput(Descriptor *, const String &)": "Called to verify if new players are banned from the host, influencing whether connection is closed."
+    }
+  },
+  "bool conn::check_reconnect(Descriptor *d, const String &name)": {
+    "brief": "Checks for an existing non-NPC character with the specified name to facilitate reconnection, updating connection data if found.",
+    "details": "The function iterates through the global list of characters in the game world, examining each to determine if it is a non-NPC character whose name matches the provided name and is different from the character currently associated with the descriptor. If such a character is identified, the function copies the password data from that character's pcdata to the descriptor's character, effectively restoring the connection for a link-dead player. This process ensures that only valid, player-controlled characters are considered for reconnection, supporting seamless gameplay continuity. If no matching character is found, the function returns false, indicating no reconnection was performed.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the current connection attempt.",
+      "name": "The name of the player attempting to reconnect."
+    },
+    "returns": "True if a matching link-dead player is found and the connection data is updated; otherwise, false.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the assumption that character names are unique identifiers for players. It only updates the password data if a suitable character is found, without modifying other connection or character state.",
+    "rationale": "This function is used during the login or reconnection process to identify and restore sessions for players who have become disconnected, ensuring minimal disruption and maintaining game continuity.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1ab2004ee8b9a535e6ca63167a266a7e53",
+    "etype": "member",
+    "kind": "function",
+    "name": "check_reconnect",
+    "qualified_name": null,
+    "definition": "bool conn::check_reconnect",
+    "argsstring": "(Descriptor *d, const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_get_name_state, State * conn::GetNameState::handleInput(Descriptor *, const String &)": "Called to determine if the user is reconnecting to an existing session, affecting the 'fOld' flag."
+    }
+  },
+  "bool conn::check_playing(Descriptor *d, const String &name)": {
+    "brief": "Checks if a character with the specified name is already connected and actively playing.",
+    "details": "This function iterates through the global list of all active network descriptors to determine if any other descriptor (excluding the current one) is associated with a character of the given name and is in an active state. It skips descriptors that are in connection states related to name input or password verification, such as getName or getOldPass. If a matching character is found, it sends a message to the current descriptor's output buffer informing the user that the character is already connected and prompts whether to connect anyway. The function returns true if such an active connection exists, indicating that the character is already in use; otherwise, it returns false, allowing the connection process to proceed.",
+    "params": {
+      "d": "Pointer to the current Descriptor attempting to connect or verify character status.",
+      "name": "The name of the character to check for existing active connections."
+    },
+    "returns": "True if the character is already connected and active; false otherwise.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function specifically excludes descriptors that are in the process of entering their name or password, focusing only on fully active game connections. This prevents false positives during login or authentication phases.",
+    "rationale": "Used during the connection process to prevent multiple simultaneous logins of the same character, ensuring game integrity and avoiding duplicate sessions. It also provides user feedback when a character is already online, prompting for confirmation before proceeding.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1afe9b89b11eba5068a1005260e5d20b24",
+    "etype": "member",
+    "kind": "function",
+    "name": "check_playing",
+    "qualified_name": null,
+    "definition": "bool conn::check_playing",
+    "argsstring": "(Descriptor *d, const String &name)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_get_old_pass_state, State * conn::GetOldPassState::handleInput(Descriptor *, const String &)": "Used to determine if the character is already connected, influencing whether to break the current connection.\","
+    }
+  },
+  "const String conn::site_to_ssite(const String &site)": {
+    "brief": "Converts a site string into a standardized site identifier based on its content.",
+    "details": "This function analyzes the input site string to determine whether it contains alphabetic characters or is purely numeric. It counts the number of dots in the string to decide which segment to extract. For sites with alphabetic characters, it retrieves the substring starting from the position of the third-to-last dot, capturing the last three dot-separated sections, which typically represent the most specific part of the site. For purely numeric sites, it extracts the substring from the beginning up to the third dot, capturing the first three sections, often representing broader site categories. This logic ensures consistent and normalized site identifiers, facilitating comparison, storage, and further processing in systems that rely on standardized site formats.",
+    "params": {
+      "site": "The input String representing the site to be converted."
+    },
+    "returns": "A String containing the standardized site identifier, either the last three sections for alphanumeric sites or the first three for numeric sites.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function distinguishes between alphanumeric and numeric sites by checking for alphabetic characters. It relies on the presence and position of dots to determine which part of the site to extract, making it sensitive to the site's format. The use of 'find_nth' simplifies locating specific dot positions, enabling flexible parsing of varied site string formats.",
+    "rationale": "This function is used when a consistent, normalized site identifier is needed for database queries, comparisons, or logging, especially when dealing with diverse site formats that include both numeric and alphanumeric hostnames.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1af940263afeb11728e42b2b88702749cd",
+    "etype": "member",
+    "kind": "function",
+    "name": "site_to_ssite",
+    "qualified_name": null,
+    "definition": "const String conn::site_to_ssite",
+    "argsstring": "(const String &site)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "namespaceconn, void conn::update_site(const Character *ch)": "Called to convert the character's host string into a standardized site identifier used in database queries."
+    }
+  },
+  "void conn::update_site(const Character *ch)": {
+    "brief": "Updates or inserts the character's current site information into the database based on their connection details.",
+    "details": "The function retrieves the hostname associated with the character's current connection and converts it into a standardized site identifier using site_to_ssite. It then performs a database query to check if an entry for the character's name and this site already exists. If such an entry is found, it updates the record with the current date and site information. If no matching record exists, it inserts a new record with the character's name, hostname, site identifier, and the current date. This process ensures that the database accurately reflects the character's most recent connection location, facilitating tracking and logging of site activity.",
+    "params": {
+      "ch": "A pointer to the Character object whose site information is to be updated or inserted in the database."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on the site_to_ssite conversion to normalize site identifiers, which helps maintain consistency in database records. It performs an existence check before deciding whether to update or insert, ensuring data integrity and avoiding duplicates.",
+    "rationale": "This function is used to keep the database updated with the latest site information for characters, typically invoked during connection handling or movement events, to support features like last login tracking, site-based permissions, or activity logging.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1ab0bcd9c7246d3e8fb817e759729e970b",
+    "etype": "member",
+    "kind": "function",
+    "name": "update_site",
+    "qualified_name": null,
+    "definition": "void conn::update_site",
+    "argsstring": "(const Character *ch)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_get_old_pass_state, State * conn::GetOldPassState::handleInput(Descriptor *, const String &)": "Updates the character's last site information based on current connection details.\","
+    }
+  },
+  "unsigned long conn::update_records()": {
+    "brief": "Updates login and player count statistics in the database based on current server activity.",
+    "details": "This function begins by checking if the server is running on the designated port (DIZZYPORT). If not, it returns zero immediately. If the port matches, it executes a database command to increment the total login count. It then iterates through the linked list of all active network descriptors, counting how many are currently engaged in gameplay via the is_playing() method. If this count exceeds the previously recorded maximum since server boot, it updates the maximum player count both in the internal variable and in the database. Finally, it increments the total login count stored in Game::record_logins and returns this new value. This process ensures that login and player activity statistics are accurately maintained and synchronized with the database, reflecting real-time server activity.",
+    "params": {},
+    "returns": "The total number of player logins recorded after the update.",
+    "tparams": null,
+    "throws": "This function does not explicitly throw exceptions but may fail silently if database commands fail or if the server is not on the designated port.",
+    "notes": "The function only updates records if the server is running on the specific port defined by DIZZYPORT, preventing unintended database modifications in other contexts. It also ensures that the maximum number of players since boot is tracked and updated efficiently. The use of database commands without explicit error handling means failures in database operations may go unnoticed, so in production, additional error checking might be advisable.",
+    "rationale": "This function is used during server startup or periodic maintenance to keep login and player activity statistics current, especially after new logins or significant changes in active players, ensuring accurate record-keeping for monitoring and analytics.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1a7de5db5d8a40c590c1f5f9c378c85c29",
+    "etype": "member",
+    "kind": "function",
+    "name": "update_records",
+    "qualified_name": null,
+    "definition": "unsigned long conn::update_records",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_read_new_m_o_t_d_state, State * conn::ReadNewMOTDState::handleInput(Descriptor *, const String &)": "Returns a value used to display the character's traveler ID or similar identifier."
+    }
+  },
+  "int conn::roll_stat(const Character *ch, int stat)": {
+    "brief": "Calculates a character's stat value based on race-specific limits and probabilistic bonuses.",
+    "details": "This function determines a character's stat by first generating a percentile value to decide a bonus modifier, which can slightly increase or decrease the resulting stat. It then computes a range for the stat, centered around the race's maximum and base stats for the specified attribute, adjusted by the bonus. A random value within this range is selected to produce the final stat, introducing variability while adhering to race constraints. The bonus modifier based on percentile outcomes adds an element of chance, making each stat roll somewhat unpredictable and more dynamic during character creation or development processes.",
+    "params": {
+      "stat": "Index of the specific stat to be rolled, corresponding to race's stat array.",
+      "ch": "Pointer to the Character object for whom the stat is being rolled."
+    },
+    "returns": "An integer representing the rolled character stat, influenced by race limits and probabilistic bonuses.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function incorporates a percentile-based bonus system that slightly skews the stat higher or lower, adding variability. It ensures that the stat remains within race-specific maximum limits, maintaining game balance.",
+    "rationale": "Used during character creation or stat adjustment phases to generate stats that reflect race-specific constraints while introducing randomness, making each character's attributes unique and dynamic.",
+    "state": "refined_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn_1ad8d14142cd0187bbf93c01a268127e8c",
+    "etype": "member",
+    "kind": "function",
+    "name": "roll_stat",
+    "qualified_name": null,
+    "definition": "int conn::roll_stat",
+    "argsstring": "(const Character *ch, int stat)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "structconn_1_1_roll_stats_state, State * conn::RollStatsState::handleInput(Descriptor *, const String &)": "Function called to generate a new value for a character's stat, used in the 'Y'/'y' case to assign new stats."
+    }
+  },
+  "conn": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "namespaceconn",
+    "mid": "namespaceconn",
+    "etype": "compound",
+    "kind": "namespace",
+    "name": "conn",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "void do_debug(Character *ch, String argument)": {
+    "brief": "Executes various in-game debugging, inspection, and utility operations based on specified subcommands.",
+    "details": "The do_debug function processes a subcommand provided by a character and performs a wide array of debugging and diagnostic tasks. It supports multiple subfunctions, including listing available debug options, loading and printing image files, saving object states, generating equipment items at specified levels, conducting random distribution tests, verifying room configurations for specific flags, resetting player quest timers either globally or individually, advancing the game world by a specified number of ticks, and checking object containment relationships. The function also performs environment checks such as rooms without exits or light, and can modify player quest timers or trigger game updates. It outputs results directly to the character's output buffer, utilizing helper functions and game state variables to perform these operations efficiently. The implementation ensures immediate feedback for debugging, facilitates object and world modifications, and supports complex internal diagnostics, making it a versatile tool for developers and administrators during game testing and maintenance.",
+    "params": {
+      "ch": "Pointer to the Character issuing the debug command.",
+      "argument": "String containing the subcommand and its parameters."
+    },
+    "returns": "Void; the function performs side effects such as outputting debug information, modifying game state, or creating objects without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function includes specialized subcommands for image processing, object state serialization, and game world manipulation. Certain subcommands, like 'crash', intentionally induce errors for testing purposes. The implementation relies on internal helper functions and game state variables to execute tasks efficiently and provides immediate feedback to the user, making it a critical tool for debugging and system inspection.",
+    "rationale": "This function is used by developers, administrators, or testers to diagnose, manipulate, or inspect various aspects of the game environment quickly. It facilitates rapid testing of game mechanics, environment configurations, object states, and resource management, supporting efficient debugging, maintenance, and feature verification during development or live operations.",
+    "state": "refined_summary",
+    "cid": "debug_8cc",
+    "mid": "debug_8cc_1a6a81229e390ce52e59c7cf53795042e5",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_debug",
+    "qualified_name": null,
+    "definition": "void do_debug",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "debug.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "debug_8cc",
+    "mid": "debug_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "debug.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

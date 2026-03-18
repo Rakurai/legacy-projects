@@ -1,0 +1,49 @@
+{
+  "wis_app_type": {
+    "brief": "A struct that encapsulates the practice points for a character in the application.",
+    "details": "The `wis_app_type` struct serves as a container for tracking a character's practice points within the system. Its main member, `practice`, is an integer representing the accumulated practice points that contribute to skill development and progression. This struct is used throughout the codebase to manage and update a character's practice state, supporting gameplay mechanics related to skill improvement. While currently simple, it provides a foundation for potential future extensions, such as additional practice-related attributes or methods to handle practice logic more comprehensively.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct follows a straightforward design pattern, acting as a plain data holder to facilitate easy integration and manipulation of practice data within the character management system.",
+    "rationale": "The `wis_app_type` struct exists to modularize and encapsulate practice-related data for characters, enabling clear separation of concerns and simplifying the management of practice points. It supports the system's goal of controlled skill development by providing a dedicated structure for practice tracking, which can be extended or integrated with other gameplay systems as needed.",
+    "state": "refined_summary",
+    "cid": "structwis__app__type",
+    "mid": "structwis__app__type",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "wis_app_type",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "practice": {
+    "brief": "An integer that tracks the current practice points of a character.",
+    "details": "The 'practice' variable holds the number of practice points a character has accumulated, which are used to improve existing skills or acquire new ones. It is initialized when the character is created and is dynamically updated throughout gameplay, notably increased by functions like 'advance_level' after leveling up and decreased during demotion or skill loss events. This variable plays a crucial role in the character's progression system, influencing skill development and mastery. It interacts with other attributes that govern skill learning and character advancement, ensuring a consistent progression mechanic.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The practice points are stored as a simple integer, allowing for efficient updates and checks. Proper management of this variable is essential to maintain balanced character progression.",
+    "rationale": "This variable exists to facilitate the character's skill development process by tracking accumulated practice points, enabling controlled progression and ensuring that skill improvements are earned through gameplay activities.",
+    "state": "refined_summary",
+    "cid": "structwis__app__type",
+    "mid": "structwis__app__type_1ae35655e3e8adf6d9fa0b6bdfb680a895",
+    "etype": "member",
+    "kind": "variable",
+    "name": "practice",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void demote_level(Character *ch)": "Decreased from ch->practice to reflect the loss of practice points after demotion.",
+      "update_8cc, void advance_level(Character *ch)": " Incremented by add_prac to update the character's practice points after level advancement."
+    }
+  }
+}

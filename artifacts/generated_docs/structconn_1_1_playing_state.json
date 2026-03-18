@@ -1,0 +1,49 @@
+{
+  "conn::PlayingState": {
+    "brief": "Represents the active gameplay state of a network connection within the system.",
+    "details": "The conn::PlayingState struct extends the base State class to encapsulate the behavior and handling of a network connection during active gameplay. It primarily manages user input by processing commands, including alias expansion, through its handleInput method. This struct is integral to maintaining the gameplay session's context, ensuring that commands are correctly interpreted and that the connection's state remains consistent throughout interaction. Designed for flexibility, it supports the transition between different connection states and facilitates smooth gameplay experiences by centralizing input handling logic specific to the active play phase.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "This struct employs the State design pattern, allowing for clean separation of different connection behaviors and easy state transitions. Its handleInput method processes player commands without altering the connection state, supporting a modular and maintainable architecture.",
+    "rationale": "conn::PlayingState exists to represent the specific context of an active gameplay session within the connection management system. By encapsulating input handling and state-specific behavior, it enables the system to manage multiple connection states efficiently, providing a clear structure for extending or modifying gameplay interactions without impacting other connection phases.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_playing_state",
+    "mid": "structconn_1_1_playing_state",
+    "etype": "compound",
+    "kind": "struct",
+    "name": "conn::PlayingState",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  },
+  "State * conn::PlayingState::handleInput(Descriptor *, const String &)": {
+    "brief": "Handles player input during the playing state by processing command aliases.",
+    "details": "This function manages input received while in the playing state of a networked session. It invokes substitute_alias to interpret and replace any command aliases or prefixes within the input string, ensuring commands are expanded correctly according to user-defined or system-defined aliases. After processing, it maintains the current state by returning a pointer to itself, allowing continuous command handling without state transitions. This approach ensures flexible command input handling with alias support, facilitating a smooth gameplay experience while preserving the connection's context.",
+    "params": {
+      "d": "Pointer to the Descriptor object representing the network connection context.",
+      "argument": "The input command string, potentially containing aliases and prefixes, to be processed."
+    },
+    "returns": "A pointer to the current State object, indicating no change in state after handling input.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function relies on substitute_alias to perform command alias substitution, which is crucial for supporting customizable and user-friendly command inputs. It does not alter the connection state, making it suitable for continuous command processing within the playing state.",
+    "rationale": "This function is used whenever player input needs to be interpreted with alias expansion during gameplay, ensuring commands are correctly understood and executed without changing the connection's state.",
+    "state": "refined_summary",
+    "cid": "structconn_1_1_playing_state",
+    "mid": "structconn_1_1_playing_state_1ad80f57082f0aa2923c952336602e013c",
+    "etype": "member",
+    "kind": "function",
+    "name": "handleInput",
+    "qualified_name": null,
+    "definition": "State * conn::PlayingState::handleInput",
+    "argsstring": "(Descriptor *, const String &)",
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

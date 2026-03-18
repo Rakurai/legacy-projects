@@ -1,0 +1,153 @@
+{
+  "song_table": {
+    "brief": "A vector storing all song data entries used within the application.",
+    "details": "The variable 'song_table' is a std::vector that holds multiple 'song_data' structures, each containing metadata and lyrics for individual songs. It is dynamically populated during the song loading process, such as in 'load_songs()', where new song entries are appended after successful parsing of song files or input. The collection is accessed in various functions like 'song_update()' for retrieving song information during playback and message formatting, and in 'do_play()' to verify, select, and manage songs based on user commands. This structure enables efficient management, searching, and retrieval of song data throughout the application's lifecycle.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The vector allows dynamic resizing as songs are added or removed, supporting flexible song management. Proper synchronization may be necessary if accessed concurrently.",
+    "rationale": "The 'song_table' exists to maintain an organized collection of all available songs, facilitating quick access, updates, and verification during user interactions and playback operations.",
+    "state": "refined_summary",
+    "cid": "music_8cc",
+    "mid": "music_8cc_1a0c5d8a7ea541d94bf39b8a7af581e68a",
+    "etype": "member",
+    "kind": "variable",
+    "name": "song_table",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "music_8cc, void do_play(Character *ch, String argument)": "Contains the list of available songs, used to find and verify the requested song based on user input.",
+      "music_8cc, void load_songs()": "Appended with new song data structures when a song with at least one line is successfully read, building the collection of songs.",
+      "music_8cc, void song_update()": " Accessed to retrieve song metadata, lyrics, and control information for playback and message formatting."
+    }
+  },
+  "void song_update()": {
+    "brief": "Updates ongoing songs, manages song progression, and broadcasts music messages to players and objects within the game environment.",
+    "details": "The song_update() function handles both global and object-specific music playback by updating song progress, transitioning between lyrics, and managing song lifecycle events. It first verifies the validity of the current global song channel, resetting or advancing lyrics as needed, and then broadcasts the current lyric line to all connected players who are listening and not in quiet mode. For jukebox objects in the game world, it initiates playback if not already started, progresses through lyrics, and transitions to subsequent songs when the current one ends, based on object state and location. The function interacts with descriptors, characters, objects, and rooms to ensure synchronized updates and appropriate messaging, respecting communication flags and room contexts to provide an immersive musical experience for players and in-game objects alike.",
+    "params": null,
+    "returns": "Void; the function performs updates and messaging without returning a value.",
+    "tparams": null,
+    "throws": "null",
+    "notes": "The function ensures that only players who are not in quiet mode and have music enabled receive song messages. It also manages song progression for both global channels and individual jukebox objects, handling song transitions and lyric advancement seamlessly within the game environment.",
+    "rationale": "This function is used during periodic game updates (e.g., pulse or tick events) to maintain continuous music playback, synchronize song lyrics across players, and manage jukebox objects' song states, ensuring an immersive and synchronized musical experience in the game world.",
+    "state": "refined_summary",
+    "cid": "music_8cc",
+    "mid": "1a0b657999be418ba80c414a1a558109bf",
+    "etype": "member",
+    "kind": "function",
+    "name": "song_update",
+    "qualified_name": null,
+    "definition": "void song_update",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "update_8cc, void update_handler()": "Called when pulse_music reaches zero to update music or song states."
+    }
+  },
+  "void load_songs()": {
+    "brief": "Loads song data from the music file into the global song table, including metadata and lyrics.",
+    "details": "The function begins by resetting the global array that tracks song assignments to indicate no songs are loaded initially. It then attempts to open the music data file; if the file cannot be opened, it logs a bug message and exits early. When the file is successfully opened, it reads characters sequentially to identify song entries, looking for a '#' character to mark the end of data. For each song, it reads the group and name strings using dedicated functions, then proceeds to read lyric lines until a tilde (~) delimiter is encountered or the maximum number of lyric lines is reached. If the lyric count exceeds the predefined limit, a bug is logged to flag the issue. Valid songs with at least one lyric line are added to the song table. The function ensures proper resource management by closing the file after processing all entries or upon reaching the end marker, maintaining system stability and data integrity during the loading process.",
+    "params": {
+      "fp": "Pointer to the FILE object representing the open music data file for reading."
+    },
+    "returns": "Void; populates the global song table with loaded songs or logs an error if the file cannot be opened.",
+    "tparams": null,
+    "throws": "null",
+    "notes": "The function uses a sentinel character '#' to determine the end of song data within the file. It also enforces a maximum number of lyric lines per song to prevent buffer overflows, logging bugs if limits are exceeded. Proper file handling ensures resources are released appropriately, and the function relies on auxiliary functions for reading strings and characters, facilitating robust parsing of the music data.",
+    "rationale": "This function is used during system startup or when reloading the music database to initialize the song collection from persistent storage, ensuring that all available songs are loaded into memory for playback and management within the application.",
+    "state": "refined_summary",
+    "cid": "music_8cc",
+    "mid": "1aa80554c8e4ca12d177015a1c04c00116",
+    "etype": "member",
+    "kind": "function",
+    "name": "load_songs",
+    "qualified_name": null,
+    "definition": "void load_songs",
+    "argsstring": "()",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "class_game, void Game::boot()": "Called to load song data from a music file into the song table during boot."
+    }
+  },
+  "channel_songs": {
+    "brief": "An array that stores the number of songs assigned to each channel or slot.",
+    "details": "The `channel_songs` array maintains the count of songs associated with each channel or slot, supporting the management of music playback across multiple channels. It is initialized during loading operations to reset song data and is referenced throughout playback functions to track the current number of songs or song indices for each channel. The array's indices correspond to specific channels or global slots, enabling efficient access, updates, and management of song-related information within the system.",
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": "The array size is determined by `MAX_GLOBAL + 1`, ensuring capacity for all channels and a global slot, which helps prevent out-of-bounds access during runtime.",
+    "rationale": "This variable exists to facilitate organized tracking of songs across multiple channels, supporting features like concurrent playback, song management, and capacity checks, thereby ensuring stable and predictable music handling within the application.",
+    "state": "refined_summary",
+    "cid": "music_8cc",
+    "mid": "music_8cc_1a4cd70d23084b2ca383c58d2989442f13",
+    "etype": "member",
+    "kind": "variable",
+    "name": "channel_songs",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "music_8cc, void do_play(Character *ch, String argument)": "Global array tracking the currently playing songs on the global channel, checked and updated to manage song playback.",
+      "music_8cc, void load_songs()": "Reset at the start to initialize the playlist or song channels, ensuring no residual data remains from previous loads.",
+      "music_8cc, void song_update()": " Used to track the current song index, lyrics line, and song queue for global music playback."
+    }
+  },
+  "void do_play(Character *ch, String argument)": {
+    "brief": "Manages the 'play' command for characters to list, play, or stop music on jukebox objects within the game.",
+    "details": "This function allows a character to interact with a jukebox either in their inventory or present in their current room. It begins by locating an accessible jukebox object, checking both the character's inventory and the room's contents, with visibility verified via can_see_obj. Depending on the provided argument, it can list available songs, play a specific song either globally or locally, or stop current playback. Listing songs supports filtering by artist or song name prefix, formatting the output for readability. Playing a song involves checking for available slots in either the global channel or the jukebox's local slots, then updating the corresponding slot with the selected song's index. Special commands like 'list', 'stop', and 'loud' are handled with appropriate permission checks, such as only allowing 'loud' to immortals. When stopping, the function resets the relevant song slots and provides feedback messages. Throughout, the function enforces visibility and permission constraints, ensuring proper interaction flow and user feedback.",
+    "params": {
+      "ch": "A pointer to the Character object issuing the 'play' command.",
+      "argument": "A String containing the arguments provided with the 'play' command, such as song name or special commands like 'list', 'stop', or 'loud'."
+    },
+    "returns": "This function does not return a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function distinguishes between local jukebox control and global loud playback, with global commands restricted to immortal characters. It also ensures that only jukeboxes in the character's inventory or in the same room are interactable, and provides user feedback for invalid actions or unavailable songs.",
+    "rationale": "This function is used whenever a character needs to list available songs, initiate playback, or stop music on jukebox objects, supporting immersive in-game music interactions and administrative controls for global sound management.",
+    "state": "refined_summary",
+    "cid": "music_8cc",
+    "mid": "music_8cc_1a8889926e5a31cfdf5a0e5cb47289cd70",
+    "etype": "member",
+    "kind": "function",
+    "name": "do_play",
+    "qualified_name": null,
+    "definition": "void do_play",
+    "argsstring": "(Character *ch, String argument)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "act__info_8cc, void do_examine(Character *ch, String argument)": "Called specifically when examining a jukebox to list or interact with its contents."
+    }
+  },
+  "music.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "music_8cc",
+    "mid": "music_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "music.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

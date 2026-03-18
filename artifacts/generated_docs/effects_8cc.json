@@ -1,0 +1,183 @@
+{
+  "void acid_effect(void *vo, int level, int dam, int target, int evolution)": {
+    "brief": "Applies acid effects recursively to rooms, characters, and objects, causing damage, corrosion, and destruction based on specified parameters.",
+    "details": "This function implements a recursive mechanism to apply acid effects across various game entities such as rooms, characters, and objects. When targeting a room, it applies the effect to all objects on the floor. When targeting a character, it applies the effect to all items carried by the character, unless the character is immortal, in which case the effect is skipped. For objects, it calculates the chance of damage based on the provided level, damage, and object properties, then potentially damages, etches, or destroys the object. The function respects protections like 'sheen' effects and item flags such as 'burn proof' and 'no purge'. It manages nested objects and their contents, applying effects recursively to simulate the corrosive and destructive nature of acid. During this process, it generates appropriate in-game messages to reflect the effects on objects and their contents, handles the transfer or removal of items as needed, including effects on gems and contained objects, and ensures that destruction and content scattering are handled correctly to maintain game consistency.",
+    "params": {
+      "dam": "The damage value associated with the acid effect, affecting the chance and extent of damage.",
+      "level": "The level or potency of the acid effect, influencing severity and chance calculations.",
+      "vo": "Pointer to the target entity, which can be a Room, Character, or Object, depending on the target parameter.",
+      "evolution": "An integer representing the evolution or stage of the effect, used for recursive damage scaling.",
+      "target": "Integer indicating the type of target: room, character, or object."
+    },
+    "returns": "This function does not return a value; it modifies the state of game entities directly through side effects.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles complex interactions such as nested object effects, content scattering, and special protections. It ensures that acid effects propagate correctly through contained items and gems, and that appropriate game messages are displayed to reflect the ongoing effects. Recursive calls are scaled down in level and damage to simulate diminishing effects on nested objects.",
+    "rationale": "This function is used in scenarios where environmental or spell effects cause widespread corrosion and damage, such as in acid breath spells or environmental hazards. Its recursive design allows for realistic and immersive effects on complex object hierarchies and room environments, making it essential for effects that need to propagate through multiple layers of game entities.",
+    "state": "refined_summary",
+    "cid": "effects_8cc",
+    "mid": "effects_8cc_1a109d6417d816edc7a49d4f909293669f",
+    "etype": "member",
+    "kind": "function",
+    "name": "acid_effect",
+    "qualified_name": null,
+    "definition": "void acid_effect",
+    "argsstring": "(void *vo, int level, int dam, int target, int evolution)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "magic_8cc, void spell_acid_breath(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": "Invoked to apply acid-specific effects recursively to the victim's room, character, or objects, causing deterioration and damage.",
+      "fight_8cc, void one_hit(Character *ch, Character *victim, skill::type attack_skill, bool secondary)": "Called to apply acid damage and effects recursively when weapon affects acid.",
+      "effects_8cc, void acid_effect(void *vo, int level, int dam, int target, int evolution)": " Called recursively to apply acid effects to objects, characters, and rooms, causing damage and deterioration."
+    }
+  },
+  "void cold_effect(void *vo, int level, int dam, int target, int evolution)": {
+    "brief": "Recursively applies a cold effect to a room, character, or object, causing damage, status effects, and potential destruction of contents.",
+    "details": "The `cold_effect` function applies a comprehensive cold-based effect to a specified target, which can be a room, character, or object. When targeting a room, it propagates the effect to all objects within the room. For characters, it attempts to inflict a chill touch effect unless the character resists, reduces hunger if applicable, and recursively applies effects to all objects carried by the character. When targeting an object, it considers protections such as 'sheen' effects, item flags like burn-proof or no-purge, and calculates a chance for the object to be destroyed based on the level and damage parameters. If destruction occurs, it handles scattering of contained objects and gems, recursively applying effects to nested contents. The function manages special protections, object flags, and ensures proper cleanup of destroyed objects, effectively simulating the destructive cold influence throughout the environment and nested structures.",
+    "params": {
+      "dam": "The damage value associated with the cold effect, affecting severity and destruction likelihood.",
+      "level": "The level or strength of the cold effect, influencing the potency and chance calculations.",
+      "vo": "Pointer to the target entity, which can be a Room, Character, or Object, depending on the target type.",
+      "evolution": "The evolution level of the effect, influencing affect levels, damage scaling, and effect duration.",
+      "target": "An integer indicating the target type: TARGET_ROOM, TARGET_CHAR, or TARGET_OBJ."
+    },
+    "returns": "This function has no return value; it directly applies effects, modifies, or destroys the target entities and their contents.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles recursive propagation of effects to nested contents, ensuring that all affected objects and characters are processed appropriately. It respects item protections such as 'sheen' and specific item flags to prevent unintended destruction. The destruction process includes scattering contained objects and gems, and cleans up destroyed objects to maintain game state consistency.",
+    "rationale": "This function is used in scenarios where a powerful cold-based spell or effect needs to impact entire environments, characters, and objects, such as during area-of-effect spells or environmental hazards. Its recursive design ensures comprehensive application of effects, making it suitable for effects that require destruction, status infliction, and content scattering across complex object hierarchies.",
+    "state": "refined_summary",
+    "cid": "effects_8cc",
+    "mid": "effects_8cc_1a9a23dd04f9f6a9aaa03ec36428dc5327",
+    "etype": "member",
+    "kind": "function",
+    "name": "cold_effect",
+    "qualified_name": null,
+    "definition": "void cold_effect",
+    "argsstring": "(void *vo, int level, int dam, int target, int evolution)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "magic_8cc, void spell_frost_breath(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": " Called to apply a cold status effect to the room or characters, representing the spell's cold-related effects and damage over time.",
+      "fight_8cc, void one_hit(Character *ch, Character *victim, skill::type attack_skill, bool secondary)": "Called to apply cold damage and effects recursively when weapon affects cold.",
+      "effects_8cc, void cold_effect(void *vo, int level, int dam, int target, int evolution)": " Called recursively to apply cold effects to objects and nested contents, propagating destruction or effects throughout."
+    }
+  },
+  "void fire_effect(void *vo, int level, int dam, int target, int evolution)": {
+    "brief": "Applies a recursive fire effect to a specified target, causing damage, effects, and potential destruction within the game environment.",
+    "details": "This function executes a recursive fire effect based on the target type. When targeting a room, it applies the effect to all objects within that room, including nested contents and gems, simulating the spreading and destructive nature of fire. For character targets, it may blind the character if they fail a saving throw, increases their thirst condition, and propagates the effect to all items they carry, including nested contents and gems, potentially causing damage or destruction. When targeting an object, it calculates a chance of ignition influenced by the level and damage parameters, considering item flags such as burn-proof, blessed, or non-purgable to determine if the object is destroyed. If the object is destroyed, its contents and gems scatter, and the effect is recursively applied to each. The function also manages visual feedback through act messages, handles object extraction, and respects item flags to prevent unintended destruction. It ensures effects are applied appropriately across nested objects and characters, effectively simulating fire's destructive and spreading behavior within the game environment, including effects on objects, gems, and characters in a consistent manner.",
+    "params": {
+      "dam": "The amount of damage inflicted by the fire, affecting severity and destruction chances.",
+      "level": "The level or potency of the fire effect, influencing damage and effect duration.",
+      "vo": "Pointer to the target entity, which can be a Room, Character, or Object, depending on the target parameter.",
+      "evolution": "The evolution level of the effect, influencing affect duration and intensity.",
+      "target": "An integer indicating the type of target: room, character, or object."
+    },
+    "returns": "Void; the function performs effects and state modifications without returning a value.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles complex interactions such as scattering object contents and gems, applying effects recursively, and respecting item flags like burn-proof, blessed, or no-purge to prevent destruction. It also provides visual feedback through in-game messages and ensures effects are appropriately propagated across nested objects and characters, accurately simulating the destructive and spreading nature of fire.",
+    "rationale": "This function is used in scenarios where a fire effect needs to be applied across multiple entities\u2014rooms, characters, and objects\u2014such as during spell effects, environmental hazards, or special abilities. Its recursive design allows for realistic spreading and destruction, making it essential for implementing immersive and dynamic fire-related mechanics within the game world.",
+    "state": "refined_summary",
+    "cid": "effects_8cc",
+    "mid": "effects_8cc_1af05d1d9c7b4315f537e0192b52509149",
+    "etype": "member",
+    "kind": "function",
+    "name": "fire_effect",
+    "qualified_name": null,
+    "definition": "void fire_effect",
+    "argsstring": "(void *vo, int level, int dam, int target, int evolution)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "magic_8cc, void spell_fire_breath(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": " Called to apply visual and damage effects of fire to the room, characters, or objects based on the spell's level and damage.",
+      "fight_8cc, void one_hit(Character *ch, Character *victim, skill::type attack_skill, bool secondary)": "Called to apply fire damage and effects recursively when weapon affects fire.",
+      "effects_8cc, void fire_effect(void *vo, int level, int dam, int target, int evolution)": "Recursively called to apply fire effects to objects, gems, and nested contents, handling destruction and scattering."
+    }
+  },
+  "void poison_effect(void *vo, int level, int dam, int target, int evolution)": {
+    "brief": "Applies poison effects recursively to rooms, characters, and objects based on specified parameters.",
+    "details": "The `poison_effect` function applies poison effects to various game entities depending on the target type. When targeting a room (`TARGET_ROOM`), it iterates through all objects in the room's contents and applies poison effects to each object by recursively calling itself with `TARGET_OBJ`. For character targets (`TARGET_CHAR`), it attempts to poison the character by performing a saving throw; if the character fails the save, it adds a poison affect to the character and displays appropriate messages. It also propagates poison to the character's equipment unless the character is immortal. When targeting objects (`TARGET_OBJ`), it evaluates whether the object can be poisoned based on its properties, such as burn-proof or blessed status, and a probabilistic chance influenced by the poison's level, damage, and the object's level. If the chance succeeds, it marks the object as poisoned by setting a specific value in its attributes. The function modifies the game state directly and does not return a value, supporting recursive propagation for complex scenarios like room contents and character inventories, ensuring comprehensive poisoning effects across the game environment.",
+    "params": {
+      "dam": "The damage value associated with the poison, affecting the poisoning probability.",
+      "level": "The level of the poison effect, influencing the chance and severity of poisoning.",
+      "vo": "A pointer to the target entity, which can be a Room, Character, or Object, depending on the target parameter.",
+      "evolution": "The evolution level of the poison, affecting its potency and effects.",
+      "target": "An integer indicating the type of target: TARGET_ROOM, TARGET_CHAR, or TARGET_OBJ."
+    },
+    "returns": "This function does not return a value; it modifies the game state by applying poison effects to rooms, characters, and objects.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function uses recursive calls to propagate poison effects throughout nested entities such as room contents and character inventories. It respects object properties like burn-proof and blessed status to prevent poisoning certain items. The chance calculations dynamically adjust based on the poison's level, damage, and object level, introducing variability in poisoning outcomes. The function also handles messaging and effect application seamlessly within the game environment.",
+    "rationale": "This function is used when applying poison effects as part of spells, traps, or environmental hazards, ensuring that all relevant entities\u2014rooms, characters, and objects\u2014are affected appropriately. Its recursive design allows for comprehensive and consistent poisoning across complex game scenarios, making it essential for implementing poison-based mechanics and effects in gameplay.",
+    "state": "refined_summary",
+    "cid": "effects_8cc",
+    "mid": "effects_8cc_1a9ceaa005da00a78793060313e6cae5c2",
+    "etype": "member",
+    "kind": "function",
+    "name": "poison_effect",
+    "qualified_name": null,
+    "definition": "void poison_effect",
+    "argsstring": "(void *vo, int level, int dam, int target, int evolution)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "magic_8cc, void spell_gas_breath(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": "Called to recursively apply poison effects to the room, characters, or objects based on the spell's parameters.",
+      "effects_8cc, void poison_effect(void *vo, int level, int dam, int target, int evolution)": " The function itself is called recursively to apply poison effects to objects, characters, and rooms."
+    }
+  },
+  "void shock_effect(void *vo, int level, int dam, int target, int evolution)": {
+    "brief": "Recursively applies a shock effect to game entities such as rooms, characters, and objects, causing damage, status effects, and potential destruction.",
+    "details": "The shock_effect function propagates a damaging electrical shock effect through various game entities, including rooms, characters, and objects. When targeting a room, it applies the effect to all contained objects by recursively calling itself on each. For characters, it performs a saving throw against electrical damage; if the save fails, it dazes the character for a duration proportional to the level and damage. It then recursively applies the effect to all items the character carries, excluding immortals. When targeting an object, it checks for protective flags such as sheen, burn-proof, or nopurge, which can prevent destruction. The chance of an object being destroyed depends on the level, damage, and item-specific modifiers like blessed status or item type. If destruction occurs, the object is removed from the game, and its contents and gems are scattered or destroyed, with the effect recursively applied to nested items. The function handles complex interactions, including scattering contents, gems, and nested objects, and modifies game entities by inflicting damage, causing destruction, and triggering related effects, all without returning a value.",
+    "params": {
+      "dam": "The amount of damage inflicted by the shock effect.",
+      "level": "The level or potency of the shock effect, influencing severity and recursive behavior.",
+      "vo": "Pointer to the target entity, which can be a Room, Character, or Object, depending on the target type.",
+      "evolution": "An integer parameter that may influence recursive effect strength or behavior.",
+      "target": "Integer indicating the type of target: room, character, or object."
+    },
+    "returns": "This function has no return value; it performs side effects on game entities affected by the shock effect.",
+    "tparams": null,
+    "throws": null,
+    "notes": "The function handles complex recursive interactions, including scattering nested contents and gems, and respects item protections such as sheen, burn-proof, and blessed flags. It ensures effects are applied consistently across different entity types and manages object destruction and containment hierarchies carefully.",
+    "rationale": "This function is used during spell effects, explosions, or environmental hazards to simulate electrical shocks that can damage, daze, or destroy game entities and their contents, supporting immersive and dynamic gameplay scenarios involving area effects and recursive damage propagation.",
+    "state": "refined_summary",
+    "cid": "effects_8cc",
+    "mid": "effects_8cc_1a14468fe3d3d1c08d51961782844c41e3",
+    "etype": "member",
+    "kind": "function",
+    "name": "shock_effect",
+    "qualified_name": null,
+    "definition": "void shock_effect",
+    "argsstring": "(void *vo, int level, int dam, int target, int evolution)",
+    "prompt": null,
+    "response": null,
+    "usages": {
+      "magic_8cc, void spell_lightning_breath(skill::type sn, int level, Character *ch, void *vo, int target, int evolution)": " Invoked to apply a shock status effect to the victim and recursively to related entities, with parameters influenced by spell success.",
+      "fight_8cc, void one_hit(Character *ch, Character *victim, skill::type attack_skill, bool secondary)": "Called to apply electric damage and effects recursively when weapon affects electricity.",
+      "effects_8cc, void shock_effect(void *vo, int level, int dam, int target, int evolution)": " Called recursively to apply the shock effect to objects, gems, and nested contents during explosions."
+    }
+  },
+  "effects.cc": {
+    "brief": null,
+    "details": null,
+    "params": {},
+    "returns": null,
+    "tparams": null,
+    "throws": null,
+    "notes": null,
+    "rationale": null,
+    "state": "extracted_summary",
+    "cid": "effects_8cc",
+    "mid": "effects_8cc",
+    "etype": "compound",
+    "kind": "file",
+    "name": "effects.cc",
+    "qualified_name": null,
+    "definition": null,
+    "argsstring": null,
+    "prompt": null,
+    "response": null,
+    "usages": null
+  }
+}

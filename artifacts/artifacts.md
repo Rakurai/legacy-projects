@@ -293,13 +293,15 @@ extracted_summary  →  generated_summary  →  refined_summary
 
 Current state distribution: 4,447 refined_summary, 732 extracted_summary, 94 generated_summary, 22 refined_usage.
 
-### `doc_db.json` (flat export)
+### `doc_db.json` (serialized documentation database) — STALE
 
-`doc_db.json` is a flat dictionary export of the per-compound files, keyed by stringified `(compound_id, signature)` tuples. The docgen notebooks write per-compound files in `generated_docs/`; `doc_db.json` is the consolidated form consumed by `classify_fns` and the MCP server build pipeline.
+<!-- spec 005, gaps.md §15: doc_db.json is a stale snapshot. The MCP build pipeline should switch to reading generated_docs/ directly. -->
 
-The key design is intentional: `(compound_id, signature)` is a **stable key** because `compound_id` is the Doxygen compound refid (immutable across regenerations) and `signature` is derived from the source code text (`definition + argsstring` for functions, `name` for everything else). Neither changes when Doxygen is re-run against the same source.
+> **Warning:** `doc_db.json` is a **stale snapshot** serialized before the LLM refinement passes. It contains only 12 fields and 2,272 briefs. The actual `generated_docs/` files have 20 fields and 4,946 briefs (93.4%), plus notes (83%), rationale (83%), and usages (55%). See `mcp/doc_server/specs/v1/gaps.B.md §1` for the full data audit.
 
-The `mid` field inside each doc entry stores the member hash from the Doxygen run at the time the doc was generated. **This field is untrustworthy** after a code_graph refresh — see "Entity ID Reconciliation" below.
+`artifacts/doc_db.json` is a flat JSON dictionary keyed by string-repr tuples `"('compound_id', 'signature')"` → document objects. Currently **5,307 entries** (of which only ~2,272 have non-empty `brief` fields — vs 4,946 in the actual generated_docs source).
+
+The MCP doc server's build pipeline (`build_helpers/loaders.py`) currently loads this file. **This should be replaced** with loading from `generated_docs/` per-compound files via `legacy_common.doc_db.DocumentDB`.
 
 ---
 

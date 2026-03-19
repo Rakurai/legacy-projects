@@ -6,7 +6,6 @@ is wrong, we fail loudly rather than silently coercing.
 """
 
 from server.db_models import Capability, Entity
-from server.enums import Provenance
 from server.models import CapabilitySummary, EntityDetail, EntitySummary
 
 
@@ -22,7 +21,6 @@ def entity_to_summary(entity: Entity) -> EntitySummary:
         brief=entity.brief,
         fan_in=entity.fan_in,
         fan_out=entity.fan_out,
-        provenance=Provenance.PRECOMPUTED,
     )
 
 
@@ -57,8 +55,6 @@ def entity_to_detail(
         rationale=entity.rationale,
         usages=entity.usages,
         notes=entity.notes,
-        side_effect_markers=entity.side_effect_markers,
-        provenance=Provenance.DOXYGEN_EXTRACTED,
     )
 
 
@@ -70,5 +66,4 @@ def capability_to_summary(cap: Capability) -> CapabilitySummary:
         description=cap.description,
         function_count=cap.function_count,
         stability=cap.stability,
-        provenance=Provenance.PRECOMPUTED,
     )

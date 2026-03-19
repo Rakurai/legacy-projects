@@ -4,20 +4,15 @@ Integration tests for behavioral analysis tools.
 Tests actual DB + graph execution via mock_ctx of:
 - get_behavior_slice
 - get_state_touches
-- get_hotspots
 """
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.db_models import Entity, Edge
 from server.errors import EntityNotFoundError
 from server.tools.behavior import (
     get_behavior_slice,
     get_state_touches,
-    get_hotspots,
 )
-
 
 # ---------- get_behavior_slice ----------
 
@@ -50,19 +45,6 @@ async def test_behavior_slice_capabilities_touched(mock_ctx, sample_entities, sa
     assert isinstance(caps, dict)
     # damage and armor_absorb are in "combat"
     assert "combat" in caps
-
-
-@pytest.mark.asyncio
-async def test_behavior_slice_side_effects(mock_ctx, sample_entities, sample_edges):
-    """Behavior slice extracts side effect markers."""
-    eid = sample_entities[1].entity_id  # do_kill
-    result = await get_behavior_slice(mock_ctx, entity_id=eid, max_depth=3, max_cone_size=50)
-
-    se = result.behavior.side_effects
-    assert isinstance(se, dict)
-    # damage has messaging + state_mutation markers; both should be present
-    assert "messaging" in se
-    assert "state_mutation" in se
 
 
 @pytest.mark.asyncio
@@ -122,75 +104,9 @@ async def test_state_touches_transitive(mock_ctx, sample_entities, sample_edges)
 
 @pytest.mark.asyncio
 async def test_state_touches_side_effects(mock_ctx, sample_entities, sample_edges):
-    """Side effects are extracted from callees."""
+    """Side effect fields are no longer present."""
     eid = sample_entities[1].entity_id  # do_kill
     result = await get_state_touches(mock_ctx, entity_id=eid)
 
-    assert isinstance(result.direct_side_effects, list)
-    assert isinstance(result.transitive_side_effects, list)
-    # damage (direct callee of do_kill) has side_effect_markers
-    categories = [m.category for m in result.direct_side_effects]
-    assert "messaging" in categories or "state_mutation" in categories
-
-
-# ---------- get_hotspots ----------
-
-@pytest.mark.asyncio
-async def test_hotspots_fan_in(mock_ctx, sample_entities):
-    """Fan-in hotspots ranked by fan_in descending."""
-    result = await get_hotspots(mock_ctx, metric="fan_in", limit=5)
-
-    assert result.metric == "fan_in"
-    assert len(result.hotspots) >= 1
-    # damage has fan_in=23 (highest)
-    assert result.hotspots[0].name == "damage"
-
-
-@pytest.mark.asyncio
-async def test_hotspots_fan_out(mock_ctx, sample_entities):
-    """Fan-out hotspots ranked by fan_out descending."""
-    result = await get_hotspots(mock_ctx, metric="fan_out", limit=5)
-
-    assert result.metric == "fan_out"
-    assert len(result.hotspots) >= 1
-    # do_kill has fan_out=15 (highest)
-    assert result.hotspots[0].name == "do_kill"
-
-
-@pytest.mark.asyncio
-async def test_hotspots_bridge(mock_ctx, sample_entities):
-    """Bridge hotspots filter to is_bridge=True."""
-    result = await get_hotspots(mock_ctx, metric="bridge", limit=5)
-
-    assert result.metric == "bridge"
-    # Only damage has is_bridge=True
-    if result.hotspots:
-        assert result.hotspots[0].name == "damage"
-
-
-@pytest.mark.asyncio
-async def test_hotspots_underdocumented(mock_ctx, sample_entities):
-    """Underdocumented hotspots filter to entities with no brief."""
-    result = await get_hotspots(mock_ctx, metric="underdocumented", limit=5)
-
-    assert result.metric == "underdocumented"
-    # All sample entities have briefs, so no underdocumented results
-    assert result.hotspots == []
-
-
-@pytest.mark.asyncio
-async def test_hotspots_with_capability_filter(mock_ctx, sample_entities):
-    """Capability filter restricts results."""
-    result = await get_hotspots(mock_ctx, metric="fan_in", capability="combat", limit=5)
-
-    for h in result.hotspots:
-        assert h.capability == "combat"
-
-
-@pytest.mark.asyncio
-async def test_hotspots_with_kind_filter(mock_ctx, sample_entities):
-    """Kind filter restricts results."""
-    result = await get_hotspots(mock_ctx, metric="fan_in", kind="function", limit=5)
-
-    for h in result.hotspots:
-        assert h.kind == "function"
+    assert not hasattr(result, "direct_side_effects")
+    assert not hasattr(result, "transitive_side_effects")

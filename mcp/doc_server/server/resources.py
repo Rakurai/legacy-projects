@@ -184,7 +184,6 @@ async def get_entity_resource(
         "rationale": entity.rationale,
         "usages": entity.usages,
         "notes": entity.notes,
-        "side_effect_markers": entity.side_effect_markers,
     }
 
 

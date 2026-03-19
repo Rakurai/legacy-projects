@@ -51,43 +51,14 @@ class Relationship(StrEnum):
 
 
 # ---------------------------------------------------------------------------
-# Side-effect analysis
+# Behavior analysis
 # ---------------------------------------------------------------------------
-
-class SideEffectCategory(StrEnum):
-    """Categories of side effects detected by heuristic analysis."""
-    MESSAGING = "messaging"
-    PERSISTENCE = "persistence"
-    STATE_MUTATION = "state_mutation"
-    SCHEDULING = "scheduling"
-
 
 class AccessType(StrEnum):
     """Whether a relationship is direct or transitive."""
     DIRECT = "direct"
     TRANSITIVE = "transitive"
 
-
-class Confidence(StrEnum):
-    """Confidence level of a side-effect marker."""
-    DIRECT = "direct"
-    HEURISTIC = "heuristic"
-    TRANSITIVE = "transitive"
-
-
-# ---------------------------------------------------------------------------
-# Provenance tracking (FR-044)
-# ---------------------------------------------------------------------------
-
-class Provenance(StrEnum):
-    """Data source label per FR-044."""
-    DOXYGEN_EXTRACTED = "doxygen_extracted"
-    LLM_GENERATED = "llm_generated"
-    SUBSYSTEM_NARRATIVE = "subsystem_narrative"
-    PRECOMPUTED = "precomputed"
-    INFERRED = "inferred"
-    HEURISTIC = "heuristic"
-    MEASURED = "measured"
 
 
 # ---------------------------------------------------------------------------
@@ -144,18 +115,6 @@ class CapabilityType(StrEnum):
     PROJECTION = "projection"
     INFRASTRUCTURE = "infrastructure"
     UTILITY = "utility"
-
-
-# ---------------------------------------------------------------------------
-# Hotspot metrics
-# ---------------------------------------------------------------------------
-
-class HotspotMetric(StrEnum):
-    """Ranking metric for hotspot detection."""
-    FAN_IN = "fan_in"
-    FAN_OUT = "fan_out"
-    BRIDGE = "bridge"
-    UNDERDOCUMENTED = "underdocumented"
 
 
 # ---------------------------------------------------------------------------

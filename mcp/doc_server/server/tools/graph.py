@@ -4,19 +4,14 @@ Graph Navigation Tools - callers, callees, dependencies, hierarchy, related.
 Tools are decorated at module level with @mcp.tool() and remain directly importable.
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
-from sqlmodel import select
 
 from server.app import get_ctx, mcp
 from server.converters import entity_to_summary
-from server.db_models import Entity
 from server.enums import Relationship
-from server.graph import (
-    INCLUDES,
-)
 from server.graph import (
     get_callees as get_callees_fn,
 )
@@ -64,13 +59,6 @@ class RelatedEntitiesResponse(BaseModel):
     """Response from get_related_entities tool."""
     entity_id: str
     neighbors_by_relationship: dict[str, list[EntitySummary]]
-    truncation: TruncationMetadata
-
-
-class RelatedFilesResponse(BaseModel):
-    """Response from get_related_files tool."""
-    file_path: str
-    related_files: list[dict]
     truncation: TruncationMetadata
 
 
@@ -177,7 +165,7 @@ async def get_dependencies(
     direction: Annotated[
         str,
         Field(description="Edge direction: incoming, outgoing, both"),
-    ] = "both",
+    ] = "outgoing",
     limit: Annotated[int, Field(ge=1, le=500, description="Maximum results")] = 100,
 ) -> DependenciesResponse:
     """
@@ -246,28 +234,36 @@ async def get_dependencies(
 async def get_class_hierarchy(
     ctx: Context,
     entity_id: Annotated[str, Field(description="Class entity ID")],
+    direction: Annotated[
+        Literal["ancestors", "descendants", "both"],
+        Field(description="Which direction: ancestors, descendants, or both"),
+    ] = "both",
 ) -> ClassHierarchyResponse:
     """
     Get class hierarchy (base classes and derived classes).
+
+    direction: 'ancestors' (base classes only), 'descendants' (derived only), 'both'.
     """
     lc = get_ctx(ctx)
     graph = lc["graph"]
 
-    log.info("get_class_hierarchy", entity_id=entity_id)
+    log.info("get_class_hierarchy", entity_id=entity_id, direction=direction)
 
     async with lc["db_manager"].session() as session:
         hierarchy = get_class_hierarchy_fn(graph, entity_id)
 
-        all_ids = hierarchy["base_classes"] + hierarchy["derived_classes"]
+        base_ids = hierarchy["base_classes"] if direction in ("ancestors", "both") else []
+        derived_ids = hierarchy["derived_classes"] if direction in ("descendants", "both") else []
+        all_ids = base_ids + derived_ids
         entity_map = await fetch_entity_map(session, all_ids)
 
     base_classes = [
         entity_to_summary(entity_map[e])
-        for e in hierarchy["base_classes"] if e in entity_map
+        for e in base_ids if e in entity_map
     ]
     derived_classes = [
         entity_to_summary(entity_map[e])
-        for e in hierarchy["derived_classes"] if e in entity_map
+        for e in derived_ids if e in entity_map
     ]
 
     return ClassHierarchyResponse(
@@ -281,15 +277,17 @@ async def get_class_hierarchy(
 async def get_related_entities(
     ctx: Context,
     entity_id: Annotated[str, Field(description="Entity ID")],
-    limit: Annotated[int, Field(ge=1, le=500, description="Maximum results")] = 100,
+    limit_per_type: Annotated[int, Field(ge=1, le=500, description="Maximum results per relationship group")] = 20,
 ) -> RelatedEntitiesResponse:
     """
     Get all direct neighbors grouped by relationship type.
+
+    Results are capped per relationship group (limit_per_type).
     """
     lc = get_ctx(ctx)
     graph = lc["graph"]
 
-    log.info("get_related_entities", entity_id=entity_id)
+    log.info("get_related_entities", entity_id=entity_id, limit_per_type=limit_per_type)
 
     async with lc["db_manager"].session() as session:
         if entity_id not in graph:
@@ -301,97 +299,56 @@ async def get_related_entities(
                 ),
             )
 
-        all_neighbors: list[tuple[str, str, str]] = []
-        seen = set()
+        # Collect all neighbors, grouped by relationship key
+        groups: dict[str, list[str]] = {}
 
         for _, target, data in graph.out_edges(entity_id, data=True):
-            key = (target, data.get("type", "unknown"), "outgoing")
-            if key not in seen:
-                seen.add(key)
-                all_neighbors.append(key)
+            key = f"{data.get('type', 'unknown')}_outgoing"
+            groups.setdefault(key, []).append(target)
 
         for source, _, data in graph.in_edges(entity_id, data=True):
-            key = (source, data.get("type", "unknown"), "incoming")
-            if key not in seen:
-                seen.add(key)
-                all_neighbors.append(key)
+            key = f"{data.get('type', 'unknown')}_incoming"
+            groups.setdefault(key, []).append(source)
 
-        all_neighbors = all_neighbors[:limit]
-
-        all_ids = list({n[0] for n in all_neighbors})
+        # Collect unique IDs for DB fetch (all groups, pre-truncation)
+        all_ids = list({eid for ids in groups.values() for eid in ids})
         entity_map = await fetch_entity_map(session, all_ids)
 
+    # Truncate per group and build response
+    truncated = False
     neighbors_by_relationship: dict[str, list[EntitySummary]] = {}
-    total = 0
-    for neighbor_id, rel_type, direction in all_neighbors:
-        if neighbor_id in entity_map:
-            key = f"{rel_type}_{direction}"
-            neighbors_by_relationship.setdefault(key, []).append(
-                entity_to_summary(entity_map[neighbor_id])
-            )
-            total += 1
+    total_available = 0
+    total_returned = 0
+
+    for key, neighbor_ids in groups.items():
+        # Deduplicate within group
+        seen: set[str] = set()
+        unique_ids: list[str] = []
+        for nid in neighbor_ids:
+            if nid not in seen:
+                seen.add(nid)
+                unique_ids.append(nid)
+
+        total_available += len(unique_ids)
+
+        if len(unique_ids) > limit_per_type:
+            truncated = True
+            unique_ids = unique_ids[:limit_per_type]
+
+        summaries = [
+            entity_to_summary(entity_map[nid])
+            for nid in unique_ids if nid in entity_map
+        ]
+        if summaries:
+            neighbors_by_relationship[key] = summaries
+            total_returned += len(summaries)
 
     return RelatedEntitiesResponse(
         entity_id=entity_id,
         neighbors_by_relationship=neighbors_by_relationship,
         truncation=TruncationMetadata(
-            truncated=total >= limit,
-            total_available=total,
-            node_count=total,
-        ),
-    )
-
-
-@mcp.tool()
-async def get_related_files(
-    ctx: Context,
-    file_path: Annotated[str, Field(description="Source file path")],
-    limit: Annotated[int, Field(ge=1, le=200, description="Maximum results")] = 50,
-) -> RelatedFilesResponse:
-    """
-    Find related files via include relationships.
-    """
-    lc = get_ctx(ctx)
-    graph = lc["graph"]
-
-    log.info("get_related_files", file_path=file_path)
-
-    async with lc["db_manager"].session() as session:
-        result = await session.execute(
-            select(Entity).where(Entity.file_path == file_path).where(Entity.kind == "file")
-        )
-        file_entities = list(result.scalars().all())
-
-        target_ids: list[str] = []
-        for fe in file_entities:
-            if fe.entity_id not in graph:
-                continue
-            for _, target, data in graph.out_edges(fe.entity_id, data=True):
-                if data.get("type") == INCLUDES:
-                    target_ids.append(target)
-
-        entity_map = await fetch_entity_map(session, target_ids)
-
-    related_map: dict[str, dict] = {}
-    for target_id in target_ids:
-        te = entity_map.get(target_id)
-        if te and te.file_path:
-            if te.file_path not in related_map:
-                related_map[te.file_path] = {
-                    "file_path": te.file_path,
-                    "relationship": INCLUDES,
-                    "entity_count": 0,
-                }
-            related_map[te.file_path]["entity_count"] += 1
-
-    related_files = list(related_map.values())[:limit]
-
-    return RelatedFilesResponse(
-        file_path=file_path,
-        related_files=related_files,
-        truncation=TruncationMetadata(
-            truncated=len(related_map) > limit,
-            total_available=len(related_map),
-            node_count=len(related_files),
+            truncated=truncated,
+            total_available=total_available,
+            node_count=total_returned,
         ),
     )

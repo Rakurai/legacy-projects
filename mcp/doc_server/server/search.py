@@ -27,7 +27,7 @@ if TYPE_CHECKING:
 
 from server.converters import entity_to_summary
 from server.db_models import Entity
-from server.enums import Provenance, SearchMode
+from server.enums import SearchMode
 from server.logging_config import log
 from server.models import SearchResult
 
@@ -192,7 +192,6 @@ async def hybrid_search(
             result_type="entity",
             score=min(score / normalizer, 1.0),
             search_mode=search_mode,
-            provenance=Provenance.PRECOMPUTED,
             entity_summary=entity_to_summary(entity),
         ))
 

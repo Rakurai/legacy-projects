@@ -109,15 +109,6 @@ async def test_list_entry_points(mock_ctx, sample_entities, sample_entry_points)
 
 
 @pytest.mark.asyncio
-async def test_list_entry_points_with_capability_filter(mock_ctx, sample_entities, sample_entry_points):
-    """Capability filter restricts entry points."""
-    result = await list_entry_points(mock_ctx, capability="commands")
-
-    for ep in result.entry_points:
-        assert ep.capability == "commands"
-
-
-@pytest.mark.asyncio
 async def test_list_entry_points_with_name_pattern(mock_ctx, sample_entities, sample_entry_points):
     """Name pattern filter (SQL LIKE) restricts entry points."""
     result = await list_entry_points(mock_ctx, name_pattern="do_%")
@@ -128,8 +119,8 @@ async def test_list_entry_points_with_name_pattern(mock_ctx, sample_entities, sa
 
 @pytest.mark.asyncio
 async def test_list_entry_points_empty(mock_ctx, sample_entities, sample_entry_points):
-    """Non-matching filter returns empty list."""
-    result = await list_entry_points(mock_ctx, capability="nonexistent_cap")
+    """Non-matching name pattern returns empty list."""
+    result = await list_entry_points(mock_ctx, name_pattern="zzz_nonexistent%")
 
     assert result.entry_points == []
 

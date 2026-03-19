@@ -62,11 +62,6 @@ class Entity(SQLModel, table=True):
     fan_in: int = Field(default=0, ge=0, description="Incoming CALLS edges")
     fan_out: int = Field(default=0, ge=0, description="Outgoing CALLS edges")
     is_bridge: bool = Field(default=False, description="Callers/callees span different capabilities")
-    side_effect_markers: dict[str, list[str]] | None = Field(
-        default=None,
-        sa_column=Column(JSONB),
-        description="JSON: {messaging: [...], persistence: [...], state_mutation: [...], scheduling: [...]}"
-    )
 
     # Embedding
     embedding: list[float] | None = Field(

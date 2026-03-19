@@ -5,7 +5,6 @@ Loads dependency graph from GML file and:
 - Extracts edges for database population
 - Computes fan_in/fan_out metrics
 - Identifies bridge functions (cross-capability edges)
-- Categorizes side-effect markers
 
 Uses existing doxygen_graph.py parser to load GML.
 """
@@ -13,13 +12,9 @@ Uses existing doxygen_graph.py parser to load GML.
 from collections import defaultdict
 from pathlib import Path
 
+from build_helpers.entity_processor import MergedEntity
 from legacy_common.doxygen_graph import load_graph
-
-from build_helpers.entity_processor import SIDE_EFFECT_FUNCTIONS, MergedEntity
 from server.logging_config import log
-
-# Maximum BFS depth when scanning for transitive side-effect calls
-_SIDE_EFFECT_BFS_DEPTH = 2
 
 
 def load_graph_edges(
@@ -170,81 +165,3 @@ def compute_bridge_flags(
             bridge_count += 1
 
     log.info("Bridge flags computed", bridge_count=bridge_count)
-
-
-def compute_side_effect_markers(
-    merged_entities: list[MergedEntity],
-    edges: list[tuple[str, str, str]]
-) -> None:
-    """
-    Compute side_effect_markers by categorizing called functions.
-
-    For each entity, traverse CALLS edges and check if callees are in the
-    curated side-effect function list. Categorize by type (messaging, persistence,
-    state_mutation, scheduling).
-
-    Tracks direct vs. transitive markers (depth 1 vs. depth >1).
-
-    Updates merged_entity.side_effect_markers in place.
-
-    Args:
-        merged_entities: List of merged entity records
-        edges: List of (source_id, target_id, relationship) tuples
-    """
-    log.info("Computing side-effect markers")
-
-    # Build entity_id → name map
-    name_map: dict[str, str] = {
-        merged.entity_id: merged.entity.name for merged in merged_entities
-    }
-
-    # Build adjacency list for CALLS edges
-    callees_map: dict[str, list[str]] = defaultdict(list)
-    for source, target, relationship in edges:
-        if relationship.lower() == "calls":
-            callees_map[source].append(target)
-
-    # Build reverse lookup: function name → side-effect category
-    effect_category: dict[str, str] = {}
-    for category, funcs in SIDE_EFFECT_FUNCTIONS.items():
-        for func in funcs:
-            effect_category[func] = category
-
-    # Compute side effects for each entity
-    for merged in merged_entities:
-        entity_id = merged.entity_id
-        markers: dict[str, list[str]] = {
-            "messaging": [],
-            "persistence": [],
-            "state_mutation": [],
-            "scheduling": []
-        }
-
-        # BFS to depth _SIDE_EFFECT_BFS_DEPTH (direct + one level transitive)
-        visited: set[str] = {entity_id}
-        queue: list[tuple[str, int]] = [(entity_id, 0)]
-
-        while queue:
-            current, depth = queue.pop(0)
-
-            if depth >= _SIDE_EFFECT_BFS_DEPTH:
-                continue
-
-            for callee in callees_map[current]:
-                if callee in visited:
-                    continue
-
-                visited.add(callee)
-                callee_name = name_map.get(callee, "")
-
-                # Check if callee is a side-effect function
-                if callee_name in effect_category:
-                    category = effect_category[callee_name]
-                    markers[category].append(callee_name)
-
-                queue.append((callee, depth + 1))
-
-        # Only store non-empty markers
-        merged.side_effect_markers = {k: v for k, v in markers.items() if v}
-
-    log.info("Side-effect markers computed")

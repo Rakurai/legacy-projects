@@ -8,7 +8,8 @@ from typing import Annotated
 
 from fastmcp import Context
 from pydantic import BaseModel, Field
-from sqlmodel import select
+from sqlalchemy.dialects.postgresql import JSONB
+from sqlmodel import col, select
 
 from server.app import get_ctx, mcp
 from server.converters import capability_to_summary, entity_to_summary
@@ -62,7 +63,7 @@ async def list_capabilities(ctx: Context) -> ListCapabilitiesResponse:
     List all capability groups with metadata.
 
     Returns all 30 capability groups with type, description,
-    function count, stability, and doc quality distribution.
+    function count, and stability.
     """
     lc = get_ctx(ctx)
 
@@ -87,6 +88,11 @@ async def get_capability_detail(
 ) -> GetCapabilityDetailResponse:
     """
     Get detailed capability information with dependencies and entry points.
+
+    The entry_points field returns entry points that route into this capability
+    via their transitive call cone, not entry points classified as this capability.
+    Entry points have capability=NULL (they are dispatchers); the EntryPoint.capabilities
+    JSONB column is enriched at build time with transitive capability data.
     """
     lc = get_ctx(ctx)
 
@@ -108,8 +114,7 @@ async def get_capability_detail(
 
         ep_result = await session.execute(
             select(EntryPoint)
-            .join(Entity, Entity.entity_id == EntryPoint.entity_id)
-            .where(Entity.capability == capability)
+            .where(col(EntryPoint.capabilities).cast(JSONB).contains([capability]))
             .order_by(EntryPoint.name)
         )
         entry_points = [ep.name for ep in ep_result.scalars().all()]
@@ -133,7 +138,6 @@ async def get_capability_detail(
         dependencies=dependencies,
         entry_points=entry_points,
         functions=functions,
-        provenance="precomputed",
     )
 
     return GetCapabilityDetailResponse(detail=detail)
@@ -235,21 +239,22 @@ async def compare_capabilities(
 @mcp.tool()
 async def list_entry_points(
     ctx: Context,
-    capability: Annotated[str | None, Field(description="Optional capability filter")] = None,
     name_pattern: Annotated[str | None, Field(description="SQL LIKE pattern (e.g., 'do_look%')")] = None,
     limit: Annotated[int, Field(ge=1, le=500, description="Maximum results")] = 100,
 ) -> ListEntryPointsResponse:
     """
     List entry points (do_*, spell_*, spec_* functions).
+
+    Entry points have capability=NULL by design — they are routing dispatchers,
+    not capability implementations. Use get_capability_detail to find which
+    entry points route into a specific capability.
     """
     lc = get_ctx(ctx)
 
-    log.info("list_entry_points", capability=capability, name_pattern=name_pattern)
+    log.info("list_entry_points", name_pattern=name_pattern)
 
     async with lc["db_manager"].session() as session:
         stmt = select(Entity).where(Entity.is_entry_point == True)  # noqa: E712
-        if capability:
-            stmt = stmt.where(Entity.capability == capability)
         if name_pattern:
             stmt = stmt.where(Entity.name.like(name_pattern))
         stmt = stmt.order_by(Entity.name).limit(limit)

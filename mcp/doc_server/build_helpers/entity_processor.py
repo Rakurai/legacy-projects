@@ -5,7 +5,6 @@ Takes raw entity and documentation data and produces enriched entity records
 ready for database insertion. Computes:
 - fan_in/fan_out (from CALLS edges in dependency graph)
 - is_bridge (cross-capability callers/callees)
-- side_effect_markers (categorized by type)
 - is_entry_point (do_*, spell_*, spec_* pattern)
 - search vectors (weighted tsvector composition)
 """
@@ -21,27 +20,6 @@ from server.logging_config import log
 
 class BuildError(Exception):
     """Raised when the build pipeline detects an unrecoverable data problem."""
-
-
-# Side-effect function markers (categorized)
-SIDE_EFFECT_FUNCTIONS = {
-    "messaging": [
-        "send_to_char", "send_to_room", "act", "printf_to_char", "page_to_char",
-        "echo_to_char", "echo_to_room", "echo_to_all", "wiznet", "announce",
-    ],
-    "persistence": [
-        "save_char", "save_char_obj", "save_area", "fwrite_char", "fwrite_obj",
-        "sql_save", "sql_update", "sql_insert", "sql_delete", "write_player",
-    ],
-    "state_mutation": [
-        "affect_to_char", "affect_strip", "affect_remove", "set_fighting",
-        "stop_fighting", "extract_char", "char_from_room", "char_to_room",
-        "obj_from_char", "obj_to_char", "obj_from_room", "obj_to_room",
-    ],
-    "scheduling": [
-        "event_create", "add_event", "schedule", "WAIT_STATE", "delay_event",
-    ],
-}
 
 
 class SignatureMap:
@@ -98,7 +76,6 @@ class MergedEntity:
         self.fan_out: int = 0
         self.is_bridge: bool = False
         self.is_entry_point: bool = False
-        self.side_effect_markers: dict[str, list[str]] = {}
         self.embedding: list[float] | None = None
         self._capability: str | None = None
 
@@ -356,7 +333,7 @@ def assign_capabilities(
     log.info("Capabilities assigned", assigned=assigned, total=len(merged_entities))
 
 
-# Note: fan_in, fan_out, is_bridge, and side_effect_markers
-# are computed from the dependency graph in graph_loader.py
-# after edges are loaded. These functions will be called from
-# the main build pipeline after graph construction.
+# Note: fan_in, fan_out, and is_bridge are computed from the
+# dependency graph in graph_loader.py after edges are loaded.
+# These functions will be called from the main build pipeline
+# after graph construction.

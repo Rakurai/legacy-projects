@@ -1,12 +1,4 @@
-"""
-Integration tests for entity lookup tools.
-
-Tests actual DB execution via mock_ctx of:
-- get_entity (by id, with code, with neighbors)
-- get_source_code
-- list_file_entities
-- get_file_summary
-"""
+"""Integration tests for entity lookup tools."""
 
 import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,8 +8,6 @@ from server.errors import EntityNotFoundError
 from server.tools.entity import (
     get_entity,
     get_source_code,
-    list_file_entities,
-    get_file_summary,
 )
 
 
@@ -85,52 +75,3 @@ async def test_get_source_code_not_found(mock_ctx, sample_entities):
     """Missing entity raises EntityNotFoundError."""
     with pytest.raises(EntityNotFoundError):
         await get_source_code(mock_ctx, entity_id="nonexistent_id_xyz")
-
-
-# ---------- list_file_entities ----------
-
-@pytest.mark.asyncio
-async def test_list_file_entities(mock_ctx, sample_entities):
-    """Lists all entities in a file ordered by start line."""
-    result = await list_file_entities(mock_ctx, file_path="src/fight.cc")
-
-    assert result.file_path == "src/fight.cc"
-    # fight.cc has: max_damage (line 10), armor_absorb (line 50), damage (line 100), file entity
-    assert len(result.entities) >= 3
-
-
-@pytest.mark.asyncio
-async def test_list_file_entities_with_kind_filter(mock_ctx, sample_entities):
-    """Kind filter restricts results."""
-    result = await list_file_entities(mock_ctx, file_path="src/fight.cc", kind="function")
-
-    assert all(e.kind == "function" for e in result.entities)
-
-
-@pytest.mark.asyncio
-async def test_list_file_entities_empty(mock_ctx, sample_entities):
-    """Non-existent file returns empty list."""
-    result = await list_file_entities(mock_ctx, file_path="src/nonexistent.cc")
-
-    assert result.entities == []
-
-
-# ---------- get_file_summary ----------
-
-@pytest.mark.asyncio
-async def test_get_file_summary(mock_ctx, sample_entities):
-    """Returns aggregated file stats."""
-    result = await get_file_summary(mock_ctx, file_path="src/fight.cc")
-
-    assert result.file_path == "src/fight.cc"
-    assert result.entity_count >= 3
-    assert "function" in result.entity_count_by_kind
-    assert "combat" in result.capability_distribution
-    assert len(result.top_entities_by_fan_in) >= 1
-
-
-@pytest.mark.asyncio
-async def test_get_file_summary_not_found(mock_ctx, sample_entities):
-    """Non-existent file raises EntityNotFoundError."""
-    with pytest.raises(EntityNotFoundError):
-        await get_file_summary(mock_ctx, file_path="src/nonexistent.cc")

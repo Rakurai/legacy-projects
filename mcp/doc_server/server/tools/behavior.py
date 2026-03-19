@@ -15,10 +15,6 @@ from server.converters import entity_to_summary
 from server.db_models import Entity
 from server.enums import (
     AccessType,
-    Confidence,
-    HotspotMetric,
-    Provenance,
-    SideEffectCategory,
     TruncationReason,
 )
 from server.errors import EntityNotFoundError
@@ -29,7 +25,6 @@ from server.models import (
     CapabilityTouch,
     EntitySummary,
     GlobalTouch,
-    SideEffectMarker,
     TruncationMetadata,
 )
 from server.util import fetch_entity_summaries
@@ -50,45 +45,7 @@ class StateTouchesResponse(BaseModel):
     entity_id: str
     signature: str
     direct_uses: list[EntitySummary]
-    direct_side_effects: list[SideEffectMarker]
     transitive_uses: list[EntitySummary]
-    transitive_side_effects: list[SideEffectMarker]
-
-
-class HotspotsResponse(BaseModel):
-    """Response from get_hotspots tool."""
-    metric: str
-    hotspots: list[EntitySummary]
-    truncation: TruncationMetadata
-
-
-def _extract_side_effects_for_entities(
-    entities: dict[str, Entity],
-    entity_ids: list[str],
-    access_type: AccessType,
-) -> list[SideEffectMarker]:
-    """Extract side effect markers from a set of entities."""
-    markers: list[SideEffectMarker] = []
-    for eid in entity_ids:
-        entity = entities.get(eid)
-        if not entity:
-            continue
-        sem = entity.side_effect_markers
-        if not sem or not isinstance(sem, dict):
-            continue
-        for category, functions in sem.items():
-            if category not in (SideEffectCategory.MESSAGING, SideEffectCategory.PERSISTENCE, SideEffectCategory.STATE_MUTATION, SideEffectCategory.SCHEDULING):
-                continue
-            if isinstance(functions, list) and functions:
-                markers.append(SideEffectMarker(
-                    function_id=eid,
-                    function_name=entity.name or eid,
-                    category=category,
-                    access_type=access_type,
-                    confidence=Confidence.DIRECT if access_type == AccessType.DIRECT else Confidence.TRANSITIVE,
-                    provenance=Provenance.HEURISTIC,
-                ))
-    return markers
 
 
 @mcp.tool()
@@ -102,7 +59,7 @@ async def get_behavior_slice(
     Compute transitive call cone with behavioral analysis.
 
     Analyzes direct/transitive callees, capabilities touched,
-    globals used, and side effects (messaging, persistence, state_mutation, scheduling).
+    and globals used.
     """
     lc = get_ctx(ctx)
     graph = lc["graph"]
@@ -188,15 +145,6 @@ async def get_behavior_slice(
                         kind="variable", access_type=AccessType.TRANSITIVE,
                     ))
 
-    # Side effects
-    side_effects: dict[str, list[SideEffectMarker]] = {}
-    for m in _extract_side_effects_for_entities(all_entities_map, [entity_id], AccessType.DIRECT):
-        side_effects.setdefault(m.category, []).append(m)
-    for m in _extract_side_effects_for_entities(all_entities_map, direct_ids, AccessType.DIRECT):
-        side_effects.setdefault(m.category, []).append(m)
-    for m in _extract_side_effects_for_entities(all_entities_map, transitive_ids, AccessType.TRANSITIVE):
-        side_effects.setdefault(m.category, []).append(m)
-
     behavior = BehaviorSlice(
         entry_point=seed_summary,
         direct_callees=direct_summaries,
@@ -205,8 +153,6 @@ async def get_behavior_slice(
         truncated=truncated,
         capabilities_touched=cap_touches,
         globals_used=globals_used,
-        side_effects=side_effects,
-        provenance=Provenance.INFERRED,
     )
 
     total_cone = len(direct_summaries) + len(transitive_summaries)
@@ -270,22 +216,6 @@ async def get_state_touches(
         )
         entity_map = {e.entity_id: e for e in result.scalars().all()}
 
-        # Indirect callees for transitive side effects
-        indirect_callee_ids: list[str] = []
-        for callee_id in direct_callee_ids:
-            if callee_id not in graph:
-                continue
-            for _, target, data in graph.out_edges(callee_id, data=True):
-                if data.get("type") == CALLS and target not in direct_callee_ids:
-                    indirect_callee_ids.append(target)
-
-        if indirect_callee_ids:
-            result2 = await session.execute(
-                select(Entity).where(Entity.entity_id.in_(indirect_callee_ids))
-            )
-            for e in result2.scalars().all():
-                entity_map[e.entity_id] = e
-
     direct_uses = [
         entity_to_summary(entity_map[e])
         for e in direct_use_ids
@@ -296,71 +226,10 @@ async def get_state_touches(
         for e in transitive_use_ids
         if e in entity_map and entity_map[e].kind == "variable"
     ]
-    direct_side_effects = _extract_side_effects_for_entities(entity_map, direct_callee_ids, AccessType.DIRECT)
-    transitive_side_effects = _extract_side_effects_for_entities(entity_map, indirect_callee_ids, AccessType.TRANSITIVE)
 
     return StateTouchesResponse(
         entity_id=entity_id,
         signature=entity.signature,
         direct_uses=direct_uses,
-        direct_side_effects=direct_side_effects,
         transitive_uses=transitive_uses,
-        transitive_side_effects=transitive_side_effects,
-    )
-
-
-@mcp.tool()
-async def get_hotspots(
-    ctx: Context,
-    metric: Annotated[
-        HotspotMetric,
-        Field(description="Ranking metric"),
-    ],
-    kind: Annotated[str | None, Field(description="Optional kind filter")] = None,
-    capability: Annotated[str | None, Field(description="Optional capability filter")] = None,
-    limit: Annotated[int, Field(ge=1, le=100, description="Maximum results")] = 20,
-) -> HotspotsResponse:
-    """
-    Find architectural hotspots ranked by metric.
-
-    Metrics: fan_in (most called), fan_out (calls most), bridge (cross-capability),
-    underdocumented (important but poorly documented).
-    """
-    lc = get_ctx(ctx)
-
-    log.info("get_hotspots", metric=metric, kind=kind, capability=capability)
-
-    async with lc["db_manager"].session() as session:
-        stmt = select(Entity)
-        if kind:
-            stmt = stmt.where(Entity.kind == kind)
-        if capability:
-            stmt = stmt.where(Entity.capability == capability)
-
-        if metric == HotspotMetric.FAN_IN:
-            stmt = stmt.order_by(Entity.fan_in.desc())
-        elif metric == HotspotMetric.FAN_OUT:
-            stmt = stmt.order_by(Entity.fan_out.desc())
-        elif metric == HotspotMetric.BRIDGE:
-            stmt = stmt.where(Entity.is_bridge == True)  # noqa: E712
-            stmt = stmt.order_by(Entity.fan_in.desc())
-        elif metric == HotspotMetric.UNDERDOCUMENTED:
-            stmt = stmt.where(Entity.brief.is_(None))
-            stmt = stmt.order_by(Entity.fan_in.desc())
-
-        stmt = stmt.limit(limit)
-
-        result = await session.execute(stmt)
-        entities = list(result.scalars().all())
-
-    summaries = [entity_to_summary(e) for e in entities]
-
-    return HotspotsResponse(
-        metric=metric,
-        hotspots=summaries,
-        truncation=TruncationMetadata(
-            truncated=False,
-            total_available=len(summaries),
-            node_count=len(summaries),
-        ),
     )

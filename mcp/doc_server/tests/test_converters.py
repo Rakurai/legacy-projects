@@ -5,10 +5,9 @@ Tests entity_to_summary, entity_to_detail, and capability_to_summary
 with various inputs to cover all conversion branches.
 """
 
-import pytest
 
-from server.db_models import Entity, Capability
-from server.converters import entity_to_summary, entity_to_detail, capability_to_summary
+from server.converters import capability_to_summary, entity_to_detail, entity_to_summary
+from server.db_models import Capability, Entity
 
 
 def _make_entity(**overrides) -> Entity:
@@ -33,7 +32,6 @@ def _make_entity(**overrides) -> Entity:
         fan_in=5,
         fan_out=3,
         is_bridge=False,
-        side_effect_markers=None,
     )
     defaults.update(overrides)
     return Entity(**defaults)
@@ -55,7 +53,6 @@ def test_entity_to_summary_basic():
     assert summary.brief == entity.brief
     assert summary.fan_in == 5
     assert summary.fan_out == 3
-    assert summary.provenance == "precomputed"
 
 
 # ---------- entity_to_detail ----------
@@ -78,21 +75,12 @@ def test_entity_to_detail_include_code_false():
     assert detail.source_text is None
 
 
-def test_entity_to_detail_provenance():
-    """entity_to_detail sets doxygen_extracted provenance."""
-    entity = _make_entity()
-    detail = entity_to_detail(entity)
-
-    assert detail.provenance == "doxygen_extracted"
-
-
 def test_entity_to_detail_all_fields():
     """entity_to_detail maps all Entity fields to EntityDetail."""
     entity = _make_entity(
         notes="Some implementation notes",
         rationale="Design choice explanation",
         usages={"caller_a": "calls for damage calc"},
-        side_effect_markers={"messaging": ["send_to_char"]},
         is_bridge=True,
         is_entry_point=True,
     )
@@ -107,7 +95,6 @@ def test_entity_to_detail_all_fields():
     assert detail.notes == "Some implementation notes"
     assert detail.rationale == "Design choice explanation"
     assert detail.usages == {"caller_a": "calls for damage calc"}
-    assert detail.side_effect_markers == {"messaging": ["send_to_char"]}
     assert detail.is_bridge is True
     assert detail.is_entry_point is True
 
@@ -130,4 +117,3 @@ def test_capability_to_summary_basic():
     assert summary.description == "Combat system"
     assert summary.function_count == 25
     assert summary.stability == "stable"
-    assert summary.provenance == "precomputed"

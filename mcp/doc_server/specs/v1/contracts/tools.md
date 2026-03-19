@@ -1,6 +1,6 @@
 # Tool Contracts: MCP Documentation Server
 
-<!-- Canonical V1 tool contracts. Updated per spec 005: resolve_entity removed; signature param removed from all tools; ResolutionEnvelope removed; doc_quality fields removed; min_doc_quality param removed from search. -->
+<!-- Canonical V1 tool contracts. Updated per spec 008: 4 tools removed (get_hotspots, get_related_files, get_file_summary, list_file_entities); provenance/side_effects fields removed; search limit→top_k; get_class_hierarchy direction param; get_dependencies default outgoing; get_related_entities limit_per_type; list_entry_points capability param removed; entry point semantics updated. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -12,11 +12,11 @@ This document defines the MCP tool interface contracts for the Legacy Documentat
 - **Output**: JSON object with consistent response shapes (EntitySummary base, resolution envelopes, truncation metadata)
 - **Errors**: MCP errors for hard failures (DB down, invalid params); successful responses with status indicators for degraded states
 
-**Total Tools**: 19 (grouped by category) <!-- spec 005: was 20; resolve_entity removed -->
+**Total Tools**: 15 (grouped by category) <!-- spec 005/008: resolve_entity, get_hotspots, get_related_files, get_file_summary, list_file_entities removed -->
 
 ---
 
-## Entity Lookup (4 tools) <!-- spec 005: was 5; resolve_entity removed -->
+## Entity Lookup (2 tools) <!-- spec 005/008: resolve_entity, list_file_entities, get_file_summary removed -->
 
 <!-- spec 005: resolve_entity tool REMOVED. search is the sole path from text to entity IDs.
      The multi-stage resolution pipeline (name_exact → prefix → keyword → semantic) is preserved
@@ -94,25 +94,7 @@ Retrieve source code for an entity with optional context lines. <!-- spec 005: e
 
 ### list_file_entities
 
-List all entities defined in a source file.
-
-**Parameters:**
-```typescript
-{
-  file_path: string,          // Relative path (e.g., "src/fight.cc")
-  kind?: string               // Filter by kind
-}
-```
-
-**Response:**
-```typescript
-{
-  file_path: string,
-  entities: EntitySummary[],
-  truncation: TruncationMetadata
-}
-```
-
+  // <!-- spec 008: list_file_entities removed -->
 ---
 
 ### get_file_summary
@@ -176,14 +158,14 @@ Hybrid semantic + keyword search with exact match boost. <!-- spec 005: sole pat
   result_type: "entity",  // V2: "subsystem_doc"
   score: number,          // Combined score (exact * 10 + semantic * 0.6 + keyword * 0.4)
   search_mode: "hybrid" | "semantic_only" | "keyword_fallback",
-  provenance: "doxygen_extracted" | "llm_generated" | "precomputed" | "subsystem_narrative",  // Doc source provenance <!-- spec 005: added "precomputed" -->
+  // <!-- spec 008: provenance field removed -->
   entity_summary: EntitySummary  // <!-- spec 005: field renamed from "summary" -->
 }
 ```
 
 ---
 
-## Graph Exploration (6 tools)
+## Graph Exploration (4 tools) <!-- spec 008: was 6; get_related_files removed -->
 
 ### get_callers
 
@@ -314,34 +296,11 @@ Get all direct neighbors grouped by relationship type. <!-- spec 005: entity_id 
 ---
 
 ### get_related_files
-
-Get files related via INCLUDES edges, co-dependency, or shared entities.
-
-**Parameters:**
-```typescript
-{
-  file_path: string,
-  relationship?: "includes" | "included_by" | "co_dependent",  // NULL = all
-  limit?: number = 50
-}
-```
-
-**Response:**
-```typescript
-{
-  file_path: string,
-  related_files: Array<{
-    file_path: string,
-    relationship: string,
-    shared_entity_count?: number  // For "shares_entities"
-  }>,
-  truncation: TruncationMetadata
-}
-```
+  // <!-- spec 008: get_related_files removed -->
 
 ---
 
-## Behavior Analysis (3 tools)
+## Behavior Analysis (2 tools)
 
 ### get_behavior_slice
 
@@ -377,17 +336,10 @@ Compute transitive call cone with capabilities touched, globals used, side effec
     access_type: "direct" | "transitive"
   }>,
 
-  side_effects: Record<string, Array<{  // {messaging: [...], persistence: [...], ...}
-    function: EntitySummary,
-    category: "messaging" | "persistence" | "state_mutation" | "scheduling",
-    access_type: "direct" | "transitive",
-    confidence: "direct" | "heuristic" | "transitive",
-    provenance: "side_effect_marker" | "graph_transitive"
-  }>>,
+  // <!-- spec 008: side_effects dict removed; confidence field removed -->
 
   fan_in: number,             // Aggregate metrics for seed
   fan_out: number,
-  confidence: string          // Overall confidence based on doc distribution in cone
   // <!-- spec 005: resolution field removed -->
 }
 ```
@@ -411,46 +363,15 @@ Analyze which global variables an entity uses (direct and transitive). <!-- spec
 {
   entity_id: string,
   direct_uses: EntitySummary[],           // Globals directly used (USES edges, depth=1)
-  direct_side_effects: Array<{            // Side-effect markers from own CALLS (depth=1)
-    function: EntitySummary,
-    category: "messaging" | "persistence" | "state_mutation" | "scheduling",
-    access_type: "direct",
-    provenance: "side_effect_marker"
-  }>,
+  // <!-- spec 008: direct_side_effects removed -->
   transitive_uses: EntitySummary[],       // Globals reachable within 2 hops of CALLS → USES
-  transitive_side_effects: Array<{        // Side-effect markers from callees at depth 2+
-    function: EntitySummary,
-    category: "messaging" | "persistence" | "state_mutation" | "scheduling",
-    access_type: "transitive",
-    provenance: "graph_transitive"
-  }>
+  // <!-- spec 008: transitive_side_effects removed -->
 }
 ```
 
 ---
 
-### get_hotspots
-
-Find architectural hotspots ranked by metric.
-
-**Parameters:**
-```typescript
-{
-  metric: "fan_in" | "fan_out" | "bridge" | "underdocumented",
-  kind?: string,
-  capability?: string,
-  limit?: number = 20
-}
-```
-
-**Response:**
-```typescript
-{
-  metric: string,
-  hotspots: EntitySummary[],  // Sorted by metric descending
-  truncation: TruncationMetadata
-}
-```
+<!-- spec 008: get_hotspots tool REMOVED-->
 
 ---
 
@@ -507,7 +428,7 @@ Get detailed capability information including dependencies and functions.
     edge_type: string,  // requires_core, requires_policy, uses_utility, etc.
     call_count: number
   }>,
-  entry_points: EntitySummary[],       // Entry points exercising this capability
+  entry_points: EntitySummary[],       // Entry points routing into this capability (via transitive call cone) <!-- spec 008: semantic change from "classified as" to "routes into" -->
   functions?: EntitySummary[]          // Full list (if include_functions=true)
 }
 ```
@@ -541,12 +462,11 @@ Compare multiple capabilities showing shared/unique dependencies and bridges.
 
 ### list_entry_points
 
-List entry points (do_*, spell_*, spec_* functions) filterable by capability.
+List entry points (do_*, spell_*, spec_* functions). <!-- spec 008: capability param removed; use get_capability_detail to find entry points for a capability -->
 
 **Parameters:**
 ```typescript
 {
-  capability?: string,
   name_pattern?: string,  // SQL LIKE pattern (e.g., "do_look%")
   limit?: number = 100
 }

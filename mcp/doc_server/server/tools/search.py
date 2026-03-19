@@ -35,7 +35,7 @@ async def search(
     ] = "entity",
     kind: Annotated[str | None, Field(description="Optional kind filter (function, class, etc.)")] = None,
     capability: Annotated[str | None, Field(description="Optional capability filter")] = None,
-    limit: Annotated[int, Field(ge=1, le=100, description="Maximum results")] = 20,
+    top_k: Annotated[int, Field(ge=1, le=100, description="Number of results")] = 10,
 ) -> SearchResponse:
     """
     Perform hybrid semantic + keyword search.
@@ -46,7 +46,7 @@ async def search(
     """
     lc = get_ctx(ctx)
 
-    log.info("search", query=query, kind=kind, capability=capability, limit=limit)
+    log.info("search", query=query, kind=kind, capability=capability, top_k=top_k)
 
     if source != "entity":
         log.warning("Unsupported search source in V1", source=source)
@@ -64,7 +64,7 @@ async def search(
             embedding_provider=lc["embedding_provider"],
             kind=kind,
             capability=capability,
-            limit=limit,
+            limit=top_k,
         )
 
     return SearchResponse(

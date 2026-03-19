@@ -102,7 +102,6 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             fan_in=23,
             fan_out=8,
             is_bridge=True,
-            side_effect_markers={"messaging": ["send_to_char"], "state_mutation": ["affect_to_char"]},
         ),
 
         # [1] Entry point (command) — calls damage
@@ -123,7 +122,6 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             fan_in=1,
             fan_out=15,
             is_bridge=False,
-            side_effect_markers={"messaging": ["send_to_char"]},
         ),
 
         # [2] Class entity
@@ -254,8 +252,12 @@ async def sample_edges(test_session: AsyncSession, sample_entities: list[Entity]
             target_id=sample_entities[6].entity_id,
             relationship="includes",
         ),
-        # Character → Character_8hh (inherits — for class hierarchy test)
-        # We'll pretend Character has a base class; use the file entity as stand-in.
+        # Character → Character.hh (inherits — for class hierarchy direction tests)
+        Edge(
+            source_id=sample_entities[2].entity_id,
+            target_id=sample_entities[6].entity_id,
+            relationship="inherits",
+        ),
     ]
 
     for edge in edges:

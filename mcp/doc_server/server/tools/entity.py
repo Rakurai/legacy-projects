@@ -10,34 +10,19 @@ from typing import Annotated
 import networkx as nx
 from fastmcp import Context
 from pydantic import BaseModel, Field
-from sqlalchemy import func
-from sqlmodel import select
 
 from server.app import get_ctx, mcp
-from server.converters import entity_to_detail, entity_to_summary
+from server.converters import entity_to_detail
 from server.db_models import Entity
-from server.enums import EntityKind
 from server.errors import EntityNotFoundError
 from server.logging_config import log
 from server.models import (
     EntityDetail,
     EntityNeighbor,
-    EntitySummary,
-    TruncationMetadata,
 )
 from server.util import fetch_entity_map
 
 # -- Response Models --
-
-
-class FileSummaryResponse(BaseModel):
-    """Response from get_file_summary tool."""
-    file_path: str
-    entity_count: int
-    entity_count_by_kind: dict[str, int]
-    capability_distribution: dict[str, int]
-    top_entities_by_fan_in: list[EntitySummary]
-    truncation: TruncationMetadata
 
 
 class SourceCodeResponse(BaseModel):
@@ -52,13 +37,6 @@ class SourceCodeResponse(BaseModel):
     context_lines: int
     context_before: str | None = None
     context_after: str | None = None
-
-
-class ListFileEntitiesResponse(BaseModel):
-    """Response from list_file_entities tool."""
-    file_path: str
-    entities: list[EntitySummary]
-    truncation: TruncationMetadata
 
 
 @mcp.tool()
@@ -162,91 +140,4 @@ async def get_source_code(
         context_lines=context_lines,
         context_before=context_before,
         context_after=context_after,
-    )
-
-
-@mcp.tool()
-async def list_file_entities(
-    ctx: Context,
-    file_path: Annotated[str, Field(description="Source file path (e.g., src/fight.cc)")],
-    kind: Annotated[EntityKind | None, Field(description="Optional kind filter")] = None,
-    limit: Annotated[int, Field(ge=1, le=500, description="Maximum results")] = 100,
-) -> ListFileEntitiesResponse:
-    """
-    List all entities defined in a source file.
-    """
-    lc = get_ctx(ctx)
-
-    log.info("list_file_entities", file_path=file_path, kind=kind)
-
-    async with lc["db_manager"].session() as session:
-        stmt = select(Entity).where(Entity.file_path == file_path)
-        if kind:
-            stmt = stmt.where(Entity.kind == kind)
-        stmt = stmt.order_by(Entity.body_start_line).limit(limit)
-
-        result = await session.execute(stmt)
-        entities = list(result.scalars().all())
-
-        count_stmt = select(func.count(Entity.entity_id)).where(Entity.file_path == file_path)
-        if kind:
-            count_stmt = count_stmt.where(Entity.kind == kind)
-        total_count = await session.scalar(count_stmt) or 0
-
-    summaries = [entity_to_summary(e) for e in entities]
-
-    return ListFileEntitiesResponse(
-        file_path=file_path,
-        entities=summaries,
-        truncation=TruncationMetadata(
-            truncated=len(entities) < total_count,
-            total_available=total_count,
-            node_count=len(entities),
-        ),
-    )
-
-
-@mcp.tool()
-async def get_file_summary(
-    ctx: Context,
-    file_path: Annotated[str, Field(description="Source file path")],
-) -> FileSummaryResponse:
-    """
-    Get file-level statistics and top entities.
-    """
-    lc = get_ctx(ctx)
-
-    log.info("get_file_summary", file_path=file_path)
-
-    async with lc["db_manager"].session() as session:
-        result = await session.execute(
-            select(Entity).where(Entity.file_path == file_path)
-        )
-        entities = list(result.scalars().all())
-
-    if not entities:
-        raise EntityNotFoundError(file_path, kind="file")
-
-    entity_count_by_kind: dict[str, int] = {}
-    capability_distribution: dict[str, int] = {}
-
-    for entity in entities:
-        entity_count_by_kind[entity.kind] = entity_count_by_kind.get(entity.kind, 0) + 1
-        if entity.capability:
-            capability_distribution[entity.capability] = capability_distribution.get(entity.capability, 0) + 1
-
-    top_entities = sorted(entities, key=lambda e: e.fan_in, reverse=True)[:10]
-    top_summaries = [entity_to_summary(e) for e in top_entities]
-
-    return FileSummaryResponse(
-        file_path=file_path,
-        entity_count=len(entities),
-        entity_count_by_kind=entity_count_by_kind,
-        capability_distribution=capability_distribution,
-        top_entities_by_fan_in=top_summaries,
-        truncation=TruncationMetadata(
-            truncated=False,
-            total_available=len(entities),
-            node_count=len(entities),
-        ),
     )

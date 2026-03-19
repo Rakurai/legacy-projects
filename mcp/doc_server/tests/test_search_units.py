@@ -7,9 +7,8 @@ Tests pure-Python functions that don't need a database.
 import pytest
 from pydantic import ValidationError
 
-from server.search import _merge_scores
 from server.models import EntitySummary
-
+from server.search import _merge_scores
 
 # ---------- _merge_scores ----------
 

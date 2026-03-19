@@ -1,6 +1,6 @@
 # Feature Specification: MCP Documentation Server
 
-<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, 006-legacy-common-integration, and 007-data-completeness. -->
+<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, 006-legacy-common-integration, 007-data-completeness, and 008-dead-code-api-cleanup. -->
 **Feature Branch**: `001-mcp-doc-server`
 **Created**: 2026-03-14
 **Status**: Implemented (V1)
@@ -21,8 +21,8 @@ An AI assistant needs to understand what a specific function, class, or variable
 1. **Given** a search query with a unique match, **When** assistant searches, **Then** receive exact match with full documentation, source location, and metrics via entity_id <!-- spec 005: search replaces resolve_entity -->
 2. **Given** an ambiguous search query (e.g., "save" matches multiple functions), **When** assistant searches, **Then** receive ranked result list with file paths, signatures, and brief descriptions to disambiguate
 3. **Given** an entity identifier, **When** assistant requests full entity details with source code, **Then** receive complete documentation plus actual C++ source text from database
-4. **Given** a source file path, **When** assistant requests all entities in that file, **Then** receive list of all functions, classes, variables, and structs defined in that file with summaries
-5. **Given** a source file path, **When** assistant requests file summary, **Then** receive aggregated statistics including entity counts by type and capability distribution <!-- spec 005: doc_quality_distribution removed from file summary -->
+4. **Given** a source file path, **When** assistant requests all entities in that file, **Then** receive list of all functions, classes, variables, and structs defined in that file with summaries <!-- spec 008: list_file_entities tool removed; achievable via search with file_path filter -->
+5. **Given** a source file path, **When** assistant requests file summary, **Then** receive aggregated statistics including entity counts by type and capability distribution <!-- spec 005: doc_quality_distribution removed from file summary --> <!-- spec 008: get_file_summary tool removed -->
 
 ---
 
@@ -57,7 +57,7 @@ An AI assistant analyzing the `do_kill` command needs to understand what other f
 1. **Given** a function name, **When** assistant requests callers at depth=2, **Then** receive both direct callers (depth 1) and their callers (depth 2) with path information
 2. **Given** a function name, **When** assistant requests callees at depth=3, **Then** receive transitive call tree up to 3 levels deep with each entity appearing once at shortest path distance
 3. **Given** a class name, **When** assistant requests class hierarchy, **Then** receive inheritance tree showing both parent classes and derived classes
-4. **Given** a source file, **When** assistant requests related files, **Then** receive files connected via include relationships, co-dependency, or shared entity definitions
+4. **Given** a source file, **When** assistant requests related files, **Then** receive files connected via include relationships, co-dependency, or shared entity definitions <!-- spec 008: get_related_files tool removed -->
 5. **Given** a large call tree exceeding result limit, **When** assistant requests dependencies, **Then** receive truncated results with metadata indicating total available count and what was returned
 <!-- spec 005: resolution envelope no longer present on graph tools; tools accept only entity_id -->
 
@@ -75,7 +75,7 @@ An AI assistant planning to migrate `do_kill` needs to understand its behavioral
 
 1. **Given** an entry point function, **When** assistant requests behavior slice with max_depth=5, **Then** receive call cone with direct callees and full transitive closure separated
 2. **Given** a behavior slice result, **When** reviewing capabilities touched, **Then** see which capability groups are exercised directly vs. transitively with function counts per group
-3. **Given** a behavior slice result, **When** reviewing side effects, **Then** see effects categorized as messaging, persistence, state_mutation, or scheduling with direct/transitive labels
+3. **Given** a behavior slice result, **When** reviewing side effects, **Then** see effects categorized as messaging, persistence, state_mutation, or scheduling with direct/transitive labels <!-- spec 008: side_effects and SideEffectMarker removed; side-effect analysis deferred to V2 -->
 4. **Given** a function that touches global state, **When** assistant requests state touches, **Then** receive list of global variables used directly and transitively
 5. **Given** behavior slice computation hitting max_cone_size limit, **When** assistant receives results, **Then** see truncation metadata and partial results with warning
 
@@ -94,7 +94,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 1. **Given** no parameters, **When** assistant lists capabilities, **Then** receive all 30 groups with types, descriptions, function counts, and stability indicators <!-- spec 005: doc_quality_dist removed from capability responses -->
 2. **Given** a capability name, **When** assistant requests capability detail, **Then** receive group definition, typed dependency edges, entry points, and optionally full function list
 3. **Given** two or more capability names, **When** assistant compares capabilities, **Then** receive shared dependencies, unique dependencies per group, and bridge entities connecting them
-4. **Given** a filter for capability=combat, **When** assistant lists entry points, **Then** receive only entry points that directly exercise combat capability functions
+4. **Given** a filter for capability=combat, **When** assistant lists entry points, **Then** receive only entry points that directly exercise combat capability functions <!-- spec 008: capability param removed from list_entry_points; entry points have capability=NULL by design; use get_capability_detail for entry points routing into a capability -->
 5. **Given** an entry point function name, **When** assistant requests entry point info, **Then** receive which capabilities the entry point touches with direct vs. transitive counts
 
 ---
@@ -133,15 +133,15 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-002**: System MUST return ranked results with match metadata including match type, score, kind, file path, capability, and brief
 - **FR-003**: System MUST support retrieving full entity records by `entity_id` (required parameter) including identity, documentation fields, source location, capability, metrics, and optionally source code <!-- spec 005: entity_id is the sole lookup key; signature no longer accepted -->
 - **FR-004**: ~~System MUST include resolution envelope in all responses from tools accepting entity names~~ <!-- spec 005: REMOVED — ResolutionEnvelope retired; tools accept only entity_id -->
-- **FR-005**: System MUST list all entities defined in a source file, filterable by entity kind (function, class, variable, struct, etc.)
-- **FR-006**: System MUST provide file-level summaries including entity count by kind, capability distribution, and top entities by fan-in <!-- spec 005: doc_quality_distribution removed from file summary -->
+- **FR-005**: ~~System MUST list all entities defined in a source file, filterable by entity kind (function, class, variable, struct, etc.)~~ <!-- spec 008: REMOVED — list_file_entities tool removed -->
+- **FR-006**: ~~System MUST provide file-level summaries including entity count by kind, capability distribution, and top entities by fan-in~~ <!-- spec 008: REMOVED — get_file_summary tool removed --> <!-- spec 005: doc_quality_distribution removed from file summary -->
 
 #### Search
 
 - **FR-007**: System MUST perform hybrid search combining pgvector cosine similarity and Postgres full-text search with exact name/signature boost
 - **FR-008**: System MUST degrade gracefully to keyword-only search when no embedding provider is configured or when a configured provider encounters an error, and report degradation via search_mode field <!-- Updated per spec 004: provider-based system replaces single endpoint -->
 - **FR-009**: System MUST support search filtering by entity kind and capability group <!-- spec 005: min_doc_quality filter removed -->
-- **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, search_mode, and provenance
+- **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, and search_mode <!-- spec 008: provenance field removed from SearchResult -->
 - **FR-011**: System MUST normalize and combine search scores from semantic and keyword sources into unified ranking
 - **FR-012**: Search tool MUST accept a `source` parameter (defaulting to `entity`) that is V2-reserved for unified search across entity docs and subsystem docs; in V1 only `entity` is functional
 
@@ -149,8 +149,8 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 - **FR-013**: System MUST support caller and callee traversal at configurable depth (1-3 levels) with deduplication ensuring each entity appears once at shortest path
 - **FR-014**: System MUST support dependency filtering by relationship type (calls, uses, inherits, includes, containment) and direction (incoming/outgoing)
-- **FR-015**: System MUST provide class hierarchy exploration in both directions (parent classes and derived classes)
-- **FR-016**: System MUST identify related files via include relationships, co-dependency, or shared entity definitions
+- **FR-015**: System MUST provide class hierarchy exploration in both directions (parent classes and derived classes) <!-- spec 008: added direction parameter typed as Literal["ancestors","descendants","both"] -->
+- **FR-016**: ~~System MUST identify related files via include relationships, co-dependency, or shared entity definitions~~ <!-- spec 008: REMOVED — get_related_files tool removed -->
 - **FR-017**: System MUST include truncation metadata in all graph and list results showing truncated status, total_available count, and returned count; system does NOT support pagination (results are hard-truncated to top N, clients must refine queries to access different result subsets)
 
 #### Behavior Analysis
@@ -158,15 +158,15 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-018**: System MUST compute call cones via breadth-first search from seed functions, separating direct callees from transitive cone
 - **FR-019**: System MUST report capabilities touched with direct vs. transitive counts and function lists per capability
 - **FR-020**: System MUST report global variables used with direct vs. transitive access indicators
-- **FR-021**: System MUST categorize side-effect markers as messaging, persistence, state_mutation, or scheduling with direct/transitive labels
-- **FR-022**: System MUST support hotspot detection ranked by fan_in, fan_out, bridge (cross-capability), or underdocumented, with kind and capability filters
+- **FR-021**: ~~System MUST categorize side-effect markers as messaging, persistence, state_mutation, or scheduling with direct/transitive labels~~ <!-- spec 008: REMOVED — side-effect markers system removed -->
+- **FR-022**: ~~System MUST support hotspot detection ranked by fan_in, fan_out, bridge (cross-capability), or underdocumented, with kind and capability filters~~ <!-- spec 008: REMOVED — get_hotspots tool removed -->
 
 #### Capability System
 
 - **FR-023**: System MUST list all capability groups with type, description, function count, and stability indicator <!-- spec 005: doc_quality_dist removed from capability responses -->
 - **FR-024**: System MUST provide detailed capability information including group definition, typed dependency edges, entry points, and optionally full function list
 - **FR-025**: System MUST support comparing multiple capabilities showing shared dependencies, unique dependencies, and bridge entities
-- **FR-026**: System MUST list entry points (do_*, spell_*, spec_* functions) filterable by capability and name pattern
+- **FR-026**: System MUST list entry points (do_*, spell_*, spec_* functions) filterable by name pattern <!-- spec 008: capability filter removed; entry points have capability=NULL by design -->
 - **FR-027**: System MUST report which capabilities an entry point exercises with direct vs. transitive function counts
 
 #### Resources & Prompts
@@ -183,7 +183,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-034**: ~~Build script MUST compute doc_quality classification (high/medium/low)~~ <!-- spec 005: REMOVED — doc_quality and doc_state columns dropped -->
 - **FR-035**: Build script MUST compute fan_in and fan_out metrics by counting CALLS edges in dependency graph
 - **FR-036**: Build script MUST compute is_bridge flag by checking whether function's incoming vs. outgoing CALLS neighbors span different capability groups
-- **FR-037**: Build script MUST compute side_effect_markers by checking each function's CALLS edges against curated side-effect function list and categorizing as messaging, persistence, state_mutation, or scheduling
+- **FR-037**: ~~Build script MUST compute side_effect_markers by checking each function's CALLS edges against curated side-effect function list and categorizing as messaging, persistence, state_mutation, or scheduling~~ <!-- spec 008: REMOVED — side-effect markers system removed (curated function list was unvalidated) -->
 - **FR-038**: Build script MUST set is_entry_point flag for functions matching patterns: do_*, spell_*, spec_*
 - **FR-039**: Build script MUST generate weighted tsvector for full-text search with weights: name=A, brief/details=B, definition_text=C, source_text=D
 - **FR-040**: Build script MUST be idempotent, producing identical database state on repeated runs from same input artifacts
@@ -193,7 +193,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 - **FR-042**: Server MUST serve only pre-computed data loaded from database; no runtime LLM inference
 - **FR-043**: Server MUST provide responses that are deterministic and reproducible given identical database state
-- **FR-044**: Server MUST tag all derived/analysis data items with provenance labels (inferred, heuristic, precomputed, measured)
+- **FR-044**: ~~Server MUST tag all derived/analysis data items with provenance labels (inferred, heuristic, precomputed, measured)~~ <!-- spec 008: REMOVED — provenance labels removed from all response models -->
 - **FR-045**: Server MUST maintain consistency between documentation records and source code through build-time extraction performed by build script; consistency is guaranteed only at build time, and users must rebuild the database after code changes (per assumption A-006)
 
 #### Error Handling
@@ -280,10 +280,10 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-008**: ~~95% of entity lookups result in exact match (resolution_status=exact)~~ <!-- spec 005: REMOVED — resolve_entity retired; agents use search + entity_id pattern -->
 - **SC-009**: Build script processes all artifacts (5,293 entities, 25,000 edges, 30 capabilities) and populates database in under 5 minutes
 - **SC-010**: Build script produces identical database state on repeated runs from same input artifacts (idempotent operation)
-- **SC-011**: All derived metrics (fan_in, fan_out, is_bridge, side_effect_markers) are correctly computed from source artifacts and match validation samples <!-- spec 005: doc_quality removed from derived metrics -->
+- **SC-011**: All derived metrics (fan_in, fan_out, is_bridge) are correctly computed from source artifacts and match validation samples <!-- spec 005: doc_quality removed from derived metrics --> <!-- spec 008: side_effect_markers removed from derived metrics -->
 - **SC-012**: Source code extraction captures ≥90% of entities with valid body locations, storing complete function/class definitions in database. Build fails with `BuildError` on zero extraction or invalid line ranges. <!-- spec 007: ≥90% threshold; fail-fast on zero/invalid -->
 - **SC-013**: Full-text search tsvector enables relevant keyword matches for natural language queries against entity documentation and source code
-- **SC-014**: All server responses include structured provenance labels enabling consumers to assess data reliability (precomputed, inferred, heuristic, measured)
+- **SC-014**: ~~All server responses include structured provenance labels enabling consumers to assess data reliability (precomputed, inferred, heuristic, measured)~~ <!-- spec 008: REMOVED — provenance labels removed -->
 
 <!-- Success criteria added per specs 003/004 -->
 - **SC-015**: After a full build, approximately 848 entities have non-null capability assignment (from capability_graph.json members)
@@ -300,7 +300,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-024**: Zero ID collisions across ~5,305 entities (enforced by build-time collision detection)
 - **SC-025**: After a full build, at least 95% of doc_db.json entries with non-empty brief have non-null brief in the database
 - **SC-026**: An agent can complete search → get_entity → get_callers → get_behavior_slice using only entity_ids, with zero signature-based lookups
-- **SC-027**: No tool in the MCP catalog accepts a `signature` parameter for entity lookup (19 tools total)
+- **SC-027**: No tool in the MCP catalog accepts a `signature` parameter for entity lookup (15 tools total) <!-- spec 008: 19 → 15 tools; get_hotspots, get_related_files, get_file_summary, list_file_entities removed -->
 
 <!-- Success criteria added per spec 007 -->
 - **SC-028**: After a successful build, ≥95% of all entities have non-null `embedding` in the database (doc-less entities receive minimal embeddings)

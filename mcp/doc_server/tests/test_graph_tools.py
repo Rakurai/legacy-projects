@@ -1,28 +1,14 @@
-"""
-Integration tests for graph navigation tools.
-
-Tests actual DB + graph execution via mock_ctx of:
-- get_callers
-- get_callees
-- get_dependencies
-- get_class_hierarchy
-- get_related_entities
-- get_related_files
-"""
+"""Integration tests for graph navigation tools."""
 
 import pytest
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from server.db_models import Entity, Edge
 from server.tools.graph import (
-    get_callers,
     get_callees,
-    get_dependencies,
+    get_callers,
     get_class_hierarchy,
+    get_dependencies,
     get_related_entities,
-    get_related_files,
 )
-
 
 # ---------- get_callers ----------
 
@@ -108,12 +94,35 @@ async def test_get_dependencies_with_relationship_filter(mock_ctx, sample_entiti
 
 @pytest.mark.asyncio
 async def test_get_class_hierarchy(mock_ctx, sample_entities, sample_edges):
-    """Returns empty hierarchy when no inherits edges exist."""
-    eid = sample_entities[2].entity_id  # Character class — no inherits edges in test data
+    """Default direction='both' returns base + derived classes."""
+    eid = sample_entities[2].entity_id  # Character class — inherits → Character.hh
     result = await get_class_hierarchy(mock_ctx, entity_id=eid)
 
     assert result.entity_id == eid
+    # Character inherits Character.hh (as base class stand-in)
+    base_names = [s.name for s in result.base_classes]
+    assert "Character.hh" in base_names
+
+
+@pytest.mark.asyncio
+async def test_get_class_hierarchy_ancestors_only(mock_ctx, sample_entities, sample_edges):
+    """direction='ancestors' returns only base_classes, derived empty."""
+    eid = sample_entities[2].entity_id
+    result = await get_class_hierarchy(mock_ctx, entity_id=eid, direction="ancestors")
+
+    base_names = [s.name for s in result.base_classes]
+    assert "Character.hh" in base_names
+    assert result.derived_classes == []
+
+
+@pytest.mark.asyncio
+async def test_get_class_hierarchy_descendants_only(mock_ctx, sample_entities, sample_edges):
+    """direction='descendants' returns only derived_classes, base empty."""
+    eid = sample_entities[2].entity_id
+    result = await get_class_hierarchy(mock_ctx, entity_id=eid, direction="descendants")
+
     assert result.base_classes == []
+    # Character has no derived classes in test data
     assert result.derived_classes == []
 
 
@@ -133,31 +142,10 @@ async def test_get_related_entities(mock_ctx, sample_entities, sample_edges):
 
 @pytest.mark.asyncio
 async def test_get_related_entities_isolated(mock_ctx, sample_entities, sample_edges):
-    """Entity not in graph returns empty neighbors."""
-    # Character class has no edges in sample_edges
+    """Entity with only inherits edges returns non-empty neighbors."""
+    # Character has exactly one edge: inherits → Character.hh
     eid = sample_entities[2].entity_id
     result = await get_related_entities(mock_ctx, entity_id=eid)
 
     total = sum(len(v) for v in result.neighbors_by_relationship.values())
-    assert total == 0
-
-
-# ---------- get_related_files ----------
-
-@pytest.mark.asyncio
-async def test_get_related_files(mock_ctx, sample_entities, sample_edges):
-    """Finds files related via includes edges."""
-    result = await get_related_files(mock_ctx, file_path="src/fight.cc")
-
-    assert result.file_path == "src/fight.cc"
-    related_paths = [r["file_path"] for r in result.related_files]
-    # file_fight_cc → file_character_hh (includes)
-    assert "src/include/Character.hh" in related_paths
-
-
-@pytest.mark.asyncio
-async def test_get_related_files_no_includes(mock_ctx, sample_entities, sample_edges):
-    """File with no includes returns empty list."""
-    result = await get_related_files(mock_ctx, file_path="src/nonexistent.cc")
-
-    assert result.related_files == []
+    assert total == 1

@@ -2,7 +2,6 @@
 Pydantic API Models - MCP Tool Request/Response Schemas.
 
 All models use Pydantic v2 patterns (BaseModel, Field, field_validator, ConfigDict).
-Provenance fields track data source per FR-044.
 """
 
 from pydantic import BaseModel, Field, field_validator
@@ -10,13 +9,10 @@ from pydantic import BaseModel, Field, field_validator
 from server.enums import (
     AccessType,
     CapabilityType,
-    Confidence,
     EntityKind,
     EntityType,
     FocusType,
-    Provenance,
     SearchMode,
-    SideEffectCategory,
     TruncationReason,
 )
 
@@ -36,7 +32,6 @@ class EntitySummary(BaseModel):
     brief: str | None = Field(default=None, description="One-line summary")
     fan_in: int = Field(ge=0, description="Incoming CALLS edges")
     fan_out: int = Field(ge=0, description="Outgoing CALLS edges")
-    provenance: Provenance = Field(default=Provenance.PRECOMPUTED, description="Data source")
 
     @field_validator("signature", "name")
     @classmethod
@@ -53,7 +48,6 @@ class EntityNeighbor(BaseModel):
     kind: str
     relationship: str  # CALLS, USES, INHERITS, INCLUDES, CONTAINED_BY
     direction: str  # "incoming" or "outgoing" (set dynamically from graph traversal)
-    provenance: Provenance = Field(default=Provenance.PRECOMPUTED)
 
 
 class EntityDetail(BaseModel):
@@ -96,14 +90,8 @@ class EntityDetail(BaseModel):
     usages: dict[str, str] | None
     notes: str | None
 
-    # Side effects
-    side_effect_markers: dict[str, list[str]] | None
-
     # Optional neighbors (include_neighbors=true)
     neighbors: list[EntityNeighbor] | None = None
-
-    # Provenance
-    provenance: Provenance = Field(default=Provenance.DOXYGEN_EXTRACTED)
 
 
 class TruncationMetadata(BaseModel):
@@ -126,7 +114,6 @@ class SearchResult(BaseModel):
     result_type: str  # "entity" in V1; V2 adds "subsystem_doc"
     score: float = Field(ge=0, le=1, description="Normalized combined score")
     search_mode: SearchMode
-    provenance: Provenance
     entity_summary: EntitySummary | None = None  # Present when result_type="entity"
 
 
@@ -136,7 +123,6 @@ class CapabilityTouch(BaseModel):
     direct_count: int
     transitive_count: int
     functions: list[EntitySummary]  # Sample (truncated if >10)
-    provenance: Provenance = Field(default=Provenance.INFERRED)
 
 
 class GlobalTouch(BaseModel):
@@ -145,17 +131,6 @@ class GlobalTouch(BaseModel):
     name: str
     kind: EntityKind = EntityKind.VARIABLE
     access_type: AccessType
-    provenance: Provenance = Field(default=Provenance.INFERRED)
-
-
-class SideEffectMarker(BaseModel):
-    """Side effect marker in behavior analysis."""
-    function_id: str
-    function_name: str
-    category: SideEffectCategory
-    access_type: AccessType
-    confidence: Confidence
-    provenance: Provenance = Field(default=Provenance.HEURISTIC)
 
 
 class BehaviorSlice(BaseModel):
@@ -178,11 +153,6 @@ class BehaviorSlice(BaseModel):
     # Globals used
     globals_used: list[GlobalTouch]
 
-    # Side effects (categorized)
-    side_effects: dict[str, list[SideEffectMarker]]  # category → markers
-
-    provenance: Provenance = Field(default=Provenance.INFERRED)
-
 
 class CapabilitySummary(BaseModel):
     """Summary of a capability group."""
@@ -191,7 +161,6 @@ class CapabilitySummary(BaseModel):
     description: str
     function_count: int
     stability: str | None
-    provenance: Provenance = Field(default=Provenance.PRECOMPUTED)
 
 
 class CapabilityDetail(BaseModel):
@@ -204,7 +173,6 @@ class CapabilityDetail(BaseModel):
     dependencies: list[dict]  # Typed edges to other capabilities
     entry_points: list[str]  # Entry point function names
     functions: list[EntitySummary] | None = None  # Optional full function list
-    provenance: Provenance = Field(default=Provenance.PRECOMPUTED)
 
 
 # V2-Reserved Shapes (defined now to prevent response-shape drift)

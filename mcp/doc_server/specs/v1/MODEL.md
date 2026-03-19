@@ -1,6 +1,6 @@
 # Data Model: MCP Documentation Server
 
-<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, 006-legacy-common-integration, and 007-data-completeness. -->
+<!-- Canonical V1 data model. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, 006-legacy-common-integration, 007-data-completeness, and 008-dead-code-api-cleanup. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -63,7 +63,7 @@ CREATE TABLE entities (
     fan_in          INTEGER DEFAULT 0,         -- Incoming CALLS edges
     fan_out         INTEGER DEFAULT 0,         -- Outgoing CALLS edges
     is_bridge       BOOLEAN DEFAULT FALSE,     -- Callers/callees span different capabilities
-    side_effect_markers JSONB,                 -- {messaging: [...], persistence: [...], state_mutation: [...], scheduling: [...]}
+    -- <!-- spec 008: side_effect_markers JSONB column removed -->
 
     -- Embedding
     embedding       vector(N),                 -- pgvector column; N = EMBEDDING_DIMENSION env var (default 768 for BAAI/bge-base-en-v1.5)
@@ -93,7 +93,7 @@ CREATE INDEX idx_entities_embedding ON entities USING ivfflat (embedding vector_
 - `fan_out`: COUNT(edges WHERE source_id = entity_id AND edge_type = 'CALLS')
 - `is_bridge`: EXISTS(edge e1 JOIN edge e2 WHERE e1.source_cap != e2.target_cap AND e1.entity = e2.entity). Requires capability assignment to be completed first (pipeline ordering). <!-- spec 003: depends on capability assignment -->
 - `is_entry_point`: name LIKE 'do_%' OR name LIKE 'spell_%' OR name LIKE 'spec_%'
-- `side_effect_markers`: BFS from entity through CALLS edges, check callees against curated list, categorize by marker type
+- <!-- spec 008: side_effect_markers derivation removed (curated function list was unvalidated) -->
 
 ### 1.2 Edges Table
 
@@ -222,7 +222,7 @@ class Entity(SQLModel, table=True):
     fan_in: int = 0
     fan_out: int = 0
     is_bridge: bool = False
-    side_effect_markers: dict | None = Field(default=None, sa_column=Column(JSONB))
+    # <!-- spec 008: side_effect_markers field removed -->
 
     # Embedding + search
     # <!-- spec 004: dimension is configurable via EMBEDDING_DIMENSION env var, default 768 -->
@@ -382,8 +382,7 @@ class EntityDetail(BaseModel):
     usages: dict[str, str] | None
     notes: str | None
 
-    # Side effects
-    side_effect_markers: dict[str, list[str]] | None
+    # <!-- spec 008: side_effect_markers field removed from EntityDetail -->
 
     # Optional neighbors (include_neighbors=true)
     neighbors: list[EntityNeighbor] | None = None
@@ -410,7 +409,7 @@ class SearchResult(BaseModel):
     result_type: Literal["entity", "subsystem_doc"]  # V2: subsystem_doc not used in V1
     score: float = Field(ge=0, le=1, description="Normalized combined score")
     search_mode: Literal["hybrid", "semantic_only", "keyword_fallback"] = Field(description="Which search mode was used")
-    provenance: Literal["doxygen_extracted", "llm_generated", "precomputed", "subsystem_narrative"]  # Doc source provenance <!-- spec 005: added "precomputed" -->
+    # <!-- spec 008: provenance field removed -->
     entity_summary: EntitySummary | SubsystemDocSummary | dict  # EntitySummary in V1; V2 adds SubsystemDocSummary
     # <!-- spec 005: field renamed from "summary" to "entity_summary" in implementation -->
 ```
@@ -436,30 +435,23 @@ class BehaviorSlice(BaseModel):
     # Globals used
     globals_used: list[GlobalTouch]
 
-    # Side effects (categorized)
-    side_effects: dict[str, list[SideEffectMarker]]  # category → markers
+    # <!-- spec 008: side_effects dict and SideEffectMarker model removed -->
 
 class CapabilityTouch(BaseModel):
     capability: str
     direct_count: int  # Functions in this cap called directly
     transitive_count: int  # Functions in this cap in full cone
     functions: list[EntitySummary]  # Sample (truncated if >10)
-    provenance: Literal["graph_calls", "graph_transitive", "capability_map"] = "capability_map"
+    # <!-- spec 008: provenance field removed -->
 
 class GlobalTouch(BaseModel):
     entity_id: str
     name: str
     kind: Literal["variable"]
     access_type: Literal["direct", "transitive"]
-    provenance: Literal["graph_uses", "graph_transitive"] = "graph_uses"
+    # <!-- spec 008: provenance field removed -->
 
-class SideEffectMarker(BaseModel):
-    function_id: str
-    function_name: str
-    category: Literal["messaging", "persistence", "state_mutation", "scheduling"]
-    access_type: Literal["direct", "transitive"]
-    confidence: Literal["direct", "heuristic", "transitive"]
-    provenance: Literal["side_effect_marker", "graph_transitive"] = "side_effect_marker"
+# <!-- spec 008: SideEffectMarker model removed; SideEffectCategory, Confidence, Provenance enums removed -->
 ```
 
 ### 3.6 Truncation Metadata
@@ -534,7 +526,7 @@ class ContextBundle(BaseModel):
 6.  Extract source_text from disk using (file_path, start_line, end_line); BuildError on zero extraction or invalid line ranges  <!-- spec 007: fail-fast; narrows exceptions to OSError/UnicodeDecodeError -->
 7.  Load capability_graph.json → build name→capability mapping from members lists
 8.  Assign capabilities to merged entities (~848 assignments)
-9.  Load graph edges (translate to deterministic IDs), compute fan_in/fan_out, bridge flags (requires capabilities), side_effect_markers  <!-- spec 005: edge ID translation -->
+9.  Load graph edges (translate to deterministic IDs), compute fan_in/fan_out, bridge flags (requires capabilities)  <!-- spec 005: edge ID translation --> <!-- spec 008: side_effect_markers computation removed -->
 10. Compute is_entry_point  <!-- spec 005: doc_quality computation removed -->
 11. Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(...brief/details..., 'B') || setweight(...definition_text..., 'C') || setweight(...source_text..., 'D')
 12. Load or generate embeddings:  <!-- spec 006: build_embed_text() replaced by Document.to_doxygen() --> <!-- spec 007: doc-less entities get minimal embeddings -->
@@ -627,7 +619,7 @@ async def get_by_signature(session: AsyncSession, sig: str) -> Entity | None:
 async def get_by_name(session: AsyncSession, name: str, limit: int = 20) -> list[Entity]:
     result = await session.execute(
         select(Entity).where(Entity.name == name)
-        .order_by(Entity.doc_quality.desc(), Entity.fan_in.desc())
+        .order_by(Entity.fan_in.desc())  # <!-- spec 008: doc_quality removed from ORDER BY -->
         .limit(limit)
     )
     return list(result.scalars().all())
@@ -636,7 +628,7 @@ async def get_by_name(session: AsyncSession, name: str, limit: int = 20) -> list
 async def get_by_prefix(session: AsyncSession, prefix: str, limit: int = 20) -> list[Entity]:
     result = await session.execute(
         select(Entity).where(Entity.name.startswith(prefix))
-        .order_by(func.length(Entity.name), Entity.doc_quality.desc())
+        .order_by(func.length(Entity.name), Entity.fan_in.desc())  # <!-- spec 008: doc_quality removed from ORDER BY -->
         .limit(limit)
     )
     return list(result.scalars().all())

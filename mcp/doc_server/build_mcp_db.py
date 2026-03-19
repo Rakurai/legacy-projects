@@ -36,7 +36,6 @@ from build_helpers.entity_processor import (
 from build_helpers.graph_loader import (
     compute_bridge_flags,
     compute_fan_metrics,
-    compute_side_effect_markers,
     load_graph_edges,
 )
 from build_helpers.loaders import (
@@ -146,7 +145,6 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             fan_in=merged.fan_in,
             fan_out=merged.fan_out,
             is_bridge=merged.is_bridge,
-            side_effect_markers=merged.side_effect_markers,
             embedding=merged.embedding,
             search_vector=None,
         )
@@ -237,20 +235,29 @@ async def populate_capabilities(
 
 async def populate_entry_points(
     session: AsyncSession,
-    merged_entities: list[MergedEntity]
+    merged_entities: list[MergedEntity],
+    edges: list[tuple[str, str, str]],
 ) -> None:
     """
     Populate entry_points table from entities where is_entry_point=true.
 
-    Computes which capabilities each entry point exercises (simplified version).
+    Computes transitive capabilities for each entry point by traversing
+    CALLS edges and collecting all capability names in the call cone.
     """
     log.info("Populating entry_points table")
+
+    # Build CALLS adjacency and capability map for call cone computation
+    callees_map: dict[str, list[str]] = {}
+    for source, target, rel in edges:
+        if rel.lower() == "calls":
+            callees_map.setdefault(source, []).append(target)
+
+    cap_map: dict[str, str | None] = {m.entity_id: m.capability for m in merged_entities}
 
     entry_point_count = 0
 
     for merged in merged_entities:
         if merged.is_entry_point:
-            # Determine entry type
             name = merged.entity.name
             if name.startswith("do_"):
                 entry_type = "do_"
@@ -261,13 +268,29 @@ async def populate_entry_points(
             else:
                 entry_type = None
 
-            # Capabilities exercised (simplified: just direct capability)
-            capabilities = [merged.capability] if merged.capability else []
+            # BFS to collect all capabilities reachable via CALLS edges
+            visited: set[str] = {merged.entity_id}
+            queue = list(callees_map.get(merged.entity_id, []))
+            visited.update(queue)
+            caps: set[str] = set()
+
+            if merged.capability:
+                caps.add(merged.capability)
+
+            while queue:
+                current = queue.pop(0)
+                cap = cap_map.get(current)
+                if cap:
+                    caps.add(cap)
+                for callee in callees_map.get(current, []):
+                    if callee not in visited:
+                        visited.add(callee)
+                        queue.append(callee)
 
             entry_point = EntryPoint(
                 name=name,
                 entity_id=merged.entity_id,
-                capabilities=capabilities,
+                capabilities=sorted(caps) if caps else [],
                 entry_type=entry_type,
             )
             session.add(entry_point)
@@ -306,7 +329,6 @@ async def main() -> None:
     edges = load_graph_edges(config.artifacts_path, merged_entities)
     compute_fan_metrics(merged_entities, edges)
     compute_bridge_flags(merged_entities, edges)
-    compute_side_effect_markers(merged_entities, edges)
 
     compute_is_entry_point(merged_entities)
 
@@ -331,7 +353,7 @@ async def main() -> None:
         await populate_entities(session, merged_entities)
         await populate_edges(session, edges)
         await populate_capabilities(session, cap_defs, cap_graph)
-        await populate_entry_points(session, merged_entities)
+        await populate_entry_points(session, merged_entities, edges)
 
         # Analyze tables for query planner
         log.info("Analyzing tables")

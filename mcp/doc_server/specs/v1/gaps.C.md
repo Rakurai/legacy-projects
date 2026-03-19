@@ -34,9 +34,7 @@ Spec 005 dropped `doc_state` and `doc_quality` from the `entities` table and `do
 
 ## 2. Side-Effect Markers — Remove (gaps §7)
 
-The `side_effect_markers` system is built on a hand-curated function list (`SIDE_EFFECT_FUNCTIONS` dict in `entity_processor.py`) that was not validated against actual call patterns. The categorization (messaging, persistence, state_mutation, scheduling) and the specific function names were hallucinated — they represent plausible-looking but unverified assumptions about what constitutes a side effect in the legacy codebase.
-
-**Decision:** Remove entirely. If side-effect analysis is needed in V2, it should be derived from the dependency graph (e.g., functions that write to globals via USES edges), not from a prebuilt dictionary.
+<!-- spec 008: RESOLVED — side_effect_markers JSONB column, SideEffectCategory/Confidence enums, SideEffectMarker model, SIDE_EFFECT_FUNCTIONS dict, compute_side_effect_markers(), and all related code removed -->
 
 ### File inventory
 
@@ -57,11 +55,7 @@ The `side_effect_markers` system is built on a hand-curated function list (`SIDE
 
 ## 3. Provenance Labels — Remove (gaps §8)
 
-Every response model carries a `provenance: Provenance` field (FR-044) that the calling agent never reads or acts on. The 7-label `Provenance` enum (`doxygen_extracted`, `llm_generated`, `subsystem_narrative`, `precomputed`, `inferred`, `heuristic`, `measured`) adds complexity without providing signal — agents reason about the *content* of responses, not their data lineage.
-
-The provenance derivation logic also depends on `doc_state` (being removed in §1), creating a coupling that makes both removals cleaner when done together.
-
-**Decision:** Remove entirely.
+<!-- spec 008: RESOLVED — Provenance enum (7 members), provenance field on all response models, _provenance_for() helper, and all provenance derivation logic removed -->
 
 ### File inventory
 
@@ -95,53 +89,26 @@ However, `db_models.py` still declares `Entity.compound_id` and `Entity.member_i
 
 ## 5. Remove Low-Value Tools (gaps §11)
 
-Four tools provide minimal value to agents and should be removed to reduce the tool surface:
-
-| Tool | File | Reason |
-|------|------|--------|
-| `get_hotspots` | `server/tools/behavior.py` | The `underdocumented` metric depends on `doc_quality` (being removed in §1). The `fan_in`/`fan_out`/`bridge` metrics are available via `search` with sorting. Not a natural part of any agent workflow |
-| `get_related_files` | `server/tools/graph.py` | Only works for outgoing INCLUDES edges (1,656 total). Returns empty for most files. The spec-creating agent works entity-first, not file-first |
-| `get_file_summary` | `server/tools/entity.py` | Returns per-file entity counts and distributions. No clear agent use case — agents navigate by entity or capability, not by source file |
-| `list_file_entities` | `server/tools/entity.py` | File-centric entity list. Occasionally useful ("what else is in this file?") but not a core workflow and can be achieved via `search` with file_path filter |
-
-Also remove the corresponding response models (`HotspotsResponse`, `FileSummaryResponse`, `ListFileEntitiesResponse`) and any related test code.
+<!-- spec 008: RESOLVED — get_hotspots, get_related_files, get_file_summary, list_file_entities removed (19 → 15 tools). Response models HotspotsResponse, FileSummaryResponse, ListFileEntitiesResponse also removed. -->
 
 ---
 
 ## 6. Entry Point / Capability Language Cleanup (gaps §2)
 
-Entry points (`do_*`, `spell_*`, `spec_*`) are **routing functions** — they dispatch into capability-grouped implementation code but do not themselves belong to a single capability. All 637 entry points have `capability=NULL` and this is correct by design. The capability classification pipeline assigns capabilities to the *callees* of entry points, not the entry points themselves.
-
-Multiple spec documents, tool contracts, and TODO items repeatedly describe this as a bug ("entry points should have capabilities", "list_entry_points with capability filter returns empty"). This is not a bug — it reflects the architectural distinction between dispatch and implementation.
-
-**Action:**
-- Update MODEL.md, SPEC.md, contracts/tools.md, and analysis.md to clarify that `Entity.capability` is NULL for entry points by design
-- Redefine `list_entry_points(capability=...)` contract: the filter means "entry points whose call cone touches this capability" (requires graph traversal), not "entry points where `Entity.capability == X`" (always empty)
-- Decide: implement the graph-traversal filter, or drop the capability parameter from `list_entry_points`
-- Similarly clarify `get_capability_detail.entry_points`: this should list entry points that *route into* the capability (via `capability_graph.json`'s `entry_points_using` field), not entry points *classified as* the capability
+<!-- spec 008: RESOLVED — capability param removed from list_entry_points; entry points have capability=NULL by design; get_capability_detail.entry_points uses JSONB containment for transitive call cone lookup; MODEL.md and contracts/tools.md updated -->
 
 ---
 
 ## 7. Contract Compliance — Tool Parameter Gaps (gaps §3)
 
-Remaining divergences between `contracts/tools.md` and the implementation:
-
-| Tool | Contract | Implementation | Fix |
-|------|----------|----------------|-----|
-| `search` | `top_k` parameter | `limit` parameter | Rename param |
-| `get_class_hierarchy` | `direction?: "ancestors"\|"descendants"\|"both"` | Always returns both | Add param + filter |
-| `get_related_files` | `relationship?: "includes"\|"included_by"\|"co_dependent"` | Outgoing INCLUDES only — returns empty for most files | Add reverse edge traversal + filter |
-| `get_related_entities` | `limit_per_type` (default 20) | `limit` global (default 100) | Restructure grouping |
-| `get_dependencies` | `direction` default `"outgoing"` | Default `"both"` | Change default |
-
-**Note:** If `get_related_files` is removed in §5, its contract row is moot.
+<!-- spec 008: RESOLVED — search: limit → top_k (default 10); get_class_hierarchy: direction param added (Literal["ancestors","descendants","both"]); get_related_entities: limit → limit_per_type (default 20, per-group truncation); get_dependencies: default direction "both" → "outgoing"; get_related_files removed (§5) -->
 
 ---
 
 ## Deliverable
 
 - Enums, models, converters, and tests shed ~30% of their fields
-- Tool count drops from 19 to 15
-- Remaining tools match their contract specs
-- No `doc_quality`, `doc_state`, `side_effect_markers`, `provenance`, `compound_id`, or `member_id` anywhere in the codebase
-- Clean rebuild + full test suite passes
+- Tool count drops from 19 to 15 <!-- spec 008: confirmed -->
+- Remaining tools match their contract specs <!-- spec 008: confirmed -->
+- No `doc_quality`, `doc_state`, `side_effect_markers`, `provenance`, `compound_id`, or `member_id` anywhere in the codebase <!-- spec 008: confirmed -->
+- Clean rebuild + full test suite passes <!-- spec 008: confirmed (170 tests pass) -->

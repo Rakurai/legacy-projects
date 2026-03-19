@@ -142,8 +142,8 @@ def explore_capability_prompt(capability_name: str) -> list[dict[str, str]]:
     """
     Generate prompt messages for capability exploration.
 
-    Workflow: get_capability_detail → list_entry_points → get_hotspots (fan_in) →
-              get_hotspots (bridge) → compare_capabilities
+    Workflow: get_capability_detail → list_entry_points → search (fan_in filter) →
+              compare_capabilities
 
     Args:
         capability_name: Capability group name to explore

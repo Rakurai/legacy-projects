@@ -4,8 +4,8 @@ Integration test for the search MCP tool wrapper.
 Tests server.tools.search.search() via mock_ctx, not just hybrid_search() directly.
 """
 
+
 import pytest
-from unittest.mock import MagicMock
 
 from server.tools.search import search
 
@@ -16,7 +16,7 @@ async def test_search_tool_keyword_mode(mock_ctx, sample_entities):
     response = await search(
         ctx=mock_ctx,
         query="damage",
-        limit=20,
+        top_k=20,
     )
 
     assert response.search_mode == "keyword_fallback"
@@ -32,7 +32,7 @@ async def test_search_tool_unsupported_source(mock_ctx, sample_entities):
         ctx=mock_ctx,
         query="damage",
         source="capability",  # type: ignore  — V1 only supports "entity"
-        limit=20,
+        top_k=20,
     )
 
     assert response.result_count == 0
@@ -48,7 +48,7 @@ async def test_search_tool_with_filters(mock_ctx, sample_entities):
         query="damage",
         kind="function",
         capability="combat",
-        limit=20,
+        top_k=20,
     )
 
     for r in response.results:
@@ -62,7 +62,7 @@ async def test_search_tool_empty_results(mock_ctx, sample_entities):
     response = await search(
         ctx=mock_ctx,
         query="zzz_nonexistent_xyz_999",
-        limit=20,
+        top_k=20,
     )
 
     assert response.result_count == 0

@@ -4,7 +4,7 @@ import re
 
 import pytest
 
-from build_helpers.entity_ids import compute_entity_id, kind_to_prefix
+from legacy_common.entity_ids import compute_entity_id, kind_to_prefix
 
 _ID_RE = re.compile(r"^[a-z]+:[0-9a-f]{7}$")
 

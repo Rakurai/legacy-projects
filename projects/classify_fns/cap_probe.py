@@ -32,16 +32,31 @@ import json
 import pickle
 import sys
 from pathlib import Path
-from collections import defaultdict
 
 import numpy as np
+from fastembed import TextEmbedding
 from sklearn.metrics.pairwise import cosine_similarity
 
 import legacy_common.doc_db as ddb
 import legacy_common.doxygen_graph as dg
 import legacy_common.doxygen_parse as dp
+from legacy_common import ARTIFACTS_DIR
+from legacy_common.entity_ids import compute_entity_id
 
 HERE = Path(__file__).resolve().parent
+CAPABILITY_DEFS_PATH = ARTIFACTS_DIR / "capability_defs.json"
+EMBED_CACHE_PATH = ARTIFACTS_DIR / "embed_cache_BAAI-bge-base-en-v1.5_768.pkl"
+
+# ── Lazy fastembed model ─────────────────────────────────────────────
+
+_fastembed_model: TextEmbedding | None = None
+
+
+def _get_fastembed() -> TextEmbedding:
+    global _fastembed_model
+    if _fastembed_model is None:
+        _fastembed_model = TextEmbedding(model_name="BAAI/bge-base-en-v1.5")
+    return _fastembed_model
 
 
 # ── Loading (cached across invocations via module-level globals) ─────
@@ -56,17 +71,16 @@ def _load():
     print("Loading artifacts...", file=sys.stderr)
 
     # Graph, entity DB, doc DB
-    graph = dg.load_graph(CLUSTERING_DIR / "code_graph.gml")
-    entity_db = dp.load_db(CLUSTERING_DIR / "code_graph.json")
-    doc_database = ddb.DocumentDB()
-    doc_database.load(ddb.DOC_DB_PATH)
+    graph = dg.load_graph(ARTIFACTS_DIR / "code_graph.gml")
+    entity_db = dp.load_db(ARTIFACTS_DIR / "code_graph.json")
+    doc_database = ddb.DocumentDB(docs_dir=ARTIFACTS_DIR / "generated_docs")
 
-    # Embeddings cache
-    with open(CLUSTERING_DIR / "embeddings_cache.pkl", "rb") as f:
-        all_embeddings: dict[str, np.ndarray] = pickle.load(f)
+    # Embeddings cache (keyed by deterministic entity ID)
+    with open(EMBED_CACHE_PATH, "rb") as f:
+        all_embeddings: dict[str, list[float]] = pickle.load(f)
 
     # Capability defs
-    with open(HERE / "capability_defs.json") as f:
+    with open(CAPABILITY_DEFS_PATH) as f:
         cap_defs: dict[str, dict] = json.load(f)
 
     # Classification results (if available)
@@ -76,9 +90,6 @@ def _load():
         with open(cls_path) as f:
             cls_data = json.load(f)
         classifications = cls_data.get("classifications", {})
-
-    # OpenAI embedding model
-    import legacy_common.openai_embeddings as oai_emb
 
     # Build callee pool: node_id → (name, embedding, doc_text, brief, current_group)
     # Re-derive callee info from graph (same logic as notebook)
@@ -125,16 +136,20 @@ def _load():
         sig = nd.get("name", nid)
         name = bare_name(sig)
 
-        # Resolve doc
+        # Resolve doc and deterministic entity ID
         doc = None
         doc_text = None
+        det_id = None
         try:
             eid = dg.get_body_eid(entity_db, nid)
             entity = entity_db.get(eid)
             if entity:
-                doc = doc_database.get_doc(eid.compound, entity.signature)
-                if doc is None and eid.compound in doc_database:
-                    for _sig, d in doc_database[eid.compound].items():
+                cid = eid.compound
+                second = eid.member if eid.member else cid
+                det_id = compute_entity_id(entity.kind, cid, second)
+                doc = doc_database.get_doc(cid, entity.signature)
+                if doc is None and cid in doc_database:
+                    for _sig, d in doc_database[cid].items():
                         if d.name == entity.name and d.brief:
                             doc = d
                             break
@@ -144,10 +159,11 @@ def _load():
         if doc:
             doc_text = doc.to_doxygen()
 
-        # Embedding: try cache, else skip
+        # Embedding: look up by deterministic entity ID
         emb = None
-        if doc and doc.mid and doc.mid in all_embeddings:
-            emb = all_embeddings[doc.mid]
+        if det_id and det_id in all_embeddings:
+            raw = all_embeddings[det_id]
+            emb = np.asarray(raw, dtype=np.float32)
 
         if emb is None:
             continue  # can't probe without embedding
@@ -188,7 +204,7 @@ def _load():
     _cache.update(
         graph=graph, entity_db=entity_db, doc_db=doc_database,
         all_embeddings=all_embeddings, cap_defs=cap_defs,
-        sbert=None, oai_emb=oai_emb, pool=pool, pool_ids=pool_ids, pool_matrix=pool_matrix,
+        pool=pool, pool_ids=pool_ids, pool_matrix=pool_matrix,
         classifications=classifications,
         locked_by_group=locked_by_group, locked_nids=locked_nids,
     )
@@ -199,8 +215,9 @@ def _load():
 
 
 def encode(text: str) -> np.ndarray:
-    c = _load()
-    return c["oai_emb"].embed_single(text)
+    """Embed a single text using the local ONNX model."""
+    model = _get_fastembed()
+    return np.array(list(model.embed([text])), dtype=np.float32)[0]
 
 
 def probe(desc_text: str, threshold: float = 0.40,

@@ -1,0 +1,2 @@
+Good, now that we have some consensus on overall design, we can get back to deciding what the mcp server needs to provide for all 3 types of agents.  Keep in mind that v1, v2, etc are just internal implementation phases and not relevant here, we won’t start and planning or spec writing until the mcp server is complete with all resources, tools, and prompts.  So knowing what we know now, let’s think about what the final form for the mcp server looks like, and what kind of curation or pre-computing (agentic, computed, or by hand) needs to happen to get us there
+

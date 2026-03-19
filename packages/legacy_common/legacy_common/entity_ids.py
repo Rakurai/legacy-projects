@@ -1,17 +1,15 @@
 """
-Deterministic entity ID generation for the build pipeline.
+Deterministic entity ID generation.
 
 Replaces opaque Doxygen IDs with stable, type-prefixed content-hashed IDs
 of the form ``{prefix}:{sha256(canonical_key)[:7]}``.
 
-The canonical key is the signature_map tuple ``(compound_id, second_element)``.
-The server runtime treats entity_id as an opaque key — only the build
-pipeline imports this module.
+The canonical key is ``repr((compound_id, second_element))`` where
+second_element is the member hash for members, or the compound ID for compounds.
 """
 
 import hashlib
 
-# Prefix mapping: entity kind → short prefix for deterministic IDs.
 _KIND_PREFIX: dict[str, str] = {
     "function": "fn",
     "define": "fn",
@@ -31,9 +29,6 @@ def kind_to_prefix(kind: str) -> str:
 
 def compute_entity_id(kind: str, compound_id: str, second_element: str) -> str:
     """Compute a deterministic entity ID from kind and canonical key components.
-
-    The canonical key is ``repr((compound_id, second_element))`` — the same
-    format used as keys in ``signature_map.json``.
 
     Returns:
         String in ``{prefix}:{7 hex}`` format, e.g. ``fn:a3f8c1d``.

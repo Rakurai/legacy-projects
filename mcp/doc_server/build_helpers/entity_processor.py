@@ -13,9 +13,9 @@ ready for database insertion. Computes:
 from collections.abc import ItemsView
 from pathlib import Path
 
-from build_helpers.entity_ids import compute_entity_id
 from legacy_common.doc_db import Document, DocumentDB
 from legacy_common.doxygen_parse import DoxygenEntity, EntityDatabase
+from legacy_common.entity_ids import compute_entity_id
 from server.logging_config import log
 
 

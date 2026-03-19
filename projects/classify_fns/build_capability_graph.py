@@ -16,15 +16,15 @@ Pipeline stages:
   9. Compute entry-point enablement per wave
  10. Export capability_graph.json
 
-Inputs:
-  - clustering/code_graph.gml      (networkx MultiDiGraph)
-  - clustering/code_graph.json     (entity database)
-  - clustering/doc_db.json         (LLM-generated function docs)
-  - clustering/embeddings_cache.pkl (function embeddings)
-  - capability_defs.json           (capability group definitions with locked lists)
+Inputs (all from artifacts/):
+  - code_graph.gml                                (networkx MultiDiGraph)
+  - code_graph.json                               (entity database)
+  - generated_docs/*.json                         (LLM-generated function docs)
+  - embed_cache_BAAI-bge-base-en-v1.5_768.pkl    (entity embeddings)
+  - capability_defs.json                          (capability group definitions with locked lists)
 
 Output:
-  - capability_graph.json
+  - projects/classify_fns/capability_graph.json
 """
 
 import json
@@ -35,6 +35,7 @@ from pathlib import Path
 
 import numpy as np
 import networkx as nx
+from fastembed import TextEmbedding
 from sklearn.metrics.pairwise import cosine_similarity
 
 # ── Module setup ─────────────────────────────────────────────────────
@@ -42,19 +43,36 @@ from sklearn.metrics.pairwise import cosine_similarity
 import legacy_common.doc_db as ddb
 import legacy_common.doxygen_graph as dg
 import legacy_common.doxygen_parse as dp
-import legacy_common.openai_embeddings as oai_emb
 from legacy_common import ARTIFACTS_DIR
+from legacy_common.entity_ids import compute_entity_id
 
 # ── Paths ────────────────────────────────────────────────────────────
 
 HERE = Path(__file__).resolve().parent
-CAPABILITY_DEFS_PATH = HERE / "capability_defs.json"
-EMBEDDING_CACHE_PATH = ARTIFACTS_DIR / "embeddings_cache.pkl"
+CAPABILITY_DEFS_PATH = ARTIFACTS_DIR / "capability_defs.json"
+EMBED_CACHE_PATH = ARTIFACTS_DIR / "embed_cache_BAAI-bge-base-en-v1.5_768.pkl"
 OUTPUT_PATH = HERE / "capability_graph.json"
 
 EDGE_THRESHOLD = 3          # min cross-capability call pairs for a dependency edge
 EMBED_SIM_THRESHOLD = 0.40  # min cosine similarity for embedding-based classification
 ENTRY_PREFIXES = ("do_", "spell_", "spec_")
+
+# ── Lazy fastembed model ─────────────────────────────────────────────
+
+_fastembed_model: TextEmbedding | None = None
+
+
+def _get_fastembed() -> TextEmbedding:
+    global _fastembed_model
+    if _fastembed_model is None:
+        _fastembed_model = TextEmbedding(model_name="BAAI/bge-base-en-v1.5")
+    return _fastembed_model
+
+
+def embed_texts_local(texts: list[str]) -> np.ndarray:
+    """Embed texts using the local ONNX model. Returns (N, dim) float32 array."""
+    model = _get_fastembed()
+    return np.array(list(model.embed(texts)), dtype=np.float32)
 
 # ── Type system for dependency edges ─────────────────────────────────
 # Maps (src_type, tgt_type) → edge_kind.  Missing pairs default to "requires".
@@ -128,18 +146,24 @@ def resolve_doc(
     db: ddb.DocumentDB,
     entity_db: dp.EntityDatabase,
     node_id: str,
-) -> tuple:
-    """Look up the doc for a graph node.  Returns (doc, doc_text)."""
+) -> tuple[ddb.Document | None, str | None, str | None]:
+    """Look up the doc for a graph node.
+
+    Returns (doc, doc_text, deterministic_entity_id).
+    """
     try:
         eid = dg.get_body_eid(entity_db, node_id)
     except Exception:
-        return None, None
+        return None, None, None
 
     entity = entity_db.get(eid)
     if entity is None:
-        return None, None
+        return None, None, None
 
     cid = eid.compound
+    second = eid.member if eid.member else cid
+    det_id = compute_entity_id(entity.kind, cid, second)
+
     sig = entity.signature
     doc = db.get_doc(cid, sig)
     if doc is None and cid in db:
@@ -149,7 +173,7 @@ def resolve_doc(
                 break
 
     doc_text = doc.to_doxygen() if doc else None
-    return doc, doc_text
+    return doc, doc_text, det_id
 
 
 def classify_edge(src_type: str, tgt_type: str) -> str:
@@ -163,20 +187,20 @@ def load_artifacts():
     """Load graph, entity DB, doc DB, embeddings, and capability definitions."""
     print("Stage 1: Loading artifacts...")
 
-    graph = dg.load_graph(CLUSTERING_DIR / "code_graph.gml")
-    entity_db = dp.load_db(CLUSTERING_DIR / "code_graph.json")
-    doc_db = ddb.DocumentDB()
-    doc_db.load(ddb.DOC_DB_PATH)
+    graph = dg.load_graph(ARTIFACTS_DIR / "code_graph.gml")
+    entity_db = dp.load_db(ARTIFACTS_DIR / "code_graph.json")
+    doc_db = ddb.DocumentDB(docs_dir=ARTIFACTS_DIR / "generated_docs")
 
-    with open(EMBEDDING_CACHE_PATH, "rb") as f:
-        emb_cache: dict[str, np.ndarray] = pickle.load(f)
+    with open(EMBED_CACHE_PATH, "rb") as f:
+        emb_cache: dict[str, list[float]] = pickle.load(f)
 
     with open(CAPABILITY_DEFS_PATH) as f:
         cap_defs: dict[str, dict] = json.load(f)
 
     print(f"  Graph: {graph.number_of_nodes()} nodes, {graph.number_of_edges()} edges")
     print(f"  Entity DB: {len(entity_db.entities)} entities")
-    print(f"  Doc DB: {doc_db.count()} documents")
+    doc_count = sum(len(v) for v in doc_db.docs.values())
+    print(f"  Doc DB: {doc_count} documents (from generated_docs/)")
     print(f"  Embeddings cache: {len(emb_cache)} entries")
     print(f"  Capability groups: {len(cap_defs)}")
     print()
@@ -260,12 +284,13 @@ def map_callees(
         full_sig = vd.get("name", node_id)
         name = bare_name(full_sig)
 
-        doc, doc_text = resolve_doc(doc_db, entity_db, node_id)
+        doc, doc_text, det_id = resolve_doc(doc_db, entity_db, node_id)
 
-        # Resolve embedding from cache
+        # Resolve embedding from cache via deterministic entity ID
         emb = None
-        if doc and doc.mid and doc.mid in emb_cache:
-            emb = emb_cache[doc.mid]
+        if det_id and det_id in emb_cache:
+            raw = emb_cache[det_id]
+            emb = np.asarray(raw, dtype=np.float32)
 
         callee_info[node_id] = {
             "name": name,
@@ -315,7 +340,7 @@ def classify_callees(
     group_names = sorted(cap_defs.keys())
     group_descs = [cap_defs[g]["desc"] for g in group_names]
     print("  Embedding group descriptions for fallback classification...")
-    group_desc_embeddings = oai_emb.embed_texts(group_descs, show_progress=True)
+    group_desc_embeddings = embed_texts_local(group_descs)
 
     callee_group: dict[str, str] = {}
     group_members: defaultdict[str, set[str]] = defaultdict(set)

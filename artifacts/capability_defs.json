@@ -855,7 +855,9 @@
       "strcpy",
       "strlen",
       "strncmp",
-      "strstr"
+      "strstr",
+      "decltype",
+      "dizzy_scantime"
     ]
   },
   "numerics": {
@@ -874,7 +876,9 @@
       "number_percent",
       "number_range",
       "prd_chance",
-      "roll_chance"
+      "roll_chance",
+      "pow2gt",
+      "number_mm"
     ]
   },
   "flags": {

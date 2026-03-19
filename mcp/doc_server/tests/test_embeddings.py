@@ -149,10 +149,7 @@ class TestGenerateEmbeddingsIncludesDocLess:
         assert len(texts) == 2
 
     def test_all_doc_less_entities_embedded(self, tmp_path: Path) -> None:
-        entities = [
-            _make_merged(f"fn_{i}", kind="function", body_fn=f"src/f{i}.cc")
-            for i in range(5)
-        ]
+        entities = [_make_merged(f"fn_{i}", kind="function", body_fn=f"src/f{i}.cc") for i in range(5)]
         for e in entities:
             e.doc = None
 

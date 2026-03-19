@@ -55,6 +55,86 @@ class SignatureMap:
         return len(self._map)
 
 
+_CONTRACT_SEED_FAN_IN_THRESHOLD = 10
+"""Minimum fan_in for an entity to qualify as a contract seed (configurable)."""
+
+# Domain-specific terms from the Legacy MUD codebase vocabulary.
+# Used for rationale_specificity heuristic (domain-term density component).
+_DOMAIN_TERMS: frozenset[str] = frozenset(
+    {
+        "damage",
+        "spell",
+        "magic",
+        "combat",
+        "character",
+        "player",
+        "mobile",
+        "mob",
+        "room",
+        "area",
+        "effect",
+        "affect",
+        "buff",
+        "debuff",
+        "weapon",
+        "skill",
+        "level",
+        "experience",
+        "hit",
+        "attack",
+        "defense",
+        "poison",
+        "heal",
+        "cure",
+        "cast",
+        "ability",
+        "stat",
+        "attribute",
+        "condition",
+        "mortal",
+        "immortal",
+        "deity",
+        "mana",
+        "hitpoint",
+        "movement",
+        "fight",
+        "flee",
+        "death",
+        "respawn",
+        "save",
+        "resist",
+        "immunity",
+        "vulnerability",
+        "flag",
+        "bitvector",
+        "tick",
+        "pulse",
+        "act",
+        "command",
+        "do_",
+        "spell_",
+        "spec_",
+        "clan",
+        "guild",
+        "race",
+        "class",
+        "alignment",
+        "karma",
+        "reputation",
+        "quest",
+        "auction",
+        "shop",
+        "object",
+        "item",
+        "container",
+        "wear",
+        "wield",
+        "inventory",
+        "equipment",
+    }
+)
+
+
 class MergedEntity:
     """
     Merged entity record combining DoxygenEntity + Document + derived metrics.
@@ -78,6 +158,12 @@ class MergedEntity:
         self.is_entry_point: bool = False
         self.embedding: list[float] | None = None
         self._capability: str | None = None
+
+        # KG enrichment fields (FR-001 through FR-004)
+        self.doc_state: str | None = None
+        self.notes_length: int | None = None
+        self.is_contract_seed: bool = False
+        self.rationale_specificity: float | None = None
 
     @property
     def old_entity_id(self) -> str:
@@ -142,7 +228,7 @@ def merge_entities(
         "Entities merged",
         total=len(merged),
         with_docs=len(merged) - unmatched_entities,
-        without_docs=unmatched_entities
+        without_docs=unmatched_entities,
     )
 
     return merged
@@ -170,8 +256,7 @@ def assign_deterministic_ids(merged_entities: list[MergedEntity]) -> dict[str, s
 
         if new_id in seen_new_ids:
             raise RuntimeError(
-                f"Hash collision: {new_id!r} produced by both "
-                f"{seen_new_ids[new_id]!r} and {merged.old_entity_id!r}"
+                f"Hash collision: {new_id!r} produced by both {seen_new_ids[new_id]!r} and {merged.old_entity_id!r}"
             )
 
         seen_new_ids[new_id] = merged.old_entity_id
@@ -186,10 +271,7 @@ def assign_deterministic_ids(merged_entities: list[MergedEntity]) -> dict[str, s
     return old_to_new
 
 
-def extract_source_code(
-    merged_entities: list[MergedEntity],
-    project_root: Path
-) -> None:
+def extract_source_code(merged_entities: list[MergedEntity], project_root: Path) -> None:
     """
     Extract source code from disk for entities with body location.
 
@@ -220,7 +302,9 @@ def extract_source_code(
                         if 0 < entity.decl.line <= len(lines):
                             merged.definition_text = lines[entity.decl.line - 1].strip()
                 except (OSError, UnicodeDecodeError) as e:
-                    log.warning("Failed to extract definition", entity_id=merged.entity_id, path=str(decl_file), error=str(e))
+                    log.warning(
+                        "Failed to extract definition", entity_id=merged.entity_id, path=str(decl_file), error=str(e)
+                    )
             else:
                 log.warning("Declaration file not found", entity_id=merged.entity_id, path=str(decl_file))
 
@@ -243,7 +327,9 @@ def extract_source_code(
                         merged.source_text = "".join(lines[start_idx:end_idx])
                         extracted_count += 1
                 except (OSError, UnicodeDecodeError) as e:
-                    log.warning("Failed to extract source", entity_id=merged.entity_id, path=str(body_file), error=str(e))
+                    log.warning(
+                        "Failed to extract source", entity_id=merged.entity_id, path=str(body_file), error=str(e)
+                    )
                     failed_count += 1
             else:
                 log.warning("Source file not found", entity_id=merged.entity_id, path=str(body_file))
@@ -294,10 +380,7 @@ def compute_is_entry_point(merged_entities: list[MergedEntity]) -> None:
     log.info("Entry point flags computed", entry_point_count=entry_point_count)
 
 
-def assign_capabilities(
-    merged_entities: list[MergedEntity],
-    cap_graph: dict
-) -> None:
+def assign_capabilities(merged_entities: list[MergedEntity], cap_graph: dict) -> None:
     """
     Assign capability groups to entities from capability_graph.json members.
 
@@ -331,6 +414,70 @@ def assign_capabilities(
             assigned += 1
 
     log.info("Capabilities assigned", assigned=assigned, total=len(merged_entities))
+
+
+def compute_enriched_fields(merged_entities: list[MergedEntity]) -> None:
+    """
+    Compute KG-enrichment derived fields for all merged entities (FR-001 through FR-004, FR-013).
+
+    Computes:
+    - doc_state: carried from doc.state (the documentation generation tier)
+    - notes_length: character count of the notes field
+    - is_contract_seed: fan_in > threshold AND rationale is non-null
+    - rationale_specificity: heuristic score based on length x domain-term density
+
+    Must be called AFTER fan_in values are assigned (i.e., after graph metrics are computed).
+
+    Raises:
+        BuildError: If a documented entity is missing the required `state` field (FR-013).
+    """
+    log.info("Computing KG enrichment fields")
+
+    seeds = 0
+    with_doc_state = 0
+
+    for merged in merged_entities:
+        doc = merged.doc
+        if doc is None:
+            continue
+
+        # FR-001: Carry doc_state from doc.state. Required field — fail fast if missing.
+        if doc.state is None:
+            raise BuildError(
+                f"Entity {merged.old_entity_id!r} (sig: {merged.entity.signature!r}) "
+                f"has a generated_docs entry but missing required 'state' field. "
+                f"Check the generated_docs artifact for this entity."
+            )
+        merged.doc_state = doc.state
+        with_doc_state += 1
+
+        # FR-002: notes_length from character count of notes field
+        notes = getattr(doc, "notes", None)
+        if notes:
+            merged.notes_length = len(notes)
+
+        # FR-003: is_contract_seed — high fan_in AND rationale present
+        rationale = getattr(doc, "rationale", None)
+        if merged.fan_in > _CONTRACT_SEED_FAN_IN_THRESHOLD and rationale:
+            merged.is_contract_seed = True
+            seeds += 1
+
+        # FR-004: rationale_specificity heuristic (length x domain-term density)
+        if rationale:
+            words = rationale.lower().split()
+            if words:
+                word_set = set(words)
+                domain_hits = len(word_set & _DOMAIN_TERMS)
+                density = domain_hits / len(word_set)
+                # Normalize length: cap at 500 chars for a score of 1.0
+                length_score = min(len(rationale) / 500.0, 1.0)
+                merged.rationale_specificity = round(length_score * (0.5 + 0.5 * density), 4)
+
+    log.info(
+        "KG enrichment fields computed",
+        with_doc_state=with_doc_state,
+        contract_seeds=seeds,
+    )
 
 
 # Note: fan_in, fan_out, and is_bridge are computed from the

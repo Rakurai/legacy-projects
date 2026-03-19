@@ -12,6 +12,7 @@ from server.tools.graph import (
 
 # ---------- get_callers ----------
 
+
 @pytest.mark.asyncio
 async def test_get_callers(mock_ctx, sample_entities, sample_edges):
     """Finds callers at depth 1."""
@@ -36,6 +37,7 @@ async def test_get_callers_no_callers(mock_ctx, sample_entities, sample_edges):
 
 
 # ---------- get_callees ----------
+
 
 @pytest.mark.asyncio
 async def test_get_callees(mock_ctx, sample_entities, sample_edges):
@@ -65,6 +67,7 @@ async def test_get_callees_depth_2(mock_ctx, sample_entities, sample_edges):
 
 # ---------- get_dependencies ----------
 
+
 @pytest.mark.asyncio
 async def test_get_dependencies(mock_ctx, sample_entities, sample_edges):
     """Returns filtered dependencies."""
@@ -91,6 +94,7 @@ async def test_get_dependencies_with_relationship_filter(mock_ctx, sample_entiti
 
 
 # ---------- get_class_hierarchy ----------
+
 
 @pytest.mark.asyncio
 async def test_get_class_hierarchy(mock_ctx, sample_entities, sample_edges):
@@ -127,6 +131,7 @@ async def test_get_class_hierarchy_descendants_only(mock_ctx, sample_entities, s
 
 
 # ---------- get_related_entities ----------
+
 
 @pytest.mark.asyncio
 async def test_get_related_entities(mock_ctx, sample_entities, sample_edges):

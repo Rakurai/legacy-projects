@@ -26,18 +26,22 @@ from server.models import (
 
 # -- Response Models --
 
+
 class ListCapabilitiesResponse(BaseModel):
     """Response from list_capabilities tool."""
+
     capabilities: list[CapabilitySummary]
 
 
 class GetCapabilityDetailResponse(BaseModel):
     """Response from get_capability_detail tool."""
+
     detail: CapabilityDetail
 
 
 class CompareCapabilitiesResponse(BaseModel):
     """Response from compare_capabilities tool."""
+
     capabilities: list[str]
     shared_dependencies: list[EntitySummary]
     unique_dependencies: dict[str, list[EntitySummary]]
@@ -47,12 +51,14 @@ class CompareCapabilitiesResponse(BaseModel):
 
 class ListEntryPointsResponse(BaseModel):
     """Response from list_entry_points tool."""
+
     entry_points: list[EntitySummary]
     truncation: TruncationMetadata
 
 
 class EntryPointInfoResponse(BaseModel):
     """Response from get_entry_point_info tool."""
+
     entry_point: EntitySummary
     capabilities_exercised: dict[str, dict]
 
@@ -70,9 +76,7 @@ async def list_capabilities(ctx: Context) -> ListCapabilitiesResponse:
     log.info("list_capabilities")
 
     async with lc["db_manager"].session() as session:
-        result = await session.execute(
-            select(Capability).order_by(Capability.name)
-        )
+        result = await session.execute(select(Capability).order_by(Capability.name))
         capabilities = list(result.scalars().all())
 
     return ListCapabilitiesResponse(
@@ -103,13 +107,10 @@ async def get_capability_detail(
         if not cap:
             raise CapabilityNotFoundError(capability)
 
-        edge_result = await session.execute(
-            select(CapabilityEdge).where(CapabilityEdge.source_cap == capability)
-        )
+        edge_result = await session.execute(select(CapabilityEdge).where(CapabilityEdge.source_cap == capability))
         edges = list(edge_result.scalars().all())
         dependencies = [
-            {"target_capability": e.target_cap, "edge_type": e.edge_type, "call_count": e.call_count}
-            for e in edges
+            {"target_capability": e.target_cap, "edge_type": e.edge_type, "call_count": e.call_count} for e in edges
         ]
 
         ep_result = await session.execute(
@@ -122,9 +123,7 @@ async def get_capability_detail(
         functions: list[EntitySummary] | None = None
         if include_functions:
             func_result = await session.execute(
-                select(Entity)
-                .where(Entity.capability == capability)
-                .order_by(Entity.fan_in.desc())
+                select(Entity).where(Entity.capability == capability).order_by(Entity.fan_in.desc())
             )
             func_entities = list(func_result.scalars().all())
             functions = [entity_to_summary(e) for e in func_entities]
@@ -165,9 +164,7 @@ async def compare_capabilities(
         all_entity_ids: set[str] = set()
 
         for cap_name in capabilities:
-            result = await session.execute(
-                select(Entity.entity_id).where(Entity.capability == cap_name)
-            )
+            result = await session.execute(select(Entity.entity_id).where(Entity.capability == cap_name))
             entity_ids = set(result.scalars().all())
             cap_entities[cap_name] = entity_ids
             all_entity_ids |= entity_ids
@@ -183,7 +180,8 @@ async def compare_capabilities(
 
         cap_set = set(capabilities)
         shared_ids = [
-            eid for eid, caps in entity_callers_caps.items()
+            eid
+            for eid, caps in entity_callers_caps.items()
             if len(caps & cap_set) >= 2  # noqa: PLR2004  — shared = used by ≥2
         ][:limit]
 
@@ -212,9 +210,7 @@ async def compare_capabilities(
 
         entity_map: dict[str, Entity] = {}
         if all_fetch_ids:
-            result = await session.execute(
-                select(Entity).where(Entity.entity_id.in_(list(all_fetch_ids)))
-            )
+            result = await session.execute(select(Entity).where(Entity.entity_id.in_(list(all_fetch_ids))))
             entity_map = {e.entity_id: e for e in result.scalars().all()}
 
     shared = [entity_to_summary(entity_map[e]) for e in shared_ids if e in entity_map]
@@ -231,7 +227,9 @@ async def compare_capabilities(
         unique_dependencies=unique,
         bridge_entities=bridges,
         truncation=TruncationMetadata(
-            truncated=False, total_available=total, node_count=total,
+            truncated=False,
+            total_available=total,
+            node_count=total,
         ),
     )
 

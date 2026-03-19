@@ -21,6 +21,7 @@ from server.logging_config import configure_logging, log
 
 class LifespanContext(TypedDict):
     """Typed dict yielded by lifespan, accessible via ctx.lifespan_context."""
+
     config: ServerConfig
     db_manager: DatabaseManager
     graph: nx.MultiDiGraph

@@ -16,12 +16,12 @@ from typing import Any
 
 from legacy_common.doc_db import DocumentDB
 from legacy_common.doxygen_parse import EntityDatabase
-
 from server.logging_config import log
 
 
 class ArtifactValidationError(Exception):
     """Raised when required artifacts are missing or invalid."""
+
     pass
 
 
@@ -67,9 +67,7 @@ def validate_artifacts(artifacts_dir: Path) -> None:
         missing_files.append("generated_docs/ (empty — no JSON files)")
 
     if missing_files:
-        raise ArtifactValidationError(
-            f"Missing or empty artifact files: {', '.join(missing_files)}"
-        )
+        raise ArtifactValidationError(f"Missing or empty artifact files: {', '.join(missing_files)}")
 
     log.info("All required artifacts present and valid")
 
@@ -216,6 +214,6 @@ def load_capability_graph(artifacts_dir: Path) -> dict[str, Any]:
     log.info(
         "Capability graph loaded",
         capability_count=len(cap_graph.get("capabilities", {})),
-        dependency_sources=len(cap_graph.get("dependencies", {}))
+        dependency_sources=len(cap_graph.get("dependencies", {})),
     )
     return cap_graph

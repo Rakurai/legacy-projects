@@ -26,10 +26,10 @@ if TYPE_CHECKING:
     from server.embedding import EmbeddingProvider
 
 from server.converters import entity_to_summary
-from server.db_models import Entity
+from server.db_models import Entity, EntityUsage
 from server.enums import SearchMode
 from server.logging_config import log
-from server.models import SearchResult
+from server.models import MatchingUsage, SearchResult
 
 # Scoring weights (matching spec)
 _EXACT_WEIGHT = 10.0
@@ -57,10 +57,7 @@ async def _exact_match_ids(
     capability: str | None,
 ) -> set[str]:
     """Find entity IDs with exact signature or name match."""
-    stmt = (
-        select(Entity.entity_id)
-        .where(or_(Entity.signature == query, Entity.name == query))
-    )
+    stmt = select(Entity.entity_id).where(or_(Entity.signature == query, Entity.name == query))
     stmt = _apply_filters(stmt, kind, capability)
     result = await session.execute(stmt)
     return {row[0] for row in result.all()}
@@ -77,10 +74,7 @@ async def _keyword_scores(
     tsq = func.plainto_tsquery("english", query)
     rank_expr = func.ts_rank(Entity.search_vector, tsq).label("score")
 
-    stmt = (
-        select(Entity.entity_id, rank_expr)
-        .where(Entity.search_vector.op("@@")(tsq))
-    )
+    stmt = select(Entity.entity_id, rank_expr).where(Entity.search_vector.op("@@")(tsq))
     stmt = _apply_filters(stmt, kind, capability)
     stmt = stmt.order_by(rank_expr.desc()).limit(limit)
 
@@ -99,10 +93,7 @@ async def _semantic_scores(
     cosine_dist = Entity.embedding.cosine_distance(query_embedding)
     score_expr = (literal(1) - cosine_dist).label("score")
 
-    stmt = (
-        select(Entity.entity_id, score_expr)
-        .where(Entity.embedding.isnot(None))
-    )
+    stmt = select(Entity.entity_id, score_expr).where(Entity.embedding.isnot(None))
     stmt = _apply_filters(stmt, kind, capability)
     stmt = stmt.order_by(score_expr.desc()).limit(limit)
 
@@ -174,9 +165,7 @@ async def hybrid_search(
 
     # Fetch full entities for top results in one query
     top_ids = [eid for eid, _ in ranked]
-    result = await session.execute(
-        select(Entity).where(Entity.entity_id.in_(top_ids))
-    )
+    result = await session.execute(select(Entity).where(Entity.entity_id.in_(top_ids)))
     entity_map = {e.entity_id: e for e in result.scalars().all()}
 
     # Normalize max score for 0-1 range
@@ -188,12 +177,168 @@ async def hybrid_search(
         entity = entity_map.get(eid)
         if not entity:
             continue
-        results.append(SearchResult(
-            result_type="entity",
-            score=min(score / normalizer, 1.0),
-            search_mode=search_mode,
-            entity_summary=entity_to_summary(entity),
-        ))
+        results.append(
+            SearchResult(
+                result_type="entity",
+                score=min(score / normalizer, 1.0),
+                search_mode=search_mode,
+                entity_summary=entity_to_summary(entity),
+            )
+        )
 
     log.info("Search complete", result_count=len(results), search_mode=search_mode)
+    return results, search_mode
+
+
+async def hybrid_search_usages(
+    session: AsyncSession,
+    query: str,
+    embedding_provider: EmbeddingProvider | None = None,
+    kind: str | None = None,
+    capability: str | None = None,
+    limit: int = 20,
+) -> tuple[list[SearchResult], SearchMode]:
+    """
+    Hybrid search over entity_usages descriptions (FR-008).
+
+    Combines semantic search over usage embeddings (0.6 weight) with keyword
+    search over usage tsvectors (0.4 weight). No exact-match boost (usage
+    descriptions have no name/signature to boost).
+
+    Results are grouped by callee entity — one SearchResult per callee, with
+    top-matching usage descriptions inlined as supporting evidence.
+
+    kind and capability filters apply to the callee entity.
+    """
+    log.info("Hybrid usage search", query=query, kind=kind, capability=capability)
+
+    query_embedding: list[float] | None = None
+    search_mode: SearchMode = SearchMode.HYBRID
+
+    if embedding_provider:
+        try:
+            query_embedding = await embedding_provider.embed_query(query)
+        except (OSError, RuntimeError, TimeoutError) as e:
+            log.warning("Embedding generation failed; using keyword-only for usages search", error=str(e))
+            search_mode = SearchMode.KEYWORD_FALLBACK
+    else:
+        search_mode = SearchMode.KEYWORD_FALLBACK
+
+    # Keyword scores over usage descriptions: {(callee_id, caller_compound, caller_sig): score}
+    usage_scores: dict[tuple[str, str, str], float] = {}
+
+    tsq = func.plainto_tsquery("english", query)
+    kw_rank = func.ts_rank(EntityUsage.search_vector, tsq).label("score")
+    kw_stmt = (
+        select(  # type: ignore[call-overload]
+            EntityUsage.callee_id,
+            EntityUsage.caller_compound,
+            EntityUsage.caller_sig,
+            EntityUsage.description,
+            kw_rank,
+        )
+        .where(EntityUsage.search_vector.op("@@")(tsq))  # type: ignore[union-attr]
+        .order_by(kw_rank.desc())
+        .limit(limit * 5)
+    )
+    kw_result = await session.execute(kw_stmt)
+    for row in kw_result.all():
+        key = (row.callee_id, row.caller_compound, row.caller_sig)
+        usage_scores[key] = float(row.score) * _KEYWORD_WEIGHT
+
+    # Semantic scores over usage embeddings
+    if search_mode == SearchMode.HYBRID and query_embedding is not None:
+        cosine_dist = EntityUsage.embedding.cosine_distance(query_embedding)  # type: ignore[union-attr]
+        sem_score_expr = (literal(1) - cosine_dist).label("score")
+        sem_stmt = (
+            select(  # type: ignore[call-overload]
+                EntityUsage.callee_id,
+                EntityUsage.caller_compound,
+                EntityUsage.caller_sig,
+                EntityUsage.description,
+                sem_score_expr,
+            )
+            .where(EntityUsage.embedding.isnot(None))  # type: ignore[union-attr]
+            .order_by(sem_score_expr.desc())
+            .limit(limit * 5)
+        )
+        sem_result = await session.execute(sem_stmt)
+        for row in sem_result.all():
+            key = (row.callee_id, row.caller_compound, row.caller_sig)
+            sem_contribution = float(row.score) * _SEMANTIC_WEIGHT
+            usage_scores[key] = usage_scores.get(key, 0.0) + sem_contribution
+
+    if not usage_scores:
+        log.info("Usage search complete", result_count=0, search_mode=search_mode)
+        return [], search_mode
+
+    # Fetch all descriptions for scored rows (needed for MatchingUsage)
+    desc_map: dict[tuple[str, str, str], str] = {}
+    keys_with_scores = list(usage_scores.keys())
+    all_callee_ids = list({k[0] for k in keys_with_scores})
+
+    desc_result = await session.execute(
+        select(
+            EntityUsage.callee_id, EntityUsage.caller_compound, EntityUsage.caller_sig, EntityUsage.description
+        ).where(EntityUsage.callee_id.in_(all_callee_ids))  # type: ignore[attr-defined]
+    )
+    for row in desc_result.all():
+        desc_map[(row.callee_id, row.caller_compound, row.caller_sig)] = row.description
+
+    # Group by callee: best combined score, top matching usages
+    callee_scores: dict[str, float] = {}
+    callee_usages: dict[str, list[MatchingUsage]] = {}
+
+    for (callee_id, compound, sig), score in usage_scores.items():
+        if callee_id not in callee_scores or score > callee_scores[callee_id]:
+            callee_scores[callee_id] = score
+        description = desc_map.get((callee_id, compound, sig), "")
+        if callee_id not in callee_usages:
+            callee_usages[callee_id] = []
+        callee_usages[callee_id].append(
+            MatchingUsage(
+                caller_compound=compound,
+                caller_sig=sig,
+                description=description,
+                score=min(score, 1.0),
+            )
+        )
+
+    # Sort callee_usages per callee by score desc, keep top 3 as evidence
+    for callee_id, usages_list in callee_usages.items():
+        usages_list.sort(key=lambda u: u.score, reverse=True)
+        callee_usages[callee_id] = usages_list[:3]
+
+    # Rank callees by best score
+    ranked_callees = sorted(callee_scores.items(), key=lambda x: x[1], reverse=True)[:limit]
+
+    # Fetch callee entities
+    ranked_callee_ids = [cid for cid, _ in ranked_callees]
+    entity_result = await session.execute(select(Entity).where(Entity.entity_id.in_(ranked_callee_ids)))  # type: ignore[attr-defined]
+    entity_map = {e.entity_id: e for e in entity_result.scalars().all()}
+
+    # Apply callee-level filters
+    max_score = ranked_callees[0][1] if ranked_callees else 1.0
+    normalizer = max_score if max_score > 0 else 1.0
+
+    results: list[SearchResult] = []
+    for callee_id, score in ranked_callees:
+        entity = entity_map.get(callee_id)
+        if not entity:
+            continue
+        if kind and entity.kind != kind:
+            continue
+        if capability and entity.capability != capability:
+            continue
+        results.append(
+            SearchResult(
+                result_type="entity",
+                score=min(score / normalizer, 1.0),
+                search_mode=search_mode,
+                entity_summary=entity_to_summary(entity),
+                matching_usages=callee_usages.get(callee_id),
+            )
+        )
+
+    log.info("Usage search complete", result_count=len(results), search_mode=search_mode)
     return results, search_mode

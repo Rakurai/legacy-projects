@@ -22,6 +22,7 @@ from server.embedding import (
 # Factory tests (no model download needed — mock providers)
 # ---------------------------------------------------------------------------
 
+
 class TestCreateProvider:
     """Tests for the create_provider factory function."""
 
@@ -105,6 +106,7 @@ class TestCreateProvider:
 # LocalEmbeddingProvider integration tests (require model download)
 # ---------------------------------------------------------------------------
 
+
 @pytest.mark.slow
 class TestLocalEmbeddingProviderIntegration:
     """Integration tests that actually load the ONNX model.
@@ -148,6 +150,7 @@ class TestLocalEmbeddingProviderIntegration:
 # Protocol conformance
 # ---------------------------------------------------------------------------
 
+
 class TestProtocolConformance:
     """Verify implementations match the EmbeddingProvider protocol."""
 
@@ -170,6 +173,7 @@ class TestProtocolConformance:
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
+
 
 def _mock_config(**overrides) -> MagicMock:
     """Create a mock ServerConfig with sensible defaults."""

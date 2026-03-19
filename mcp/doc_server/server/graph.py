@@ -59,10 +59,7 @@ async def load_graph(session: AsyncSession) -> nx.MultiDiGraph:
 
 
 def compute_call_cone(
-    graph: nx.MultiDiGraph,
-    seed_id: str,
-    max_depth: int = 5,
-    max_size: int = 200
+    graph: nx.MultiDiGraph, seed_id: str, max_depth: int = 5, max_size: int = 200
 ) -> dict[str, list[str] | bool]:
     """
     Compute transitive call cone via BFS from seed function.
@@ -85,12 +82,7 @@ def compute_call_cone(
     """
     if seed_id not in graph:
         log.warning("Seed entity not in graph", seed_id=seed_id)
-        return {
-            "direct": [],
-            "transitive": [],
-            "truncated": False,
-            "max_depth_reached": 0
-        }
+        return {"direct": [], "transitive": [], "truncated": False, "max_depth_reached": 0}
 
     direct_callees: list[str] = []
     transitive_cone: list[str] = []
@@ -128,16 +120,11 @@ def compute_call_cone(
         "direct": direct_callees,
         "transitive": transitive_cone,
         "truncated": truncated,
-        "max_depth_reached": max_depth_reached
+        "max_depth_reached": max_depth_reached,
     }
 
 
-def get_callers(
-    graph: nx.MultiDiGraph,
-    entity_id: str,
-    depth: int = 1,
-    limit: int = 50
-) -> dict[int, list[str]]:
+def get_callers(graph: nx.MultiDiGraph, entity_id: str, depth: int = 1, limit: int = 50) -> dict[int, list[str]]:
     """
     Get callers (entities with CALLS edges to this entity) up to depth levels.
 
@@ -179,12 +166,7 @@ def get_callers(
     return callers_by_depth
 
 
-def get_callees(
-    graph: nx.MultiDiGraph,
-    entity_id: str,
-    depth: int = 1,
-    limit: int = 50
-) -> dict[int, list[str]]:
+def get_callees(graph: nx.MultiDiGraph, entity_id: str, depth: int = 1, limit: int = 50) -> dict[int, list[str]]:
     """
     Get callees (entities this entity calls) up to depth levels.
 
@@ -225,10 +207,7 @@ def get_callees(
     return callees_by_depth
 
 
-def get_class_hierarchy(
-    graph: nx.MultiDiGraph,
-    entity_id: str
-) -> dict[str, list[str]]:
+def get_class_hierarchy(graph: nx.MultiDiGraph, entity_id: str) -> dict[str, list[str]]:
     """
     Get class hierarchy (base classes and derived classes) via INHERITS edges.
 
@@ -257,7 +236,4 @@ def get_class_hierarchy(
         if data.get("type") == INHERITS:
             derived_classes.append(source)
 
-    return {
-        "base_classes": base_classes,
-        "derived_classes": derived_classes
-    }
+    return {"base_classes": base_classes, "derived_classes": derived_classes}

@@ -109,9 +109,7 @@ async def resolve_entity(
 
 async def _resolve_by_entity_id(session: AsyncSession, entity_id: str) -> ResolutionResult | None:
     """Stage 1: Exact entity_id match."""
-    result = await session.execute(
-        select(Entity).where(Entity.entity_id == entity_id)
-    )
+    result = await session.execute(select(Entity).where(Entity.entity_id == entity_id))
     entity = result.scalar_one_or_none()
 
     if entity:
@@ -225,10 +223,7 @@ async def _resolve_by_keyword(
     tsq = func.plainto_tsquery("english", query)
     rank_expr = func.ts_rank(Entity.search_vector, tsq).label("score")
 
-    stmt = (
-        select(Entity)
-        .where(Entity.search_vector.op("@@")(tsq))
-    )
+    stmt = select(Entity).where(Entity.search_vector.op("@@")(tsq))
     if kind:
         stmt = stmt.where(Entity.kind == kind)
     stmt = stmt.order_by(rank_expr.desc()).limit(limit)
@@ -261,10 +256,7 @@ async def _resolve_by_semantic(
         cosine_dist = Entity.embedding.cosine_distance(query_embedding)
         score_expr = (literal(1) - cosine_dist).label("score")
 
-        stmt = (
-            select(Entity)
-            .where(Entity.embedding.isnot(None))
-        )
+        stmt = select(Entity).where(Entity.embedding.isnot(None))
         if kind:
             stmt = stmt.where(Entity.kind == kind)
         stmt = stmt.order_by(score_expr.desc()).limit(limit)

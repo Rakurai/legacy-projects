@@ -55,6 +55,10 @@ def entity_to_detail(
         rationale=entity.rationale,
         usages=entity.usages,
         notes=entity.notes,
+        doc_state=entity.doc_state,
+        notes_length=entity.notes_length,
+        is_contract_seed=entity.is_contract_seed,
+        rationale_specificity=entity.rationale_specificity,
     )
 
 

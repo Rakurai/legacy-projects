@@ -29,9 +29,9 @@ def configure_logging(level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INF
     logger.add(
         sys.stderr,
         format="<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | "
-               "<level>{level: <8}</level> | "
-               "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
-               "<level>{message}</level> {extra}",
+        "<level>{level: <8}</level> | "
+        "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> - "
+        "<level>{message}</level> {extra}",
         level=level,
         serialize=False,  # Human-readable by default; JSON for production
         backtrace=True,

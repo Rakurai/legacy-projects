@@ -21,17 +21,11 @@ async def fetch_entity_summaries(
     if not entity_ids:
         return []
 
-    result = await session.execute(
-        select(Entity).where(Entity.entity_id.in_(entity_ids))
-    )
+    result = await session.execute(select(Entity).where(Entity.entity_id.in_(entity_ids)))
     entities = result.scalars().all()
     entity_map = {e.entity_id: e for e in entities}
 
-    return [
-        entity_to_summary(entity_map[eid])
-        for eid in entity_ids
-        if eid in entity_map
-    ]
+    return [entity_to_summary(entity_map[eid]) for eid in entity_ids if eid in entity_map]
 
 
 async def fetch_entity_map(
@@ -42,7 +36,5 @@ async def fetch_entity_map(
     if not entity_ids:
         return {}
 
-    result = await session.execute(
-        select(Entity).where(Entity.entity_id.in_(entity_ids))
-    )
+    result = await session.execute(select(Entity).where(Entity.entity_id.in_(entity_ids)))
     return {e.entity_id: e for e in result.scalars().all()}

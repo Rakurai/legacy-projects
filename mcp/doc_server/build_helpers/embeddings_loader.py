@@ -43,11 +43,7 @@ def build_minimal_embed_text(merged: MergedEntity) -> str | None:
     kind = merged.entity.kind or ""
     name = merged.entity.name or ""
     sig = merged.signature or ""
-    file_path = (
-        merged.entity.body.fn if merged.entity.body
-        else merged.entity.decl.fn if merged.entity.decl
-        else None
-    )
+    file_path = merged.entity.body.fn if merged.entity.body else merged.entity.decl.fn if merged.entity.decl else None
 
     if not kind and not name and not sig:
         return None

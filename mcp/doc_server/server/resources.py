@@ -40,9 +40,7 @@ async def get_capabilities_resource(session: AsyncSession) -> dict:
     """
     log.info("Resource: legacy://capabilities")
 
-    result = await session.execute(
-        select(Capability).order_by(Capability.name)
-    )
+    result = await session.execute(select(Capability).order_by(Capability.name))
     capabilities = list(result.scalars().all())
 
     return {
@@ -83,9 +81,7 @@ async def get_capability_detail_resource(
         raise ValueError(f"Capability not found: {name}")
 
     # Get edges
-    edge_result = await session.execute(
-        select(CapabilityEdge).where(CapabilityEdge.source_cap == name)
-    )
+    edge_result = await session.execute(select(CapabilityEdge).where(CapabilityEdge.source_cap == name))
     edges = list(edge_result.scalars().all())
 
     # Get entry points
@@ -100,10 +96,7 @@ async def get_capability_detail_resource(
 
     # Get sample functions (top by fan_in)
     func_result = await session.execute(
-        select(Entity)
-        .where(Entity.capability == name)
-        .order_by(Entity.fan_in.desc())
-        .limit(10)
+        select(Entity).where(Entity.capability == name).order_by(Entity.fan_in.desc()).limit(10)
     )
     sample_functions = list(func_result.scalars().all())
 
@@ -129,10 +122,7 @@ async def get_capability_detail_resource(
             }
             for ep in entry_points
         ],
-        "sample_functions": [
-            entity_to_summary(e).model_dump()
-            for e in sample_functions
-        ],
+        "sample_functions": [entity_to_summary(e).model_dump() for e in sample_functions],
     }
 
 
@@ -203,20 +193,13 @@ async def get_file_entities_resource(
     """
     log.info("Resource: legacy://file/{path}", path=file_path)
 
-    result = await session.execute(
-        select(Entity)
-        .where(Entity.file_path == file_path)
-        .order_by(Entity.body_start_line)
-    )
+    result = await session.execute(select(Entity).where(Entity.file_path == file_path).order_by(Entity.body_start_line))
     entities = list(result.scalars().all())
 
     return {
         "file_path": file_path,
         "entity_count": len(entities),
-        "entities": [
-            entity_to_summary(e).model_dump()
-            for e in entities
-        ],
+        "entities": [entity_to_summary(e).model_dump() for e in entities],
     }
 
 
@@ -239,28 +222,19 @@ async def get_stats_resource(
     log.info("Resource: legacy://stats")
 
     # Entity stats
-    total_entities = await session.scalar(
-        select(func.count(Entity.entity_id))
-    ) or 0
+    total_entities = await session.scalar(select(func.count(Entity.entity_id))) or 0
 
     # Entities by kind
-    kind_result = await session.execute(
-        select(Entity.kind, func.count(Entity.entity_id))
-        .group_by(Entity.kind)
-    )
+    kind_result = await session.execute(select(Entity.kind, func.count(Entity.entity_id)).group_by(Entity.kind))
     entities_by_kind = {row[0]: row[1] for row in kind_result.all()}
 
     # Entities with documentation
-    entities_with_docs = await session.scalar(
-        select(func.count(Entity.entity_id))
-        .where(Entity.brief.isnot(None))
-    ) or 0
+    entities_with_docs = await session.scalar(select(func.count(Entity.entity_id)).where(Entity.brief.isnot(None))) or 0
 
     # Entities with embeddings
-    entities_with_embeddings = await session.scalar(
-        select(func.count(Entity.entity_id))
-        .where(Entity.embedding.isnot(None))
-    ) or 0
+    entities_with_embeddings = (
+        await session.scalar(select(func.count(Entity.entity_id)).where(Entity.embedding.isnot(None))) or 0
+    )
 
     # Graph stats
     graph_stats = {
@@ -274,19 +248,14 @@ async def get_stats_resource(
         graph_stats["edges_by_type"] = graph.graph.get("edge_type_counts", {})
 
     # Capability stats
-    total_capabilities = await session.scalar(
-        select(func.count(Capability.name))
-    ) or 0
+    total_capabilities = await session.scalar(select(func.count(Capability.name))) or 0
 
     cap_type_result = await session.execute(
-        select(Capability.type, func.count(Capability.name))
-        .group_by(Capability.type)
+        select(Capability.type, func.count(Capability.name)).group_by(Capability.type)
     )
     capabilities_by_type = {row[0]: row[1] for row in cap_type_result.all()}
 
-    total_entry_points = await session.scalar(
-        select(func.count(EntryPoint.entity_id))
-    ) or 0
+    total_entry_points = await session.scalar(select(func.count(EntryPoint.entity_id))) or 0
 
     return {
         "entity_stats": {

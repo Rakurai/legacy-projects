@@ -25,6 +25,7 @@ from server.tools.capability import (
 
 # ---------- list_capabilities ----------
 
+
 @pytest.mark.asyncio
 async def test_list_capabilities(mock_ctx, sample_capabilities):
     """Lists all capabilities sorted by name."""
@@ -48,9 +49,14 @@ async def test_list_capabilities_fields(mock_ctx, sample_capabilities):
 
 # ---------- get_capability_detail ----------
 
+
 @pytest.mark.asyncio
 async def test_get_capability_detail(
-    mock_ctx, sample_capabilities, sample_capability_edges, sample_entities, sample_entry_points,
+    mock_ctx,
+    sample_capabilities,
+    sample_capability_edges,
+    sample_entities,
+    sample_entry_points,
 ):
     """Returns full capability detail with dependencies."""
     result = await get_capability_detail(mock_ctx, capability="commands")
@@ -83,6 +89,7 @@ async def test_get_capability_detail_not_found(mock_ctx, sample_capabilities):
 
 # ---------- compare_capabilities ----------
 
+
 @pytest.mark.asyncio
 async def test_compare_capabilities(mock_ctx, sample_capabilities, sample_entities, sample_edges):
     """Compares two capabilities: shared/unique deps and bridges."""
@@ -97,6 +104,7 @@ async def test_compare_capabilities(mock_ctx, sample_capabilities, sample_entiti
 
 
 # ---------- list_entry_points ----------
+
 
 @pytest.mark.asyncio
 async def test_list_entry_points(mock_ctx, sample_entities, sample_entry_points):
@@ -126,6 +134,7 @@ async def test_list_entry_points_empty(mock_ctx, sample_entities, sample_entry_p
 
 
 # ---------- get_entry_point_info ----------
+
 
 @pytest.mark.asyncio
 async def test_get_entry_point_info(mock_ctx, sample_entities, sample_edges, sample_entry_points):

@@ -34,14 +34,17 @@ _MAX_FUNCTIONS_PER_TOUCH = 10
 
 # -- Response Models --
 
+
 class BehaviorSliceResponse(BaseModel):
     """Response from get_behavior_slice tool."""
+
     behavior: BehaviorSlice
     truncation: TruncationMetadata
 
 
 class StateTouchesResponse(BaseModel):
     """Response from get_state_touches tool."""
+
     entity_id: str
     signature: str
     direct_uses: list[EntitySummary]
@@ -94,9 +97,7 @@ async def get_behavior_slice(
                     uses_target_ids.append(target)
 
         fetch_ids = list(set(all_entity_ids + uses_target_ids))
-        result = await session.execute(
-            select(Entity).where(Entity.entity_id.in_(fetch_ids))
-        )
+        result = await session.execute(select(Entity).where(Entity.entity_id.in_(fetch_ids)))
         all_entities_map = {e.entity_id: e for e in result.scalars().all()}
 
     # Capabilities touched
@@ -109,7 +110,10 @@ async def get_behavior_slice(
         is_direct = cone_eid in direct_ids
         if cap not in cap_touches:
             cap_touches[cap] = CapabilityTouch(
-                capability=cap, direct_count=0, transitive_count=0, functions=[],
+                capability=cap,
+                direct_count=0,
+                transitive_count=0,
+                functions=[],
             )
         touch = cap_touches[cap]
         if is_direct:
@@ -126,10 +130,14 @@ async def get_behavior_slice(
             if data.get("type") == USES:
                 te = all_entities_map.get(target)
                 if te and te.kind == "variable":
-                    globals_used.append(GlobalTouch(
-                        entity_id=target, name=te.name or target,
-                        kind="variable", access_type=AccessType.DIRECT,
-                    ))
+                    globals_used.append(
+                        GlobalTouch(
+                            entity_id=target,
+                            name=te.name or target,
+                            kind="variable",
+                            access_type=AccessType.DIRECT,
+                        )
+                    )
 
     seen_globals = {g.entity_id for g in globals_used}
     for cone_eid in all_cone_ids:
@@ -140,10 +148,14 @@ async def get_behavior_slice(
                 te = all_entities_map.get(target)
                 if te and te.kind == "variable":
                     seen_globals.add(target)
-                    globals_used.append(GlobalTouch(
-                        entity_id=target, name=te.name or target,
-                        kind="variable", access_type=AccessType.TRANSITIVE,
-                    ))
+                    globals_used.append(
+                        GlobalTouch(
+                            entity_id=target,
+                            name=te.name or target,
+                            kind="variable",
+                            access_type=AccessType.TRANSITIVE,
+                        )
+                    )
 
     behavior = BehaviorSlice(
         entry_point=seed_summary,
@@ -211,15 +223,11 @@ async def get_state_touches(
                         transitive_use_ids.append(target)
 
         all_use_ids = direct_use_ids + transitive_use_ids + direct_callee_ids + [entity_id]
-        result = await session.execute(
-            select(Entity).where(Entity.entity_id.in_(all_use_ids))
-        )
+        result = await session.execute(select(Entity).where(Entity.entity_id.in_(all_use_ids)))
         entity_map = {e.entity_id: e for e in result.scalars().all()}
 
     direct_uses = [
-        entity_to_summary(entity_map[e])
-        for e in direct_use_ids
-        if e in entity_map and entity_map[e].kind == "variable"
+        entity_to_summary(entity_map[e]) for e in direct_use_ids if e in entity_map and entity_map[e].kind == "variable"
     ]
     transitive_uses = [
         entity_to_summary(entity_map[e])

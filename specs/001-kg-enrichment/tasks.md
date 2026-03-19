@@ -23,7 +23,7 @@ All paths relative to `mcp/doc_server/` within the repository root.
 
 **Purpose**: No new project initialization needed — this feature extends the existing MCP doc server. Setup phase verifies assumptions from research.md.
 
-- [ ] T001 Verify usages dict key format by inspecting artifacts — run a scratch script in `.scratch/verify_usages_format.py` that loads 3+ generated_docs JSON files, parses usages keys by splitting on `", "`, and asserts the format matches `"{compound_id}, {caller_signature}"` → description string (research.md R1)
+- [X] T001 Verify usages dict key format by inspecting artifacts — run a scratch script in `.scratch/verify_usages_format.py` that loads 3+ generated_docs JSON files, parses usages keys by splitting on `", "`, and asserts the format matches `"{compound_id}, {caller_signature}"` → description string (research.md R1)
 
 ---
 
@@ -35,31 +35,31 @@ All paths relative to `mcp/doc_server/` within the repository root.
 
 ### Schema & Models
 
-- [ ] T002 [P] Add four new columns to Entity model in `server/db_models.py`: `doc_state: str | None`, `notes_length: int | None`, `is_contract_seed: bool` (default False), `rationale_specificity: float | None`. Follow existing column patterns (nullable types, Field definitions).
+- [X] T002 [P] Add four new columns to Entity model in `server/db_models.py`: `doc_state: str | None`, `notes_length: int | None`, `is_contract_seed: bool` (default False), `rationale_specificity: float | None`. Follow existing column patterns (nullable types, Field definitions).
 
-- [ ] T003 Add EntityUsage SQLModel in `server/db_models.py` with `table=True`: composite PK `(callee_id, caller_compound, caller_sig)`, `description: str`, `embedding: list[float] | None` (Vector(768)), `search_vector: str | None` (TSVECTOR). Add FK on `callee_id` → `entities.entity_id`. Add indexes per data-model.md: callee, caller compound, HNSW on embedding, GIN on search_vector.
+- [X] T003 Add EntityUsage SQLModel in `server/db_models.py` with `table=True`: composite PK `(callee_id, caller_compound, caller_sig)`, `description: str`, `embedding: list[float] | None` (Vector(768)), `search_vector: str | None` (TSVECTOR). Add FK on `callee_id` → `entities.entity_id`. Add indexes per data-model.md: callee, caller compound, HNSW on embedding, GIN on search_vector.
 
-- [ ] T004 [P] Add new Pydantic response models in `server/models.py`: `CallingPattern(caller_compound, caller_sig, description)`, `UsageEntry(caller_compound, caller_sig, description)`, `MatchingUsage(caller_compound, caller_sig, description, score)`, `ContractMetadata(doc_state, is_contract_seed, rationale_specificity, fan_in, fan_out, capability)`. Add `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` fields to `EntityDetail`. Add optional `top_usages: list[UsageEntry] | None` to `EntityDetail`.
+- [X] T004 [P] Add new Pydantic response models in `server/models.py`: `CallingPattern(caller_compound, caller_sig, description)`, `UsageEntry(caller_compound, caller_sig, description)`, `MatchingUsage(caller_compound, caller_sig, description, score)`, `ContractMetadata(doc_state, is_contract_seed, rationale_specificity, fan_in, fan_out, capability)`. Add `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` fields to `EntityDetail`. Add optional `top_usages: list[UsageEntry] | None` to `EntityDetail`.
 
-- [ ] T005 Update `EntitySummary` and `EntityDetail` converter functions in `server/converters.py` to populate the new `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` fields from the Entity ORM object.
+- [X] T005 Update `EntitySummary` and `EntityDetail` converter functions in `server/converters.py` to populate the new `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` fields from the Entity ORM object.
 
 ### Build Pipeline — Entity Enrichment (FR-001 through FR-004)
 
-- [ ] T006 Extend entity processing in `build_helpers/entity_processor.py` to compute derived fields during entity merge: carry `doc.state` → `doc_state`, compute `notes_length` from `len(doc.notes)` when non-null, compute `is_contract_seed` from `fan_in > threshold AND rationale is not None` (threshold as a configurable constant, start with 10), compute `rationale_specificity` heuristic (length * domain-term ratio — define a small set of domain terms from the codebase vocabulary). Validate that required source fields (`state`, `brief`) are present on each generated_docs entry; raise with a clear error identifying the malformed entry if missing (FR-013).
+- [X] T006 Extend entity processing in `build_helpers/entity_processor.py` to compute derived fields during entity merge: carry `doc.state` → `doc_state`, compute `notes_length` from `len(doc.notes)` when non-null, compute `is_contract_seed` from `fan_in > threshold AND rationale is not None` (threshold as a configurable constant, start with 10), compute `rationale_specificity` heuristic (length * domain-term ratio — define a small set of domain terms from the codebase vocabulary). Validate that required source fields (`state`, `brief`) are present on each generated_docs entry; raise with a clear error identifying the malformed entry if missing (FR-013).
 
-- [ ] T007 Update `populate_entities()` in `build_mcp_db.py` to pass the four new fields (`doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity`) through to the Entity model during database insertion.
+- [X] T007 Update `populate_entities()` in `build_mcp_db.py` to pass the four new fields (`doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity`) through to the Entity model during database insertion.
 
 ### Build Pipeline — Entity Usages Table (FR-005, FR-006, FR-012)
 
-- [ ] T008 Add `populate_entity_usages()` function in `build_mcp_db.py` that: (a) drops and recreates the `entity_usages` table, (b) iterates over all merged entities with non-null `usages` dicts, (c) parses each usages key by splitting on first `", "` into `(caller_compound, caller_sig)`, (d) creates EntityUsage rows with `callee_id` = entity's deterministic ID, (e) generates tsvector search vectors for each description using PostgreSQL `to_tsvector('english', description)` via raw SQL after insertion. Reference the key parsing format from research.md R1.
+- [X] T008 Add `populate_entity_usages()` function in `build_mcp_db.py` that: (a) drops and recreates the `entity_usages` table, (b) iterates over all merged entities with non-null `usages` dicts, (c) parses each usages key by splitting on first `", "` into `(caller_compound, caller_sig)`, (d) creates EntityUsage rows with `callee_id` = entity's deterministic ID, (e) generates tsvector search vectors for each description using PostgreSQL `to_tsvector('english', description)` via raw SQL after insertion. Reference the key parsing format from research.md R1.
 
-- [ ] T009 Extend usage embeddings generation in `build_helpers/embeddings_loader.py`: add a function `generate_usage_embeddings()` that collects all usage descriptions as a flat list, calls `provider.embed_documents_sync()` in a single batch, and returns a mapping of `(callee_id, caller_compound, caller_sig)` → embedding vector. Call this from `populate_entity_usages()` and attach embeddings to EntityUsage rows before insertion.
+- [X] T009 Extend usage embeddings generation in `build_helpers/embeddings_loader.py`: add a function `generate_usage_embeddings()` that collects all usage descriptions as a flat list, calls `provider.embed_documents_sync()` in a single batch, and returns a mapping of `(callee_id, caller_compound, caller_sig)` → embedding vector. Call this from `populate_entity_usages()` and attach embeddings to EntityUsage rows before insertion.
 
-- [ ] T010 Wire `populate_entity_usages()` into the `main()` build pipeline in `build_mcp_db.py` — call it after `populate_entities()` and `populate_edges()`, passing the merged entities and embedding provider. Add schema creation for the `entity_usages` table alongside the existing table creation block.
+- [X] T010 Wire `populate_entity_usages()` into the `main()` build pipeline in `build_mcp_db.py` — call it after `populate_entities()` and `populate_edges()`, passing the merged entities and embedding provider. Add schema creation for the `entity_usages` table alongside the existing table creation block.
 
 ### Test Fixtures
 
-- [ ] T011 Update test fixtures in `tests/conftest.py`: (a) add `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` fields to all 7 `sample_entities` — give `damage` (index 0) `doc_state="refined_summary"`, `notes_length=150`, `is_contract_seed=True`, `rationale_specificity=0.85`; give others varying values including some nulls. (b) Add `sample_entity_usages` fixture creating 5 EntityUsage rows for the `damage` entity with distinct caller compounds, signatures, and descriptions. Populate embeddings as None (tests don't need real vectors). (c) Add tsvector population for entity_usages descriptions via raw SQL, matching the pattern used for entities.
+- [X] T011 Update test fixtures in `tests/conftest.py`: (a) add `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` fields to all 7 `sample_entities` — give `damage` (index 0) `doc_state="refined_summary"`, `notes_length=150`, `is_contract_seed=True`, `rationale_specificity=0.85`; give others varying values including some nulls. (b) Add `sample_entity_usages` fixture creating 5 EntityUsage rows for the `damage` entity with distinct caller compounds, signatures, and descriptions. Populate embeddings as None (tests don't need real vectors). (c) Add tsvector population for entity_usages descriptions via raw SQL, matching the pattern used for entities.
 
 **Checkpoint**: Foundation ready — enriched entities and entity_usages table are built and populated. All user story implementation can begin.
 
@@ -73,15 +73,15 @@ All paths relative to `mcp/doc_server/` within the repository root.
 
 ### Tests for User Story 1
 
-- [ ] T012 [P] [US1] Write contract tests in `tests/test_explain_interface.py`: (a) test full contract — call `explain_interface(entity_id=damage_id)` and assert all 5 sections present: `signature_block` non-null, `mechanism.brief` and `mechanism.details` populated, `contract.rationale` populated, `preconditions.notes` populated, `calling_patterns` has ≤5 entries from sample_entity_usages. (b) test partial contract — call for an entity with null rationale and assert `contract` section is None. (c) test entity not found — assert appropriate error. (d) test metadata fields — assert `doc_state`, `is_contract_seed`, `rationale_specificity`, `fan_in`, `fan_out`, `capability` are present and correct.
+- [X] T012 [P] [US1] Write contract tests in `tests/test_explain_interface.py`: (a) test full contract — call `explain_interface(entity_id=damage_id)` and assert all 5 sections present: `signature_block` non-null, `mechanism.brief` and `mechanism.details` populated, `contract.rationale` populated, `preconditions.notes` populated, `calling_patterns` has ≤5 entries from sample_entity_usages. (b) test partial contract — call for an entity with null rationale and assert `contract` section is None. (c) test entity not found — assert appropriate error. (d) test metadata fields — assert `doc_state`, `is_contract_seed`, `rationale_specificity`, `fan_in`, `fan_out`, `capability` are present and correct.
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Add `ExplainInterfaceResponse` model in `server/models.py` with sections: `signature_block: str | None`, `mechanism: MechanismSection`, `contract: ContractSection | None`, `preconditions: PreconditionsSection | None`, `calling_patterns: list[CallingPattern]`, `metadata: ContractMetadata`. Define `MechanismSection(brief, details)`, `ContractSection(rationale)`, `PreconditionsSection(notes)` as nested Pydantic models.
+- [X] T013 [US1] Add `ExplainInterfaceResponse` model in `server/models.py` with sections: `signature_block: str | None`, `mechanism: MechanismSection`, `contract: ContractSection | None`, `preconditions: PreconditionsSection | None`, `calling_patterns: list[CallingPattern]`, `metadata: ContractMetadata`. Define `MechanismSection(brief, details)`, `ContractSection(rationale)`, `PreconditionsSection(notes)` as nested Pydantic models.
 
-- [ ] T014 [US1] Implement `explain_interface` tool in `server/tools/explain.py`: (a) register with `@mcp.tool()`, accept `entity_id: str` parameter, (b) fetch entity by PK via `session.get(Entity, entity_id)`, (c) query `entity_usages` for this callee_id, join against `entities` table on `(caller_compound, caller_sig)` matching `(entities.file_path-derived compound, entities.signature)` to get caller fan_in — or use a simpler approach: subquery matching `caller_sig` against `entities.signature` to look up fan_in, default to 0 for unmatched callers, ORDER BY fan_in DESC LIMIT 5, (d) compose the five-part response, (e) return `ExplainInterfaceResponse`.
+- [X] T014 [US1] Implement `explain_interface` tool in `server/tools/explain.py`: (a) register with `@mcp.tool()`, accept `entity_id: str` parameter, (b) fetch entity by PK via `session.get(Entity, entity_id)`, (c) query `entity_usages` for this callee_id, join against `entities` table on `(caller_compound, caller_sig)` matching `(entities.file_path-derived compound, entities.signature)` to get caller fan_in — or use a simpler approach: subquery matching `caller_sig` against `entities.signature` to look up fan_in, default to 0 for unmatched callers, ORDER BY fan_in DESC LIMIT 5, (d) compose the five-part response, (e) return `ExplainInterfaceResponse`.
 
-- [ ] T015 [US1] Register `explain_interface` tool module in `server/server.py` by adding `import server.tools.explain` alongside existing tool imports.
+- [X] T015 [US1] Register `explain_interface` tool module in `server/server.py` by adding `import server.tools.explain` alongside existing tool imports.
 
 **Checkpoint**: `explain_interface` returns structured behavioral contracts. US1 independently testable.
 
@@ -95,15 +95,15 @@ All paths relative to `mcp/doc_server/` within the repository root.
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Write contract tests in `tests/test_search_tool.py` (additions to existing file): (a) test `source="usages"` returns results with `matching_usages` field populated — use a keyword that appears in sample_entity_usages descriptions. (b) test `source="usages"` groups by callee — verify no duplicate entity_ids in results. (c) test `source="usages"` with `kind` filter — verify filter applies to callee entity, not usage row. (d) test `source="entity"` (default) behavior unchanged — existing tests should still pass.
+- [X] T016 [P] [US2] Write contract tests in `tests/test_search_tool.py` (additions to existing file): (a) test `source="usages"` returns results with `matching_usages` field populated — use a keyword that appears in sample_entity_usages descriptions. (b) test `source="usages"` groups by callee — verify no duplicate entity_ids in results. (c) test `source="usages"` with `kind` filter — verify filter applies to callee entity, not usage row. (d) test `source="entity"` (default) behavior unchanged — existing tests should still pass.
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Add `"usages"` to the `source` parameter validation in `server/tools/search.py`. Update the source parameter's allowed values (and add to `SearchSource` enum in `server/enums.py` if the enum exists) and route `source="usages"` to a new search path.
+- [X] T017 [US2] Add `"usages"` to the `source` parameter validation in `server/tools/search.py`. Update the source parameter's allowed values (and add to `SearchSource` enum in `server/enums.py` if the enum exists) and route `source="usages"` to a new search path.
 
-- [ ] T018 [US2] Implement `hybrid_search_usages()` function in `server/search.py`: (a) semantic search: embed query via provider, cosine distance against `entity_usages.embedding`, return top N rows with scores, (b) keyword search: `plainto_tsquery` against `entity_usages.search_vector`, `ts_rank` for scoring, (c) combine scores with semantic 0.6 + keyword 0.4 weighting (no exact-match boost), (d) group results by `callee_id` — for each callee, collect top-matching usage descriptions with scores, (e) fetch callee `EntitySummary` for each group, (f) apply `kind` and `capability` filters to the callee entity, (g) return `SearchResponse` with `matching_usages` populated on each `SearchResult`.
+- [X] T018 [US2] Implement `hybrid_search_usages()` function in `server/search.py`: (a) semantic search: embed query via provider, cosine distance against `entity_usages.embedding`, return top N rows with scores, (b) keyword search: `plainto_tsquery` against `entity_usages.search_vector`, `ts_rank` for scoring, (c) combine scores with semantic 0.6 + keyword 0.4 weighting (no exact-match boost), (d) group results by `callee_id` — for each callee, collect top-matching usage descriptions with scores, (e) fetch callee `EntitySummary` for each group, (f) apply `kind` and `capability` filters to the callee entity, (g) return `SearchResponse` with `matching_usages` populated on each `SearchResult`.
 
-- [ ] T019 [US2] Add `matching_usages: list[MatchingUsage] | None` field to `SearchResult` model in `server/models.py`. Default to None. Populate only when `source="usages"`.
+- [X] T019 [US2] Add `matching_usages: list[MatchingUsage] | None` field to `SearchResult` model in `server/models.py`. Default to None. Populate only when `source="usages"`.
 
 **Checkpoint**: Usage-based semantic search operational. Agents can search by behavioral intent. US2 independently testable.
 
@@ -117,13 +117,13 @@ All paths relative to `mcp/doc_server/` within the repository root.
 
 ### Tests for User Story 3
 
-- [ ] T020 [P] [US3] Write contract tests in `tests/test_entity_tools.py` (additions to existing file): (a) test new fields present — call `get_entity(entity_id=damage_id)` and assert `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` are in the response with expected values from fixtures. (b) test `include_usages=True` — assert `top_usages` is a list of ≤5 `UsageEntry` items. (c) test `include_usages=False` (default) — assert `top_usages` is None. (d) test entity with null doc fields — assert null fields are correctly represented.
+- [X] T020 [P] [US3] Write contract tests in `tests/test_entity_tools.py` (additions to existing file): (a) test new fields present — call `get_entity(entity_id=damage_id)` and assert `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` are in the response with expected values from fixtures. (b) test `include_usages=True` — assert `top_usages` is a list of ≤5 `UsageEntry` items. (c) test `include_usages=False` (default) — assert `top_usages` is None. (d) test entity with null doc fields — assert null fields are correctly represented.
 
 ### Implementation for User Story 3
 
-- [ ] T021 [US3] Add `include_usages: bool = False` parameter to the `get_entity` tool function in `server/tools/entity.py`. When true, query `entity_usages` for the entity's callee_id, rank by caller fan_in (same ranking approach as `explain_interface`), take top 5, and populate `top_usages` on the `EntityDetail` response.
+- [X] T021 [US3] Add `include_usages: bool = False` parameter to the `get_entity` tool function in `server/tools/entity.py`. When true, query `entity_usages` for the entity's callee_id, rank by caller fan_in (same ranking approach as `explain_interface`), take top 5, and populate `top_usages` on the `EntityDetail` response.
 
-- [ ] T022 [US3] Verify that the foundational converter changes (T005) correctly surface `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` in the `EntityDetail` response for all existing tool paths (get_entity, get_entity with neighbors, etc.).
+- [X] T022 [US3] Verify that the foundational converter changes (T005) correctly surface `doc_state`, `notes_length`, `is_contract_seed`, `rationale_specificity` in the `EntityDetail` response for all existing tool paths (get_entity, get_entity with neighbors, etc.).
 
 **Checkpoint**: Planning agents can triage entities by documentation quality. US3 independently testable.
 
@@ -137,7 +137,7 @@ All paths relative to `mcp/doc_server/` within the repository root.
 
 ### Implementation for User Story 4
 
-- [ ] T023 [US4] Validate end-to-end auditor workflow with a test in `tests/test_explain_interface.py` (addition): given a sample entity with known behavioral contract, call `explain_interface` and verify that the combined evidence (rationale + calling patterns + doc_state) is sufficient for an auditor to assess a behavioral claim. Assert that `metadata.doc_state` is present for trust assessment and `calling_patterns` contains evidence from diverse callers.
+- [X] T023 [US4] Validate end-to-end auditor workflow with a test in `tests/test_explain_interface.py` (addition): given a sample entity with known behavioral contract, call `explain_interface` and verify that the combined evidence (rationale + calling patterns + doc_state) is sufficient for an auditor to assess a behavioral claim. Assert that `metadata.doc_state` is present for trust assessment and `calling_patterns` contains evidence from diverse callers.
 
 **Checkpoint**: Auditor workflow validated. All four user stories independently functional.
 
@@ -147,11 +147,11 @@ All paths relative to `mcp/doc_server/` within the repository root.
 
 **Purpose**: Validation, cleanup, and cross-story integration.
 
-- [ ] T024 [P] Run `uv run ruff check .` and `uv run ruff format .` from `mcp/doc_server/` to ensure all new code passes linting.
-- [ ] T025 [P] Run `uv run mypy server/` from `mcp/doc_server/` to verify strict type checking passes on all modified and new files.
-- [ ] T026 Run full test suite: `uv run pytest tests/ -v` from `mcp/doc_server/` — verify all existing tests still pass alongside new tests.
-- [ ] T027 Run quickstart.md validation: execute `uv run python -m build_script.build_mcp_db` against a real PostgreSQL instance and verify (a) entity_usages table has ~24,803 rows, (b) all 5,295 documented entities have `doc_state` populated, (c) `is_contract_seed` entities are a reasonable subset of high-fan-in entities.
-- [ ] T028 Clean up `.scratch/verify_usages_format.py` from T001.
+- [X] T024 [P] Run `uv run ruff check .` and `uv run ruff format .` from `mcp/doc_server/` to ensure all new code passes linting.
+- [X] T025 [P] Run `uv run mypy server/` from `mcp/doc_server/` to verify strict type checking passes on all modified and new files.
+- [X] T026 Run full test suite: `uv run pytest tests/ -v` from `mcp/doc_server/` — verify all existing tests still pass alongside new tests.
+- [X] T027 Run quickstart.md validation: execute `uv run python -m build_script.build_mcp_db` against a real PostgreSQL instance and verify (a) entity_usages table has ~24,803 rows, (b) all 5,295 documented entities have `doc_state` populated, (c) `is_contract_seed` entities are a reasonable subset of high-fan-in entities.
+- [X] T028 Clean up `.scratch/verify_usages_format.py` from T001.
 
 ---
 

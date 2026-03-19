@@ -29,6 +29,7 @@ from build_helpers.entity_processor import (
     MergedEntity,
     assign_capabilities,
     assign_deterministic_ids,
+    compute_enriched_fields,
     compute_is_entry_point,
     extract_source_code,
     merge_entities,
@@ -47,8 +48,8 @@ from build_helpers.loaders import (
 )
 from server.config import ServerConfig
 from server.db import DatabaseManager
-from server.db_models import Capability, CapabilityEdge, Edge, Entity, EntryPoint
-from server.embedding import create_provider
+from server.db_models import Capability, CapabilityEdge, Edge, Entity, EntityUsage, EntryPoint
+from server.embedding import EmbeddingProvider, create_provider
 from server.logging_config import configure_logging, log
 
 
@@ -73,6 +74,7 @@ async def drop_and_create_schema(engine: AsyncEngine) -> None:
         await conn.execute(text("DROP TABLE IF EXISTS capability_edges CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS capabilities CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS edges CASCADE"))
+        await conn.execute(text("DROP TABLE IF EXISTS entity_usages CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS entities CASCADE"))
         await conn.execute(text("DROP INDEX IF EXISTS entities_signature_key"))
 
@@ -147,6 +149,10 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             is_bridge=merged.is_bridge,
             embedding=merged.embedding,
             search_vector=None,
+            doc_state=merged.doc_state,
+            notes_length=merged.notes_length,
+            is_contract_seed=merged.is_contract_seed,
+            rationale_specificity=merged.rationale_specificity,
         )
         entities_batch.append(entity)
 
@@ -169,6 +175,73 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
     await session.commit()
 
     log.info("Entities table populated")
+
+
+async def populate_entity_usages(
+    session: AsyncSession,
+    merged_entities: list[MergedEntity],
+    provider: EmbeddingProvider | None,
+) -> None:
+    """
+    Populate entity_usages table by exploding usages dicts from entity docs (FR-005, FR-006).
+
+    For each entity with a non-null usages dict, parses each key as
+    "{caller_compound}, {caller_sig}" and creates one EntityUsage row per entry.
+
+    Generates embeddings for all usage descriptions in a single batch (T009),
+    inlined here rather than delegated to embeddings_loader — usage embeddings
+    are rebuilt from scratch every time and don't need caching.
+
+    Full rebuild: entity_usages is dropped and recreated each build (FR-005).
+    tsvectors are generated via SQL after insertion for keyword search (FR-006).
+    """
+    log.info("Populating entity_usages table")
+
+    # Collect all usage rows and their descriptions for batch embedding
+    rows: list[EntityUsage] = []
+    desc_index: list[int] = []  # index into rows[] for each description to embed
+
+    for merged in merged_entities:
+        if not merged.doc or not merged.doc.usages:
+            continue
+        callee_id = merged.entity_id
+        for key, description in merged.doc.usages.items():
+            caller_compound, caller_sig = key.split(", ", 1)
+            rows.append(
+                EntityUsage(
+                    callee_id=callee_id,
+                    caller_compound=caller_compound,
+                    caller_sig=caller_sig,
+                    description=description,
+                    embedding=None,
+                    search_vector=None,
+                )
+            )
+            desc_index.append(len(rows) - 1)
+
+    log.info("Usage rows collected", count=len(rows))
+
+    # T009: Inline embedding generation — single batch, no caching needed
+    if provider is not None and rows:
+        log.info("Generating usage embeddings", count=len(rows))
+        descriptions = [rows[i].description for i in desc_index]
+        vectors = list(provider.embed_documents_sync(descriptions))
+        for list_pos, row_idx in enumerate(desc_index):
+            rows[row_idx].embedding = vectors[list_pos]
+        log.info("Usage embeddings generated")
+    elif provider is None:
+        log.warning("No embedding provider — entity_usages will have null embeddings")
+
+    # Insert all rows
+    session.add_all(rows)
+    await session.commit()
+
+    # Generate tsvectors for full-text search via SQL (FR-006)
+    log.info("Generating entity_usages tsvectors")
+    await session.execute(text("UPDATE entity_usages SET search_vector = to_tsvector('english', description)"))
+    await session.commit()
+
+    log.info("entity_usages table populated", rows=len(rows))
 
 
 async def populate_edges(session: AsyncSession, edges: list[tuple[str, str, str]]) -> None:
@@ -331,6 +404,7 @@ async def main() -> None:
     compute_bridge_flags(merged_entities, edges)
 
     compute_is_entry_point(merged_entities)
+    compute_enriched_fields(merged_entities)
 
     provider = create_provider(config)
     embeddings = load_embeddings(config.artifacts_path, config, id_map)
@@ -351,6 +425,7 @@ async def main() -> None:
 
     async with db_manager.session() as session:
         await populate_entities(session, merged_entities)
+        await populate_entity_usages(session, merged_entities, provider)
         await populate_edges(session, edges)
         await populate_capabilities(session, cap_defs, cap_graph)
         await populate_entry_points(session, merged_entities, edges)
@@ -359,6 +434,7 @@ async def main() -> None:
         log.info("Analyzing tables")
         await session.execute(text("ANALYZE entities"))
         await session.execute(text("ANALYZE edges"))
+        await session.execute(text("ANALYZE entity_usages"))
         await session.commit()
 
     await db_manager.dispose()

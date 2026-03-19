@@ -16,8 +16,10 @@ from enum import StrEnum
 # Entity classification
 # ---------------------------------------------------------------------------
 
+
 class EntityKind(StrEnum):
     """Doxygen entity kind."""
+
     FUNCTION = "function"
     VARIABLE = "variable"
     CLASS = "class"
@@ -33,6 +35,7 @@ class EntityKind(StrEnum):
 
 class EntityType(StrEnum):
     """Whether an entity is a Doxygen compound or member."""
+
     COMPOUND = "compound"
     MEMBER = "member"
 
@@ -41,8 +44,10 @@ class EntityType(StrEnum):
 # Graph relationships
 # ---------------------------------------------------------------------------
 
+
 class Relationship(StrEnum):
     """Edge type in the dependency graph."""
+
     CALLS = "calls"
     USES = "uses"
     INHERITS = "inherits"
@@ -54,19 +59,22 @@ class Relationship(StrEnum):
 # Behavior analysis
 # ---------------------------------------------------------------------------
 
+
 class AccessType(StrEnum):
     """Whether a relationship is direct or transitive."""
+
     DIRECT = "direct"
     TRANSITIVE = "transitive"
-
 
 
 # ---------------------------------------------------------------------------
 # Resolution pipeline
 # ---------------------------------------------------------------------------
 
+
 class ResolutionStatus(StrEnum):
     """Outcome of entity resolution."""
+
     EXACT = "exact"
     AMBIGUOUS = "ambiguous"
     NOT_FOUND = "not_found"
@@ -74,6 +82,7 @@ class ResolutionStatus(StrEnum):
 
 class MatchType(StrEnum):
     """Which resolution stage matched."""
+
     ENTITY_ID = "entity_id"
     SIGNATURE_EXACT = "signature_exact"
     NAME_EXACT = "name_exact"
@@ -86,8 +95,10 @@ class MatchType(StrEnum):
 # Search
 # ---------------------------------------------------------------------------
 
+
 class SearchMode(StrEnum):
     """Which search strategy was used."""
+
     HYBRID = "hybrid"
     SEMANTIC_ONLY = "semantic_only"
     KEYWORD_FALLBACK = "keyword_fallback"
@@ -97,8 +108,10 @@ class SearchMode(StrEnum):
 # Truncation
 # ---------------------------------------------------------------------------
 
+
 class TruncationReason(StrEnum):
     """Why results were truncated."""
+
     DEPTH_LIMIT = "depth_limit"
     NODE_LIMIT = "node_limit"
     NONE = "none"
@@ -108,8 +121,10 @@ class TruncationReason(StrEnum):
 # Capability classification
 # ---------------------------------------------------------------------------
 
+
 class CapabilityType(StrEnum):
     """Capability architectural type."""
+
     DOMAIN = "domain"
     POLICY = "policy"
     PROJECTION = "projection"
@@ -121,8 +136,10 @@ class CapabilityType(StrEnum):
 # V2 placeholders
 # ---------------------------------------------------------------------------
 
+
 class FocusType(StrEnum):
     """V2: Context bundle focus type."""
+
     ENTITY = "entity"
     SUBSYSTEM = "subsystem"
     CAPABILITY = "capability"

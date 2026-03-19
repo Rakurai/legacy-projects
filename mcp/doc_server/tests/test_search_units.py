@@ -12,6 +12,7 @@ from server.search import _merge_scores
 
 # ---------- _merge_scores ----------
 
+
 class TestMergeScores:
     """Tests for the score merging logic."""
 
@@ -77,6 +78,7 @@ class TestMergeScores:
 
 
 # ---------- EntitySummary validator ----------
+
 
 class TestEntitySummaryValidator:
     """Tests for EntitySummary field validators."""

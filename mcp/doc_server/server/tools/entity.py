@@ -10,15 +10,18 @@ from typing import Annotated
 import networkx as nx
 from fastmcp import Context
 from pydantic import BaseModel, Field
+from sqlalchemy import func
+from sqlmodel import select as sa_select
 
 from server.app import get_ctx, mcp
 from server.converters import entity_to_detail
-from server.db_models import Entity
+from server.db_models import Entity, EntityUsage
 from server.errors import EntityNotFoundError
 from server.logging_config import log
 from server.models import (
     EntityDetail,
     EntityNeighbor,
+    UsageEntry,
 )
 from server.util import fetch_entity_map
 
@@ -27,6 +30,7 @@ from server.util import fetch_entity_map
 
 class SourceCodeResponse(BaseModel):
     """Response from get_source_code tool."""
+
     entity_id: str
     signature: str
     file_path: str | None
@@ -45,6 +49,7 @@ async def get_entity(
     entity_id: Annotated[str, Field(description="Entity ID (from search)")],
     include_code: Annotated[bool, Field(description="Include source code in response")] = False,
     include_neighbors: Annotated[bool, Field(description="Include direct neighbors in dependency graph")] = False,
+    include_usages: Annotated[bool, Field(description="Include top 5 usage patterns from callers")] = False,
 ) -> EntityDetail:
     """
     Fetch full entity details by ID.
@@ -80,14 +85,53 @@ async def get_entity(
             for nid, rel, direction in neighbor_records:
                 ne = neighbor_map.get(nid)
                 if ne:
-                    neighbors.append(EntityNeighbor(
-                        entity_id=ne.entity_id,
-                        name=ne.name or nid,
-                        kind=ne.kind,
-                        relationship=rel.upper(),
-                        direction=direction,
-                    ))
+                    neighbors.append(
+                        EntityNeighbor(
+                            entity_id=ne.entity_id,
+                            name=ne.name or nid,
+                            kind=ne.kind,
+                            relationship=rel.upper(),
+                            direction=direction,
+                        )
+                    )
             detail.neighbors = neighbors
+
+        # Populate top_usages if requested (same fan_in ranking as explain_interface)
+        if include_usages:
+            fanin_sq = (
+                sa_select(Entity.signature, func.max(Entity.fan_in).label("fan_in"))
+                .group_by(Entity.signature)
+                .subquery()
+            )
+            from sqlalchemy import outerjoin
+
+            usage_stmt = (
+                sa_select(
+                    EntityUsage.caller_compound,
+                    EntityUsage.caller_sig,
+                    EntityUsage.description,
+                    func.coalesce(fanin_sq.c.fan_in, 0).label("caller_fan_in"),
+                )
+                .select_from(
+                    outerjoin(
+                        EntityUsage,
+                        fanin_sq,
+                        EntityUsage.caller_sig == fanin_sq.c.signature,  # type: ignore[arg-type]
+                    )
+                )
+                .where(EntityUsage.callee_id == entity_id)
+                .order_by(func.coalesce(fanin_sq.c.fan_in, 0).desc())
+                .limit(5)
+            )
+            result = await session.execute(usage_stmt)
+            detail.top_usages = [
+                UsageEntry(
+                    caller_compound=row.caller_compound,
+                    caller_sig=row.caller_sig,
+                    description=row.description,
+                )
+                for row in result.all()
+            ]
 
     return detail
 

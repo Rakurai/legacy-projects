@@ -18,16 +18,8 @@ def _make_merged(
     decl_line: int | None = None,
 ) -> MergedEntity:
     """Build a MergedEntity with optional body/decl locations."""
-    body = (
-        DoxygenLocation(fn=body_fn, line=body_line, end_line=body_end_line, type="body")
-        if body_fn
-        else None
-    )
-    decl = (
-        DoxygenLocation(fn=decl_fn, line=decl_line, type="decl")
-        if decl_fn
-        else None
-    )
+    body = DoxygenLocation(fn=body_fn, line=body_line, end_line=body_end_line, type="body") if body_fn else None
+    decl = DoxygenLocation(fn=decl_fn, line=decl_line, type="decl") if decl_fn else None
     entity = DoxygenEntity(
         id=EntityID(compound=f"{name}_compound"),
         kind="function",
@@ -56,8 +48,11 @@ class TestExtractSourceCodeHappyPath:
 
         merged = _make_merged(
             "fight",
-            body_fn="src/fight.cc", body_line=2, body_end_line=4,
-            decl_fn="src/fight.cc", decl_line=2,
+            body_fn="src/fight.cc",
+            body_line=2,
+            body_end_line=4,
+            decl_fn="src/fight.cc",
+            decl_line=2,
         )
         extract_source_code([merged], tmp_path)
 

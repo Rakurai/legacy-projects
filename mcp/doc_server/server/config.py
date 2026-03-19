@@ -19,11 +19,8 @@ class ServerConfig(BaseSettings):
     All required fields MUST be present or server will fail to start (fail-fast).
     Optional fields degrade gracefully (e.g., embedding endpoint unavailable).
     """
-    model_config = SettingsConfigDict(
-        env_file=".env",
-        env_file_encoding="utf-8",
-        case_sensitive=False
-    )
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
 
     # PostgreSQL
     db_host: str = Field(default="localhost", description="PostgreSQL host")

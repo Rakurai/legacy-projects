@@ -5,7 +5,6 @@ Tests entity_to_summary, entity_to_detail, and capability_to_summary
 with various inputs to cover all conversion branches.
 """
 
-
 from server.converters import capability_to_summary, entity_to_detail, entity_to_summary
 from server.db_models import Capability, Entity
 
@@ -39,6 +38,7 @@ def _make_entity(**overrides) -> Entity:
 
 # ---------- entity_to_summary ----------
 
+
 def test_entity_to_summary_basic():
     """entity_to_summary maps all fields correctly."""
     entity = _make_entity()
@@ -56,6 +56,7 @@ def test_entity_to_summary_basic():
 
 
 # ---------- entity_to_detail ----------
+
 
 def test_entity_to_detail_include_code_true():
     """entity_to_detail with include_code=True includes source_text."""
@@ -100,6 +101,7 @@ def test_entity_to_detail_all_fields():
 
 
 # ---------- capability_to_summary ----------
+
 
 def test_capability_to_summary_basic():
     """capability_to_summary maps all fields correctly."""

@@ -13,12 +13,14 @@ from server.app import get_ctx, mcp
 from server.enums import SearchMode
 from server.logging_config import log
 from server.models import SearchResult
-from server.search import hybrid_search
+from server.search import hybrid_search, hybrid_search_usages
 
 # -- Response Model --
 
+
 class SearchResponse(BaseModel):
     """Response from search tool."""
+
     search_mode: SearchMode
     results: list[SearchResult]
     query: str
@@ -31,7 +33,7 @@ async def search(
     query: Annotated[str, Field(description="Search query (natural language or keywords)")],
     source: Annotated[
         str,
-        Field(description="Search source ('entity' only in V1)"),
+        Field(description="Search source: 'entity' (default) or 'usages' (search by caller intent)"),
     ] = "entity",
     kind: Annotated[str | None, Field(description="Optional kind filter (function, class, etc.)")] = None,
     capability: Annotated[str | None, Field(description="Optional capability filter")] = None,
@@ -46,10 +48,10 @@ async def search(
     """
     lc = get_ctx(ctx)
 
-    log.info("search", query=query, kind=kind, capability=capability, top_k=top_k)
+    log.info("search", query=query, source=source, kind=kind, capability=capability, top_k=top_k)
 
-    if source != "entity":
-        log.warning("Unsupported search source in V1", source=source)
+    if source not in ("entity", "usages"):
+        log.warning("Unsupported search source", source=source)
         return SearchResponse(
             search_mode=SearchMode.KEYWORD_FALLBACK,
             results=[],
@@ -58,14 +60,24 @@ async def search(
         )
 
     async with lc["db_manager"].session() as session:
-        results, search_mode = await hybrid_search(
-            session=session,
-            query=query,
-            embedding_provider=lc["embedding_provider"],
-            kind=kind,
-            capability=capability,
-            limit=top_k,
-        )
+        if source == "usages":
+            results, search_mode = await hybrid_search_usages(
+                session=session,
+                query=query,
+                embedding_provider=lc["embedding_provider"],
+                kind=kind,
+                capability=capability,
+                limit=top_k,
+            )
+        else:
+            results, search_mode = await hybrid_search(
+                session=session,
+                query=query,
+                embedding_provider=lc["embedding_provider"],
+                kind=kind,
+                capability=capability,
+                limit=top_k,
+            )
 
     return SearchResponse(
         search_mode=search_mode,

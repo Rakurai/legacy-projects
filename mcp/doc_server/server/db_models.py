@@ -8,6 +8,7 @@ Build helpers import from here to populate the database.
 import os
 
 from pgvector.sqlalchemy import Vector
+from sqlalchemy import Index
 from sqlalchemy.dialects.postgresql import JSONB, TSVECTOR
 from sqlmodel import Column, Field, SQLModel
 
@@ -23,6 +24,7 @@ class Entity(SQLModel, table=True):
     Represents functions, classes, variables, structs, and other code entities extracted
     from the Legacy MUD codebase via Doxygen and enriched with LLM-generated documentation.
     """
+
     __tablename__ = "entities"
 
     # Identity
@@ -30,8 +32,12 @@ class Entity(SQLModel, table=True):
 
     # Identity (user-facing)
     name: str = Field(default="", description="Bare name: do_look, race_type, etc. (empty for files/dirs)")
-    signature: str = Field(description="Full signature: void do_look(Character *ch, String argument) (not unique, indexed)")
-    kind: str = Field(description="function, variable, class, struct, file, enum, define, typedef, namespace, dir, group")
+    signature: str = Field(
+        description="Full signature: void do_look(Character *ch, String argument) (not unique, indexed)"
+    )
+    kind: str = Field(
+        description="function, variable, class, struct, file, enum, define, typedef, namespace, dir, group"
+    )
     entity_type: str = Field(description="compound or member")
 
     # Source location
@@ -48,11 +54,15 @@ class Entity(SQLModel, table=True):
     # Documentation
     brief: str | None = Field(default=None, description="One-line summary")
     details: str | None = Field(default=None, description="Detailed documentation")
-    params: dict[str, str] | None = Field(default=None, sa_column=Column(JSONB(none_as_null=True)), description="JSON: {param_name: description}")
+    params: dict[str, str] | None = Field(
+        default=None, sa_column=Column(JSONB(none_as_null=True)), description="JSON: {param_name: description}"
+    )
     returns: str | None = Field(default=None, description="Return value description")
     notes: str | None = Field(default=None, description="Implementation notes")
     rationale: str | None = Field(default=None, description="Design rationale")
-    usages: dict[str, str] | None = Field(default=None, sa_column=Column(JSONB), description="JSON: {caller_key: usage_description}")
+    usages: dict[str, str] | None = Field(
+        default=None, sa_column=Column(JSONB), description="JSON: {caller_key: usage_description}"
+    )
 
     # Classification
     capability: str | None = Field(default=None, description="Capability group name")
@@ -62,6 +72,19 @@ class Entity(SQLModel, table=True):
     fan_in: int = Field(default=0, ge=0, description="Incoming CALLS edges")
     fan_out: int = Field(default=0, ge=0, description="Outgoing CALLS edges")
     is_bridge: bool = Field(default=False, description="Callers/callees span different capabilities")
+
+    # Documentation quality signals (FR-001 through FR-004)
+    doc_state: str | None = Field(
+        default=None,
+        description="Documentation generation state: refined_summary, generated_summary, extracted_summary, refined_usage",
+    )
+    notes_length: int | None = Field(
+        default=None, ge=0, description="Character count of notes field (complexity proxy)"
+    )
+    is_contract_seed: bool = Field(default=False, description="True when fan_in > threshold AND rationale is non-null")
+    rationale_specificity: float | None = Field(
+        default=None, ge=0.0, le=1.0, description="Heuristic score: rationale length x domain-term density"
+    )
 
     # Embedding
     embedding: list[float] | None = Field(
@@ -74,7 +97,67 @@ class Entity(SQLModel, table=True):
     search_vector: str | None = Field(
         default=None,
         sa_column=Column(TSVECTOR),
-        description="Weighted tsvector: name=A, brief/details=B, definition=C, source_text=D"
+        description="Weighted tsvector: name=A, brief/details=B, definition=C, source_text=D",
+    )
+
+
+class EntityUsage(SQLModel, table=True):
+    """
+    Materialized caller→callee usage table (FR-005, FR-006, FR-012).
+
+    Exploded from the `usages` JSONB dict on each Entity row.
+    One row per caller→callee pair with a natural-language description.
+    Dropped and fully recreated on every build (no incremental updates).
+    """
+
+    __tablename__ = "entity_usages"
+    __table_args__ = (
+        Index("ix_entity_usages_callee", "callee_id"),
+        Index("ix_entity_usages_caller", "caller_compound", "caller_sig"),
+        Index(
+            "ix_entity_usages_embedding",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_with={"m": 16, "ef_construction": 64},
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
+        Index(
+            "ix_entity_usages_search_vector",
+            "search_vector",
+            postgresql_using="gin",
+        ),
+    )
+
+    # Composite primary key: (callee, caller_compound, caller_sig)
+    callee_id: str = Field(
+        primary_key=True,
+        foreign_key="entities.entity_id",
+        description="The callee entity ID",
+    )
+    caller_compound: str = Field(
+        primary_key=True,
+        description="Caller compound ID (file-based, from usages key)",
+    )
+    caller_sig: str = Field(
+        primary_key=True,
+        description="Caller function signature (from usages key)",
+    )
+
+    # Content
+    description: str = Field(description="Natural-language description of how the caller uses the callee")
+
+    # Semantic search
+    embedding: list[float] | None = Field(
+        default=None,
+        sa_column=Column(Vector(_EMBEDDING_DIM)),
+        description=f"{_EMBEDDING_DIM}-dim embedding of the description text",
+    )
+
+    # Keyword search
+    search_vector: str | None = Field(
+        default=None,
+        sa_column=Column(TSVECTOR),
+        description="tsvector of description for full-text search",
     )
 
 
@@ -85,14 +168,12 @@ class Edge(SQLModel, table=True):
     Represents relationships between entities: function calls, variable uses,
     class inheritance, file includes, and containment.
     """
+
     __tablename__ = "edges"
 
     source_id: str = Field(foreign_key="entities.entity_id", primary_key=True)
     target_id: str = Field(foreign_key="entities.entity_id", primary_key=True)
-    relationship: str = Field(
-        primary_key=True,
-        description="calls, uses, inherits, includes, contained_by"
-    )
+    relationship: str = Field(primary_key=True, description="calls, uses, inherits, includes, contained_by")
 
 
 class Capability(SQLModel, table=True):
@@ -102,6 +183,7 @@ class Capability(SQLModel, table=True):
     Represents high-level functional groupings of related code
     (e.g., combat, magic, persistence, character_state).
     """
+
     __tablename__ = "capabilities"
 
     name: str = Field(primary_key=True, description="Capability group name")
@@ -118,6 +200,7 @@ class CapabilityEdge(SQLModel, table=True):
     Represents architectural relationships: which capabilities depend on which others,
     and how many cross-capability function calls exist.
     """
+
     __tablename__ = "capability_edges"
 
     source_cap: str = Field(foreign_key="capabilities.name", primary_key=True)
@@ -135,13 +218,12 @@ class EntryPoint(SQLModel, table=True):
 
     Tracks which capabilities each entry point exercises (direct and transitive).
     """
+
     __tablename__ = "entry_points"
 
     entity_id: str = Field(primary_key=True, foreign_key="entities.entity_id")
     name: str = Field(description="do_kill, spell_fireball, spec_cast_cleric, etc.")
     capabilities: list[str] | None = Field(
-        default=None,
-        sa_column=Column(JSONB),
-        description="List of capability names exercised"
+        default=None, sa_column=Column(JSONB), description="List of capability names exercised"
     )
     entry_type: str | None = Field(default=None, description="do_, spell_, spec_")

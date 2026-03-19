@@ -14,6 +14,7 @@ from fastmcp import Context
 import server.tools.behavior
 import server.tools.capability
 import server.tools.entity
+import server.tools.explain
 import server.tools.graph
 import server.tools.search  # noqa: F401
 from server.app import get_ctx, mcp
@@ -113,6 +114,7 @@ def explore_capability(capability_name: str) -> list[dict[str, str]]:
 
 
 # ---- Entry Point ----
+
 
 def main() -> None:
     """Main entry point."""

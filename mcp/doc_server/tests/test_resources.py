@@ -25,6 +25,7 @@ from server.resources import (
 
 # ---------- get_capabilities_resource ----------
 
+
 @pytest.mark.asyncio
 async def test_capabilities_resource(
     test_session: AsyncSession,
@@ -55,6 +56,7 @@ async def test_capabilities_resource_fields(
 
 # ---------- get_capability_detail_resource ----------
 
+
 @pytest.mark.asyncio
 async def test_capability_detail_resource(
     test_session: AsyncSession,
@@ -82,6 +84,7 @@ async def test_capability_detail_resource_not_found(
 
 
 # ---------- get_entity_resource ----------
+
 
 @pytest.mark.asyncio
 async def test_entity_resource(
@@ -111,6 +114,7 @@ async def test_entity_resource_not_found(
 
 # ---------- get_file_entities_resource ----------
 
+
 @pytest.mark.asyncio
 async def test_file_entities_resource(
     test_session: AsyncSession,
@@ -137,6 +141,7 @@ async def test_file_entities_resource_empty(
 
 
 # ---------- get_stats_resource ----------
+
 
 @pytest.mark.asyncio
 async def test_stats_resource(

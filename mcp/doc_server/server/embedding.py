@@ -25,6 +25,7 @@ from server.logging_config import log
 # Protocol
 # ---------------------------------------------------------------------------
 
+
 @runtime_checkable
 class EmbeddingProvider(Protocol):
     """Protocol for embedding text into fixed-dimension float vectors."""
@@ -54,6 +55,7 @@ class EmbeddingProvider(Protocol):
 # ---------------------------------------------------------------------------
 # Local Provider (FastEmbed / ONNX)
 # ---------------------------------------------------------------------------
+
 
 class LocalEmbeddingProvider:
     """Embedding provider using a bundled ONNX model via fastembed.
@@ -93,6 +95,7 @@ class LocalEmbeddingProvider:
 # ---------------------------------------------------------------------------
 # Hosted Provider (OpenAI-compatible)
 # ---------------------------------------------------------------------------
+
 
 class HostedEmbeddingProvider:
     """Embedding provider using an OpenAI-compatible hosted endpoint.
@@ -169,6 +172,7 @@ class HostedEmbeddingProvider:
 # ---------------------------------------------------------------------------
 # Factory
 # ---------------------------------------------------------------------------
+
 
 def create_provider(config: ServerConfig) -> EmbeddingProvider | None:
     """Create an embedding provider based on configuration.

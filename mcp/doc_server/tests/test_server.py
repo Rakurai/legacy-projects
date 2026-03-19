@@ -30,6 +30,7 @@ EXPECTED_TOOLS = {
     "compare_capabilities",
     "list_entry_points",
     "get_entry_point_info",
+    "explain_interface",
 }
 
 EXPECTED_RESOURCES = {

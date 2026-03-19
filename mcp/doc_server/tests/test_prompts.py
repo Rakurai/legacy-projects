@@ -14,12 +14,16 @@ from server.prompts import (
 )
 
 
-@pytest.mark.parametrize("factory,args,expected_mentions", [
-    (explain_entity_prompt, ("damage",), ["damage"]),
-    (analyze_behavior_prompt, ("do_kill", 5), ["do_kill"]),
-    (compare_entry_points_prompt, (["do_look", "do_examine"],), ["do_look", "do_examine"]),
-    (explore_capability_prompt, ("combat",), ["combat"]),
-], ids=["explain_entity", "analyze_behavior", "compare_entry_points", "explore_capability"])
+@pytest.mark.parametrize(
+    "factory,args,expected_mentions",
+    [
+        (explain_entity_prompt, ("damage",), ["damage"]),
+        (analyze_behavior_prompt, ("do_kill", 5), ["do_kill"]),
+        (compare_entry_points_prompt, (["do_look", "do_examine"],), ["do_look", "do_examine"]),
+        (explore_capability_prompt, ("combat",), ["combat"]),
+    ],
+    ids=["explain_entity", "analyze_behavior", "compare_entry_points", "explore_capability"],
+)
 def test_prompt_structure(factory, args, expected_mentions):
     """All prompt generators return user+assistant messages mentioning key terms."""
     msgs = factory(*args)

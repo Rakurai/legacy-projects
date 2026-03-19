@@ -92,6 +92,3 @@ async def test_resolve_semantic_stage_handles_client_error(test_session: AsyncSe
 
     # Should still return not_found, not propagate the exception
     assert result.status == "not_found"
-
-
-

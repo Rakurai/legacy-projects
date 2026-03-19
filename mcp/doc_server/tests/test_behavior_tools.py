@@ -16,6 +16,7 @@ from server.tools.behavior import (
 
 # ---------- get_behavior_slice ----------
 
+
 @pytest.mark.asyncio
 async def test_behavior_slice_basic(mock_ctx, sample_entities, sample_edges):
     """Behavior slice computes call cone from entry point."""
@@ -78,6 +79,7 @@ async def test_behavior_slice_truncation_metadata(mock_ctx, sample_entities, sam
 
 
 # ---------- get_state_touches ----------
+
 
 @pytest.mark.asyncio
 async def test_state_touches_direct(mock_ctx, sample_entities, sample_edges):

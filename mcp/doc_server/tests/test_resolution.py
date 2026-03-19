@@ -148,6 +148,7 @@ async def test_resolve_with_kind_filter(test_session: AsyncSession, sample_entit
 
 # ---------- ResolutionResult helpers ----------
 
+
 def _make_resolution_entity(**overrides) -> Entity:
     """Create a minimal Entity for ResolutionResult tests."""
     defaults = dict(

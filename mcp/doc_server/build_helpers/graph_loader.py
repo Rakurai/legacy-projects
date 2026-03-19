@@ -17,10 +17,7 @@ from legacy_common.doxygen_graph import load_graph
 from server.logging_config import log
 
 
-def load_graph_edges(
-    artifacts_dir: Path,
-    merged_entities: list[MergedEntity]
-) -> list[tuple[str, str, str]]:
+def load_graph_edges(artifacts_dir: Path, merged_entities: list[MergedEntity]) -> list[tuple[str, str, str]]:
     """
     Load edges from code_graph.gml and convert node IDs to entity IDs.
 
@@ -73,10 +70,7 @@ def load_graph_edges(
     return edges
 
 
-def compute_fan_metrics(
-    merged_entities: list[MergedEntity],
-    edges: list[tuple[str, str, str]]
-) -> None:
+def compute_fan_metrics(merged_entities: list[MergedEntity], edges: list[tuple[str, str, str]]) -> None:
     """
     Compute fan_in and fan_out metrics from CALLS edges.
 
@@ -109,10 +103,7 @@ def compute_fan_metrics(
     log.info("Fan metrics computed")
 
 
-def compute_bridge_flags(
-    merged_entities: list[MergedEntity],
-    edges: list[tuple[str, str, str]]
-) -> None:
+def compute_bridge_flags(merged_entities: list[MergedEntity], edges: list[tuple[str, str, str]]) -> None:
     """
     Compute is_bridge flag for functions with cross-capability CALLS.
 
@@ -127,9 +118,7 @@ def compute_bridge_flags(
     log.info("Computing bridge flags")
 
     # Build entity_id → capability map
-    capability_map: dict[str, str | None] = {
-        merged.entity_id: merged.capability for merged in merged_entities
-    }
+    capability_map: dict[str, str | None] = {merged.entity_id: merged.capability for merged in merged_entities}
 
     # Build adjacency lists for CALLS edges
     callers: dict[str, list[str]] = defaultdict(list)

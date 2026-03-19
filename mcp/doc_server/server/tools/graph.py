@@ -27,8 +27,10 @@ from server.util import fetch_entity_map
 
 # -- Response Models --
 
+
 class CallersResponse(BaseModel):
     """Response from get_callers tool."""
+
     entity_id: str
     callers_by_depth: dict[int, list[EntitySummary]]
     truncation: TruncationMetadata
@@ -36,6 +38,7 @@ class CallersResponse(BaseModel):
 
 class CalleesResponse(BaseModel):
     """Response from get_callees tool."""
+
     entity_id: str
     callees_by_depth: dict[int, list[EntitySummary]]
     truncation: TruncationMetadata
@@ -43,6 +46,7 @@ class CalleesResponse(BaseModel):
 
 class DependenciesResponse(BaseModel):
     """Response from get_dependencies tool."""
+
     entity_id: str
     dependencies: list[dict]
     truncation: TruncationMetadata
@@ -50,6 +54,7 @@ class DependenciesResponse(BaseModel):
 
 class ClassHierarchyResponse(BaseModel):
     """Response from get_class_hierarchy tool."""
+
     entity_id: str
     base_classes: list[EntitySummary]
     derived_classes: list[EntitySummary]
@@ -57,6 +62,7 @@ class ClassHierarchyResponse(BaseModel):
 
 class RelatedEntitiesResponse(BaseModel):
     """Response from get_related_entities tool."""
+
     entity_id: str
     neighbors_by_relationship: dict[str, list[EntitySummary]]
     truncation: TruncationMetadata
@@ -86,10 +92,7 @@ async def get_callers(
     callers_by_depth: dict[int, list[EntitySummary]] = {}
     total = 0
     for d, entity_ids in callers_by_depth_ids.items():
-        summaries = [
-            entity_to_summary(entity_map[e])
-            for e in entity_ids if e in entity_map
-        ]
+        summaries = [entity_to_summary(entity_map[e]) for e in entity_ids if e in entity_map]
         callers_by_depth[d] = summaries
         total += len(summaries)
 
@@ -132,10 +135,7 @@ async def get_callees(
     callees_by_depth: dict[int, list[EntitySummary]] = {}
     total = 0
     for d, entity_ids in callees_by_depth_ids.items():
-        summaries = [
-            entity_to_summary(entity_map[e])
-            for e in entity_ids if e in entity_map
-        ]
+        summaries = [entity_to_summary(entity_map[e]) for e in entity_ids if e in entity_map]
         callees_by_depth[d] = summaries
         total += len(summaries)
 
@@ -185,7 +185,9 @@ async def get_dependencies(
                 entity_id=entity_id,
                 dependencies=[],
                 truncation=TruncationMetadata(
-                    truncated=False, total_available=0, node_count=0,
+                    truncated=False,
+                    total_available=0,
+                    node_count=0,
                 ),
             )
 
@@ -213,11 +215,13 @@ async def get_dependencies(
     dependencies = []
     for dep_id, edge_type, dep_dir in dep_records:
         if dep_id in entity_map:
-            dependencies.append({
-                "entity": entity_to_summary(entity_map[dep_id]),
-                "relationship": edge_type,
-                "direction": dep_dir,
-            })
+            dependencies.append(
+                {
+                    "entity": entity_to_summary(entity_map[dep_id]),
+                    "relationship": edge_type,
+                    "direction": dep_dir,
+                }
+            )
 
     return DependenciesResponse(
         entity_id=entity_id,
@@ -257,14 +261,8 @@ async def get_class_hierarchy(
         all_ids = base_ids + derived_ids
         entity_map = await fetch_entity_map(session, all_ids)
 
-    base_classes = [
-        entity_to_summary(entity_map[e])
-        for e in base_ids if e in entity_map
-    ]
-    derived_classes = [
-        entity_to_summary(entity_map[e])
-        for e in derived_ids if e in entity_map
-    ]
+    base_classes = [entity_to_summary(entity_map[e]) for e in base_ids if e in entity_map]
+    derived_classes = [entity_to_summary(entity_map[e]) for e in derived_ids if e in entity_map]
 
     return ClassHierarchyResponse(
         entity_id=entity_id,
@@ -295,7 +293,9 @@ async def get_related_entities(
                 entity_id=entity_id,
                 neighbors_by_relationship={},
                 truncation=TruncationMetadata(
-                    truncated=False, total_available=0, node_count=0,
+                    truncated=False,
+                    total_available=0,
+                    node_count=0,
                 ),
             )
 
@@ -335,10 +335,7 @@ async def get_related_entities(
             truncated = True
             unique_ids = unique_ids[:limit_per_type]
 
-        summaries = [
-            entity_to_summary(entity_map[nid])
-            for nid in unique_ids if nid in entity_map
-        ]
+        summaries = [entity_to_summary(entity_map[nid]) for nid in unique_ids if nid in entity_map]
         if summaries:
             neighbors_by_relationship[key] = summaries
             total_returned += len(summaries)

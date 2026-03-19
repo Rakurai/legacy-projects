@@ -13,6 +13,7 @@ from server.tools.entity import (
 
 # ---------- get_entity ----------
 
+
 @pytest.mark.asyncio
 async def test_get_entity_by_id(mock_ctx, sample_entities):
     """Fetch entity by entity_id returns full detail."""
@@ -58,6 +59,7 @@ async def test_get_entity_not_found(mock_ctx, sample_entities):
 
 # ---------- get_source_code ----------
 
+
 @pytest.mark.asyncio
 async def test_get_source_code(mock_ctx, sample_entities):
     """Returns source text and metadata."""
@@ -75,3 +77,68 @@ async def test_get_source_code_not_found(mock_ctx, sample_entities):
     """Missing entity raises EntityNotFoundError."""
     with pytest.raises(EntityNotFoundError):
         await get_source_code(mock_ctx, entity_id="nonexistent_id_xyz")
+
+
+# ---------- KG enrichment fields (US3) ----------
+
+
+@pytest.mark.asyncio
+async def test_get_entity_enrichment_fields(mock_ctx, sample_entities):
+    """get_entity returns doc_state, notes_length, is_contract_seed, rationale_specificity."""
+    damage_id = sample_entities[0].entity_id
+
+    detail = await get_entity(mock_ctx, entity_id=damage_id)
+
+    assert detail.doc_state == "refined_summary"
+    assert detail.notes_length == 150
+    assert detail.is_contract_seed is True
+    assert detail.rationale_specificity == pytest.approx(0.85)
+
+
+@pytest.mark.asyncio
+async def test_get_entity_null_enrichment_fields(mock_ctx, sample_entities):
+    """Entities without enrichment fields return correct null representations."""
+    char_id = sample_entities[2].entity_id  # Character — no notes, no rationale
+
+    detail = await get_entity(mock_ctx, entity_id=char_id)
+
+    assert detail.doc_state == "extracted_summary"
+    assert detail.notes_length is None
+    assert detail.is_contract_seed is False
+    assert detail.rationale_specificity is None
+
+
+@pytest.mark.asyncio
+async def test_get_entity_include_usages_true(mock_ctx, sample_entities, sample_entity_usages):
+    """include_usages=True populates top_usages with up to 5 UsageEntry items."""
+    damage_id = sample_entities[0].entity_id
+
+    detail = await get_entity(mock_ctx, entity_id=damage_id, include_usages=True)
+
+    assert detail.top_usages is not None
+    assert len(detail.top_usages) <= 5
+    assert len(detail.top_usages) > 0
+    for entry in detail.top_usages:
+        assert entry.caller_compound
+        assert entry.caller_sig
+        assert entry.description
+
+
+@pytest.mark.asyncio
+async def test_get_entity_include_usages_false(mock_ctx, sample_entities, sample_entity_usages):
+    """include_usages=False (default) leaves top_usages as None."""
+    damage_id = sample_entities[0].entity_id
+
+    detail = await get_entity(mock_ctx, entity_id=damage_id)
+
+    assert detail.top_usages is None
+
+
+@pytest.mark.asyncio
+async def test_get_entity_include_usages_no_usages(mock_ctx, sample_entities):
+    """include_usages=True on an entity with no usages rows returns empty list."""
+    do_kill_id = sample_entities[1].entity_id  # no sample_entity_usages for do_kill
+
+    detail = await get_entity(mock_ctx, entity_id=do_kill_id, include_usages=True)
+
+    assert detail.top_usages == []

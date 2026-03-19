@@ -23,7 +23,9 @@ async def test_load_graph_basic(test_session: AsyncSession, sample_entities: lis
 
 
 @pytest.mark.asyncio
-async def test_load_graph_edge_types(test_session: AsyncSession, sample_entities: list[Entity], sample_edges: list[Edge]):
+async def test_load_graph_edge_types(
+    test_session: AsyncSession, sample_entities: list[Entity], sample_edges: list[Edge]
+):
     """load_graph preserves edge relationship types."""
     graph = await load_graph(test_session)
 
@@ -38,14 +40,16 @@ async def test_load_graph_edge_types(test_session: AsyncSession, sample_entities
 
 
 @pytest.mark.asyncio
-async def test_load_graph_edge_type_counts(test_session: AsyncSession, sample_entities: list[Entity], sample_edges: list[Edge]):
+async def test_load_graph_edge_type_counts(
+    test_session: AsyncSession, sample_entities: list[Entity], sample_edges: list[Edge]
+):
     """load_graph pre-computes edge_type_counts on the graph object."""
     graph = await load_graph(test_session)
 
     counts = graph.graph["edge_type_counts"]
     assert isinstance(counts, dict)
-    assert counts[CALLS] == 2    # do_kill→damage, damage→armor_absorb
-    assert counts[USES] == 1     # damage→max_damage
+    assert counts[CALLS] == 2  # do_kill→damage, damage→armor_absorb
+    assert counts[USES] == 1  # damage→max_damage
     assert counts[INCLUDES] == 1  # fight.cc→Character.hh
 
 
@@ -60,7 +64,9 @@ async def test_load_graph_empty_table(test_session: AsyncSession):
 
 
 @pytest.mark.asyncio
-async def test_load_graph_connectivity(test_session: AsyncSession, sample_entities: list[Entity], sample_edges: list[Edge]):
+async def test_load_graph_connectivity(
+    test_session: AsyncSession, sample_entities: list[Entity], sample_edges: list[Edge]
+):
     """load_graph produces correct source→target edges for BFS traversal."""
     graph = await load_graph(test_session)
 

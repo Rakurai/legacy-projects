@@ -16,7 +16,7 @@ from sqlmodel import SQLModel
 import networkx as nx
 
 from server.config import ServerConfig
-from server.db_models import Entity, Edge, Capability, CapabilityEdge, EntryPoint
+from server.db_models import Capability, CapabilityEdge, Edge, Entity, EntityUsage, EntryPoint
 
 
 @pytest.fixture(scope="session")
@@ -81,7 +81,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
     Provides a minimal set of entities covering different kinds and quality levels.
     """
     entities = [
-        # [0] High-quality function with full documentation
+        # [0] High-quality function with full documentation — is_contract_seed candidate
         Entity(
             entity_id="fn:a1b2c3d",
             name="damage",
@@ -97,13 +97,18 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             details="Calculates and applies damage to a victim character, considering armor, resistances, and other factors.",
             params={"ch": "Attacker", "victim": "Target", "dam": "Base damage amount"},
             returns="void",
+            notes="Damage is capped at max_damage. Immortal characters are immune. The dam parameter is base damage before armor mitigation.",
+            rationale="Central combat damage function called by spells, attacks, and traps. Must handle all damage types consistently to ensure balance.",
             capability="combat",
             is_entry_point=False,
             fan_in=23,
             fan_out=8,
             is_bridge=True,
+            doc_state="refined_summary",
+            notes_length=150,
+            is_contract_seed=True,
+            rationale_specificity=0.85,
         ),
-
         # [1] Entry point (command) — calls damage
         Entity(
             entity_id="fn:b2c3d4e",
@@ -122,8 +127,11 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             fan_in=1,
             fan_out=15,
             is_bridge=False,
+            doc_state="generated_summary",
+            notes_length=None,
+            is_contract_seed=False,
+            rationale_specificity=None,
         ),
-
         # [2] Class entity
         Entity(
             entity_id="cls:c3d4e5f",
@@ -137,8 +145,11 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             is_entry_point=False,
             fan_in=0,
             fan_out=0,
+            doc_state="extracted_summary",
+            notes_length=None,
+            is_contract_seed=False,
+            rationale_specificity=None,
         ),
-
         # [3] Global variable (used by damage)
         Entity(
             entity_id="var:d4e5f6a",
@@ -154,8 +165,11 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             is_entry_point=False,
             fan_in=5,
             fan_out=0,
+            doc_state="extracted_summary",
+            notes_length=None,
+            is_contract_seed=False,
+            rationale_specificity=None,
         ),
-
         # [4] Another function in combat capability (called by damage transitively)
         Entity(
             entity_id="fn:e5f6a7b",
@@ -174,8 +188,11 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             fan_in=10,
             fan_out=2,
             is_bridge=False,
+            doc_state="refined_usage",
+            notes_length=None,
+            is_contract_seed=False,
+            rationale_specificity=0.30,
         ),
-
         # [5] File entity for src/fight.cc (used by related_files)
         Entity(
             entity_id="file:f6a7b8c",
@@ -189,8 +206,11 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             is_entry_point=False,
             fan_in=0,
             fan_out=0,
+            doc_state=None,
+            notes_length=None,
+            is_contract_seed=False,
+            rationale_specificity=None,
         ),
-
         # [6] File entity for src/include/Character.hh (include target)
         Entity(
             entity_id="file:a7b8c9d",
@@ -204,6 +224,10 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             is_entry_point=False,
             fan_in=0,
             fan_out=0,
+            doc_state=None,
+            notes_length=None,
+            is_contract_seed=False,
+            rationale_specificity=None,
         ),
     ]
 
@@ -213,12 +237,14 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
     await test_session.commit()
 
     # Populate tsvector for full-text search in tests
-    await test_session.execute(text(
-        "UPDATE entities SET search_vector = "
-        "setweight(to_tsvector('english', coalesce(name, '')), 'A') || "
-        "setweight(to_tsvector('english', coalesce(brief, '')), 'B') || "
-        "setweight(to_tsvector('english', coalesce(details, '')), 'B')"
-    ))
+    await test_session.execute(
+        text(
+            "UPDATE entities SET search_vector = "
+            "setweight(to_tsvector('english', coalesce(name, '')), 'A') || "
+            "setweight(to_tsvector('english', coalesce(brief, '')), 'B') || "
+            "setweight(to_tsvector('english', coalesce(details, '')), 'B')"
+        )
+    )
     await test_session.commit()
 
     return entities
@@ -409,6 +435,75 @@ def mock_ctx(test_session: AsyncSession, sample_graph: nx.MultiDiGraph, test_con
     ctx.lifespan_context = lifespan_context
 
     return ctx
+
+
+@pytest.fixture
+async def sample_entity_usages(
+    test_session: AsyncSession,
+    sample_entities: list[Entity],
+) -> list[EntityUsage]:
+    """
+    Create sample EntityUsage rows for the damage entity (index 0).
+
+    Provides 5 distinct caller→callee usage entries for testing explain_interface,
+    usage-based search, and include_usages functionality. Embeddings are None
+    (tests use keyword search or bypass semantic scoring).
+    """
+    damage_id = sample_entities[0].entity_id  # "fn:a1b2c3d"
+
+    usages = [
+        EntityUsage(
+            callee_id=damage_id,
+            caller_compound="act_wiz_8cc",
+            caller_sig="void do_kill(Character *ch, String argument)",
+            description="Calls damage to apply a lethal blow to the target character in combat.",
+            embedding=None,
+            search_vector=None,
+        ),
+        EntityUsage(
+            callee_id=damage_id,
+            caller_compound="spell_8cc",
+            caller_sig="void spell_fireball(Character *ch, Character *victim, int level)",
+            description="Used to deliver fire-based magical damage after computing spell power from caster level.",
+            embedding=None,
+            search_vector=None,
+        ),
+        EntityUsage(
+            callee_id=damage_id,
+            caller_compound="fight_8cc",
+            caller_sig="void one_hit(Character *ch, Character *victim, int dt)",
+            description="Applies physical attack damage for a single weapon strike, passing computed dam value.",
+            embedding=None,
+            search_vector=None,
+        ),
+        EntityUsage(
+            callee_id=damage_id,
+            caller_compound="affect_8cc",
+            caller_sig="void affect_tick(Character *ch)",
+            description="Applies poison damage each game tick while the poison affect is active on the character.",
+            embedding=None,
+            search_vector=None,
+        ),
+        EntityUsage(
+            callee_id=damage_id,
+            caller_compound="trap_8cc",
+            caller_sig="void trigger_trap(Character *ch, Object *obj)",
+            description="Delivers trap damage when a character activates a trapped object or room trigger.",
+            embedding=None,
+            search_vector=None,
+        ),
+    ]
+
+    for usage in usages:
+        test_session.add(usage)
+
+    await test_session.commit()
+
+    # Populate tsvectors for full-text search in tests
+    await test_session.execute(text("UPDATE entity_usages SET search_vector = to_tsvector('english', description)"))
+    await test_session.commit()
+
+    return usages
 
 
 @pytest.fixture

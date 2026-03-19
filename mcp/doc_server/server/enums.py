@@ -104,6 +104,13 @@ class SearchMode(StrEnum):
     KEYWORD_FALLBACK = "keyword_fallback"
 
 
+class SearchSource(StrEnum):
+    """Which data source to search over."""
+
+    ENTITY = "entity"
+    USAGES = "usages"
+
+
 # ---------------------------------------------------------------------------
 # Truncation
 # ---------------------------------------------------------------------------

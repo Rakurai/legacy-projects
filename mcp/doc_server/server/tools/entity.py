@@ -10,20 +10,17 @@ from typing import Annotated
 import networkx as nx
 from fastmcp import Context
 from pydantic import BaseModel, Field
-from sqlalchemy import func
-from sqlmodel import select as sa_select
 
 from server.app import get_ctx, mcp
 from server.converters import entity_to_detail
-from server.db_models import Entity, EntityUsage
+from server.db_models import Entity
 from server.errors import EntityNotFoundError
 from server.logging_config import log
 from server.models import (
     EntityDetail,
     EntityNeighbor,
-    UsageEntry,
 )
-from server.util import fetch_entity_map
+from server.util import fetch_entity_map, fetch_top_callers
 
 # -- Response Models --
 
@@ -98,40 +95,7 @@ async def get_entity(
 
         # Populate top_usages if requested (same fan_in ranking as explain_interface)
         if include_usages:
-            fanin_sq = (
-                sa_select(Entity.signature, func.max(Entity.fan_in).label("fan_in"))
-                .group_by(Entity.signature)
-                .subquery()
-            )
-            from sqlalchemy import outerjoin
-
-            usage_stmt = (
-                sa_select(
-                    EntityUsage.caller_compound,
-                    EntityUsage.caller_sig,
-                    EntityUsage.description,
-                    func.coalesce(fanin_sq.c.fan_in, 0).label("caller_fan_in"),
-                )
-                .select_from(
-                    outerjoin(
-                        EntityUsage,
-                        fanin_sq,
-                        EntityUsage.caller_sig == fanin_sq.c.signature,  # type: ignore[arg-type]
-                    )
-                )
-                .where(EntityUsage.callee_id == entity_id)
-                .order_by(func.coalesce(fanin_sq.c.fan_in, 0).desc())
-                .limit(5)
-            )
-            result = await session.execute(usage_stmt)
-            detail.top_usages = [
-                UsageEntry(
-                    caller_compound=row.caller_compound,
-                    caller_sig=row.caller_sig,
-                    description=row.description,
-                )
-                for row in result.all()
-            ]
+            detail.top_usages = await fetch_top_callers(session, entity_id, limit=5)
 
     return detail
 
@@ -160,18 +124,15 @@ async def get_source_code(
 
         if context_lines > 0 and project_root and entity.file_path and entity.body_start_line:
             source_file = project_root / entity.file_path
-            try:
-                lines = source_file.read_text(encoding="utf-8", errors="replace").splitlines()
-                start = entity.body_start_line - 1
-                end = entity.body_end_line or start
+            lines = source_file.read_text(encoding="utf-8", errors="replace").splitlines()
+            start = entity.body_start_line - 1
+            end = entity.body_end_line or start
 
-                ctx_start = max(0, start - context_lines)
-                ctx_end = min(len(lines), end + context_lines)
+            ctx_start = max(0, start - context_lines)
+            ctx_end = min(len(lines), end + context_lines)
 
-                context_before = "\n".join(lines[ctx_start:start])
-                context_after = "\n".join(lines[end:ctx_end])
-            except (OSError, UnicodeDecodeError) as e:
-                log.warning("Could not read context from disk", file=str(source_file), error=str(e))
+            context_before = "\n".join(lines[ctx_start:start])
+            context_after = "\n".join(lines[end:ctx_end])
 
     return SourceCodeResponse(
         entity_id=entity.entity_id,

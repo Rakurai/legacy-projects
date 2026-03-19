@@ -26,17 +26,14 @@ async def test_search_tool_keyword_mode(mock_ctx, sample_entities):
 
 @pytest.mark.asyncio
 async def test_search_tool_unsupported_source(mock_ctx, sample_entities):
-    """Search tool returns empty results for non-entity source."""
-    response = await search(
-        ctx=mock_ctx,
-        query="damage",
-        source="capability",  # type: ignore  — V1 only supports "entity"
-        top_k=20,
-    )
-
-    assert response.result_count == 0
-    assert response.results == []
-    assert response.search_mode == "keyword_fallback"
+    """Search tool raises ValueError for unsupported source values."""
+    with pytest.raises(ValueError, match="Unsupported search source"):
+        await search(
+            ctx=mock_ctx,
+            query="damage",
+            source="capability",  # type: ignore  — not a valid SearchSource
+            top_k=20,
+        )
 
 
 @pytest.mark.asyncio

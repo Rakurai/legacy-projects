@@ -76,19 +76,17 @@ async def test_resolve_semantic_stage_with_mock_client(test_session: AsyncSessio
 
 
 @pytest.mark.asyncio
-async def test_resolve_semantic_stage_handles_client_error(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Stage 6 gracefully handles embedding provider errors."""
+async def test_resolve_semantic_stage_propagates_client_error(test_session: AsyncSession, sample_entities: list[Entity]):
+    """Stage 6 propagates embedding provider errors — fail-fast, no silent fallback."""
     mock_provider = MagicMock()
     mock_provider.dimension = 768
     mock_provider.embed_query = AsyncMock(side_effect=RuntimeError("API down"))
 
-    result = await resolve_entity(
-        session=test_session,
-        query="zzz_completely_unmatchable_xyz_42",
-        kind=None,
-        embedding_provider=mock_provider,
-        limit=20,
-    )
-
-    # Should still return not_found, not propagate the exception
-    assert result.status == "not_found"
+    with pytest.raises(RuntimeError, match="API down"):
+        await resolve_entity(
+            session=test_session,
+            query="zzz_completely_unmatchable_xyz_42",
+            kind=None,
+            embedding_provider=mock_provider,
+            limit=20,
+        )

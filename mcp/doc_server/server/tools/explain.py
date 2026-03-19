@@ -9,11 +9,9 @@ from typing import Annotated
 
 from fastmcp import Context
 from pydantic import Field
-from sqlalchemy import func
-from sqlmodel import select
 
 from server.app import get_ctx, mcp
-from server.db_models import Entity, EntityUsage
+from server.db_models import Entity
 from server.errors import EntityNotFoundError
 from server.logging_config import log
 from server.models import (
@@ -24,6 +22,7 @@ from server.models import (
     MechanismSection,
     PreconditionsSection,
 )
+from server.util import fetch_top_callers
 
 
 @mcp.tool()
@@ -53,44 +52,14 @@ async def explain_interface(
         if not entity:
             raise EntityNotFoundError(entity_id)
 
-        # Query entity_usages for this callee, ranked by caller fan_in.
-        # Subquery: max fan_in per caller signature across all entities.
-        # Defaults to 0 for unmatched callers (common sigs like void init() may not match).
-        fanin_sq = (
-            select(Entity.signature, func.max(Entity.fan_in).label("fan_in")).group_by(Entity.signature).subquery()
-        )
-
-        from sqlalchemy import outerjoin
-
-        usage_stmt = (
-            select(
-                EntityUsage.caller_compound,
-                EntityUsage.caller_sig,
-                EntityUsage.description,
-                func.coalesce(fanin_sq.c.fan_in, 0).label("caller_fan_in"),
-            )
-            .select_from(
-                outerjoin(
-                    EntityUsage,
-                    fanin_sq,
-                    EntityUsage.caller_sig == fanin_sq.c.signature,  # type: ignore[arg-type]
-                )
-            )
-            .where(EntityUsage.callee_id == entity_id)
-            .order_by(func.coalesce(fanin_sq.c.fan_in, 0).desc())
-            .limit(5)
-        )
-
-        result = await session.execute(usage_stmt)
-        usage_rows = result.all()
-
+        top_callers = await fetch_top_callers(session, entity_id, limit=5)
         calling_patterns = [
             CallingPattern(
-                caller_compound=row.caller_compound,
-                caller_sig=row.caller_sig,
-                description=row.description,
+                caller_compound=u.caller_compound,
+                caller_sig=u.caller_sig,
+                description=u.description,
             )
-            for row in usage_rows
+            for u in top_callers
         ]
 
     # Compose signature block

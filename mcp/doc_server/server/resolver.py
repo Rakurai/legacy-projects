@@ -250,29 +250,25 @@ async def _resolve_by_semantic(
     limit: int,
 ) -> ResolutionResult | None:
     """Stage 6: Semantic search (pgvector cosine similarity)."""
-    try:
-        query_embedding = await embedding_provider.embed_query(query)
+    query_embedding = await embedding_provider.embed_query(query)
 
-        cosine_dist = Entity.embedding.cosine_distance(query_embedding)
-        score_expr = (literal(1) - cosine_dist).label("score")
+    cosine_dist = Entity.embedding.cosine_distance(query_embedding)
+    score_expr = (literal(1) - cosine_dist).label("score")
 
-        stmt = select(Entity).where(Entity.embedding.isnot(None))
-        if kind:
-            stmt = stmt.where(Entity.kind == kind)
-        stmt = stmt.order_by(score_expr.desc()).limit(limit)
+    stmt = select(Entity).where(Entity.embedding.isnot(None))
+    if kind:
+        stmt = stmt.where(Entity.kind == kind)
+    stmt = stmt.order_by(score_expr.desc()).limit(limit)
 
-        result = await session.execute(stmt)
-        entities = list(result.scalars().all())
+    result = await session.execute(stmt)
+    entities = list(result.scalars().all())
 
-        if entities:
-            return ResolutionResult(
-                status=ResolutionStatus.AMBIGUOUS,
-                match_type=MatchType.SEMANTIC,
-                candidates=entities,
-                resolved_from=query,
-            )
-
-    except (OSError, RuntimeError, TimeoutError) as e:
-        log.warning("Semantic search failed (embedding provider error)", error=str(e), query=query[:50])
+    if entities:
+        return ResolutionResult(
+            status=ResolutionStatus.AMBIGUOUS,
+            match_type=MatchType.SEMANTIC,
+            candidates=entities,
+            resolved_from=query,
+        )
 
     return None

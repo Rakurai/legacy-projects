@@ -140,11 +140,7 @@ async def hybrid_search(
     search_mode: SearchMode = SearchMode.HYBRID
 
     if embedding_provider:
-        try:
-            query_embedding = await embedding_provider.embed_query(query)
-        except (OSError, RuntimeError, TimeoutError) as e:
-            log.warning("Embedding generation failed; falling back to keyword-only", error=str(e))
-            search_mode = SearchMode.KEYWORD_FALLBACK
+        query_embedding = await embedding_provider.embed_query(query)
     else:
         search_mode = SearchMode.KEYWORD_FALLBACK
 
@@ -216,11 +212,7 @@ async def hybrid_search_usages(
     search_mode: SearchMode = SearchMode.HYBRID
 
     if embedding_provider:
-        try:
-            query_embedding = await embedding_provider.embed_query(query)
-        except (OSError, RuntimeError, TimeoutError) as e:
-            log.warning("Embedding generation failed; using keyword-only for usages search", error=str(e))
-            search_mode = SearchMode.KEYWORD_FALLBACK
+        query_embedding = await embedding_provider.embed_query(query)
     else:
         search_mode = SearchMode.KEYWORD_FALLBACK
 

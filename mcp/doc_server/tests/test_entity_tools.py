@@ -64,7 +64,7 @@ async def test_get_entity_not_found(mock_ctx, sample_entities):
 async def test_get_source_code(mock_ctx, sample_entities):
     """Returns source text and metadata."""
     eid = sample_entities[0].entity_id
-    result = await get_source_code(mock_ctx, entity_id=eid)
+    result = await get_source_code(mock_ctx, entity_id=eid, context_lines=0)
 
     assert result.entity_id == eid
     assert result.source_text is not None

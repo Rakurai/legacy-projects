@@ -10,7 +10,7 @@ from fastmcp import Context
 from pydantic import BaseModel, Field
 
 from server.app import get_ctx, mcp
-from server.enums import SearchMode
+from server.enums import SearchMode, SearchSource
 from server.logging_config import log
 from server.models import SearchResult
 from server.search import hybrid_search, hybrid_search_usages
@@ -32,9 +32,9 @@ async def search(
     ctx: Context,
     query: Annotated[str, Field(description="Search query (natural language or keywords)")],
     source: Annotated[
-        str,
+        SearchSource,
         Field(description="Search source: 'entity' (default) or 'usages' (search by caller intent)"),
-    ] = "entity",
+    ] = SearchSource.ENTITY,
     kind: Annotated[str | None, Field(description="Optional kind filter (function, class, etc.)")] = None,
     capability: Annotated[str | None, Field(description="Optional capability filter")] = None,
     top_k: Annotated[int, Field(ge=1, le=100, description="Number of results")] = 10,
@@ -50,17 +50,11 @@ async def search(
 
     log.info("search", query=query, source=source, kind=kind, capability=capability, top_k=top_k)
 
-    if source not in ("entity", "usages"):
-        log.warning("Unsupported search source", source=source)
-        return SearchResponse(
-            search_mode=SearchMode.KEYWORD_FALLBACK,
-            results=[],
-            query=query,
-            result_count=0,
-        )
+    if source not in SearchSource:
+        raise ValueError(f"Unsupported search source: {source!r}. Valid values: {[s.value for s in SearchSource]}")
 
     async with lc["db_manager"].session() as session:
-        if source == "usages":
+        if source == SearchSource.USAGES:
             results, search_mode = await hybrid_search_usages(
                 session=session,
                 query=query,

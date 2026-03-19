@@ -1,6 +1,6 @@
 # Contract: Embedding Provider
 
-<!-- Canonical V1 contract. Added per spec 004-local-fastembed-provider. -->
+
 **Feature**: 004-local-fastembed-provider
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-15

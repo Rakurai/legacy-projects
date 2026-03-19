@@ -29,7 +29,7 @@ The server exposes **factual, structural, and behavioral** information about the
 1. **Entity lookup** — resolve entity names to full documentation records with source code, supporting disambiguation of ambiguous bare names.
 2. **Hybrid search** — combine keyword (full-text) and semantic (embedding-based) search across entity documentation and source code.
 3. **Graph exploration** — expose the dependency graph (calls, uses, inherits, includes, containment) for traversal at configurable depth.
-4. **Behavior analysis** — derive behavioral views from the graph: call cones, state touches. <!-- spec 008: side-effect markers removed; hotspot detection removed -->
+4. **Behavior analysis** — derive behavioral views from the graph: call cones, state touches.
 5. **Capability browsing** — expose the 30 capability groups with their typed dependencies, entry point mappings, and function membership.
 6. **Graceful degradation** — function correctly when no embedding provider is configured or when a configured provider encounters an error, falling back to keyword-only search with explicit mode reporting.
 7. **Deterministic serving** — all data is pre-computed and loaded from a database. No LLM inference at runtime. Responses are reproducible.
@@ -52,48 +52,47 @@ Implementation is phased; each phase builds on the prior phase's infrastructure.
 ### Phase 1 — Database + Core Lookup
 
 - [ ] Build script populates all tables from artifacts without errors
-- [ ] `search("damage")` returns ranked candidates including `void damage(Character *ch, ...)` from `src/fight.cc` <!-- spec 005: search replaces resolve_entity -->
+- [ ] `search("damage")` returns ranked candidates including `void damage(Character *ch, ...)` from `src/fight.cc`
 - [ ] `get_entity` returns full record with all documentation fields, metrics, and optional source code
-- [ ] `list_file_entities("src/fight.cc")` returns all entities in that file <!-- spec 008: tool removed -->
-- [ ] `get_file_summary("src/fight.cc")` returns entity counts and capability breakdown <!-- spec 005: doc_quality_distribution removed --> <!-- spec 008: tool removed -->
+- [ ] `list_file_entities("src/fight.cc")` returns all entities in that file
+- [ ] `get_file_summary("src/fight.cc")` returns entity counts and capability breakdown
 - [ ] Resources (`legacy://entity/*`, `legacy://file/*`, `legacy://stats`) return correct data
-- [ ] Entity IDs are deterministic `{prefix}:{7hex}` and stable across rebuilds <!-- spec 005 -->
+- [ ] Entity IDs are deterministic `{prefix}:{7hex}` and stable across rebuilds
 
 ### Phase 2 — Search
 
 - [ ] `search("poison spreading between characters")` returns relevant entities ranked by combined score
 - [ ] With no embedding provider configured, search returns results with `search_mode: "keyword_fallback"`
-- [ ] Filtering by kind and capability works correctly <!-- spec 005: min_doc_quality filter removed -->
+- [ ] Filtering by kind and capability works correctly
 
 ### Phase 3 — Graph Exploration
 
-- [ ] `get_callers(entity_id, depth=2)` returns transitive callers with path information <!-- spec 005: entity_id only, not entity name -->
+- [ ] `get_callers(entity_id, depth=2)` returns transitive callers with path information
 - [ ] `get_dependencies(entity_id, relationship="inherits")` returns class hierarchy
 - [ ] All graph tools include truncation metadata when results are capped
-- [ ] <!-- spec 005: resolution envelope removed from graph tools; tools accept only entity_id -->
 
 ### Phase 4 — Behavior Analysis
 
-- [ ] `get_behavior_slice(entity_id, max_depth=5)` returns call cone with direct/transitive separation <!-- spec 005: entity_id only -->
-- [ ] Side-effect markers correctly categorized (messaging, persistence, state_mutation, scheduling) <!-- spec 008: side-effect markers removed -->
-- [ ] `get_hotspots(metric="bridge")` returns cross-capability entities <!-- spec 008: tool removed -->
-- [ ] Provenance labels present on all derived data items <!-- spec 008: provenance labels removed -->
+- [ ] `get_behavior_slice(entity_id, max_depth=5)` returns call cone with direct/transitive separation
+- [ ] Side-effect markers correctly categorized (messaging, persistence, state_mutation, scheduling)
+- [ ] `get_hotspots(metric="bridge")` returns cross-capability entities
+- [ ] Provenance labels present on all derived data items
 
 ### Phase 5 — Capabilities + Prompts
 
 - [ ] `list_capabilities` returns all 30 groups with correct types
 - [ ] `compare_capabilities(["combat", "magic"])` shows shared/unique dependencies
-- [ ] `list_entry_points(capability="combat")` returns filtered entry points <!-- spec 008: capability param removed; entry points have capability=NULL by design -->
+- [ ] `list_entry_points(capability="combat")` returns filtered entry points
 - [ ] All four canned prompts produce coherent analysis output
 
-### Phase 6 — Deterministic IDs & Interface Simplification <!-- spec 005 -->
+### Phase 6 — Deterministic IDs & Interface Simplification
 
 - [ ] Entity IDs follow `{prefix}:{7hex}` format, deterministic across rebuilds
-- [ ] `resolve_entity` tool removed from catalog (15 tools) <!-- spec 008: 19 → 15; also removed get_hotspots, get_related_files, get_file_summary, list_file_entities -->
+- [ ] `resolve_entity` tool removed from catalog (15 tools)
 - [ ] All tools accept only `entity_id` (no `signature` parameter)
 - [ ] No `ResolutionEnvelope` in any response
 - [ ] ≥95% of doc_db entries with briefs retain their brief in the database
-- [ ] `doc_quality`, `doc_state`, `compound_id`, `member_id` columns removed <!-- spec 008: also removed side_effect_markers column; also removed SideEffectCategory, Confidence, Provenance, HotspotMetric enums -->
+- [ ] `doc_quality`, `doc_state`, `compound_id`, `member_id` columns removed
 
 ---
 
@@ -104,7 +103,7 @@ Implementation is phased; each phase builds on the prior phase's infrastructure.
 | No embedding provider configured | Semantic search disabled; keyword-only mode | Explicit `keyword_fallback` mode; agents warned via `search_mode` field |
 | Embedding provider error at query time | Single request degrades to keyword-only | Provider errors caught; request completes with keyword fallback and logs warning |
 | Large call cones exceed response limits | Truncated behavior slices | `max_cone_size` parameter + truncation metadata in response |
-| Entity resolution returns wrong entity | Agent proceeds with incorrect context | Deterministic entity IDs eliminate ID instability; search returns ranked results for disambiguation <!-- spec 005: deterministic IDs replace two-step resolve/get --> |
+| Entity resolution returns wrong entity | Agent proceeds with incorrect context | Deterministic entity IDs eliminate ID instability; search returns ranked results for disambiguation |
 | Source code on disk out of sync with artifacts | Stale `source_text` in DB | Build script extracts source at build time; rebuild after code changes |
 | Stale embedding artifact | Embeddings don't reflect documentation changes | Manual invalidation — developer deletes artifact file to trigger regeneration |
 | First-run model download | Initial local embedding build requires internet | ONNX model cached locally (~130 MB); subsequent runs are fully offline |

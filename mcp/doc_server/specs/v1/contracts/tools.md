@@ -1,6 +1,5 @@
 # Tool Contracts: MCP Documentation Server
 
-<!-- Canonical V1 tool contracts. Updated per spec 008: 4 tools removed (get_hotspots, get_related_files, get_file_summary, list_file_entities); provenance/side_effects fields removed; search limit→top_k; get_class_hierarchy direction param; get_dependencies default outgoing; get_related_entities limit_per_type; list_entry_points capability param removed; entry point semantics updated. -->
 **Feature**: 001-mcp-doc-server
 **Phase**: 1 (Design & Contracts)
 **Date**: 2026-03-14
@@ -12,11 +11,11 @@ This document defines the MCP tool interface contracts for the Legacy Documentat
 - **Output**: JSON object with consistent response shapes (EntitySummary base, resolution envelopes, truncation metadata)
 - **Errors**: MCP errors for hard failures (DB down, invalid params); successful responses with status indicators for degraded states
 
-**Total Tools**: 15 (grouped by category) <!-- spec 005/008: resolve_entity, get_hotspots, get_related_files, get_file_summary, list_file_entities removed -->
+**Total Tools**: 15 (grouped by category) 
 
 ---
 
-## Entity Lookup (2 tools) <!-- spec 005/008: resolve_entity, list_file_entities, get_file_summary removed -->
+## Entity Lookup (2 tools) 
 
 <!-- spec 005: resolve_entity tool REMOVED. search is the sole path from text to entity IDs.
      The multi-stage resolution pipeline (name_exact → prefix → keyword → semantic) is preserved
@@ -24,7 +23,7 @@ This document defines the MCP tool interface contracts for the Legacy Documentat
 
 ### get_entity
 
-Fetch full entity details by entity_id. <!-- spec 005: signature param removed; entity_id is required -->
+Fetch full entity details by entity_id. 
 
 **Parameters:**
 ```typescript
@@ -37,7 +36,7 @@ Fetch full entity details by entity_id. <!-- spec 005: signature param removed; 
 
 **Response:**
 ```typescript
-EntityDetail  // <!-- spec 005: ResolutionEnvelope removed -->
+EntityDetail
 ```
 
 **Example:**
@@ -66,7 +65,7 @@ Output: {
 
 ### get_source_code
 
-Retrieve source code for an entity with optional context lines. <!-- spec 005: entity_id only -->
+Retrieve source code for an entity with optional context lines. 
 
 **Parameters:**
 ```typescript
@@ -92,11 +91,6 @@ Retrieve source code for an entity with optional context lines. <!-- spec 005: e
 
 ---
 
-### list_file_entities
-
-  // <!-- spec 008: list_file_entities removed -->
----
-
 ### get_file_summary
 
 Get aggregate file-level statistics.
@@ -114,7 +108,6 @@ Get aggregate file-level statistics.
   file_path: string,
   entity_count_by_kind: Record<string, number>,     // {function: 42, variable: 18, ...}
   capability_distribution: Record<string, number>,  // {combat: 30, utility: 12, ...}
-  // <!-- spec 005: doc_quality_distribution removed -->
   top_entities_by_fan_in: EntitySummary[],          // Top 10
   include_graph: string[],                          // Files this file includes
   included_by_graph: string[]                       // Files that include this file
@@ -129,7 +122,7 @@ Get aggregate file-level statistics.
 
 ### search
 
-Hybrid semantic + keyword search with exact match boost. <!-- spec 005: sole path from text to entity IDs -->
+Hybrid semantic + keyword search with exact match boost. 
 
 **Parameters:**
 ```typescript
@@ -138,7 +131,6 @@ Hybrid semantic + keyword search with exact match boost. <!-- spec 005: sole pat
   top_k?: number = 10,        // Number of results
   kind?: string,              // Filter by kind
   capability?: string,        // Filter by capability
-  // <!-- spec 005: min_doc_quality parameter removed -->
   source?: "entity" = "entity" // V2: support "subsystem_doc" (unused in V1)
 }
 ```
@@ -158,18 +150,17 @@ Hybrid semantic + keyword search with exact match boost. <!-- spec 005: sole pat
   result_type: "entity",  // V2: "subsystem_doc"
   score: number,          // Combined score (exact * 10 + semantic * 0.6 + keyword * 0.4)
   search_mode: "hybrid" | "semantic_only" | "keyword_fallback",
-  // <!-- spec 008: provenance field removed -->
-  entity_summary: EntitySummary  // <!-- spec 005: field renamed from "summary" -->
+  entity_summary: EntitySummary
 }
 ```
 
 ---
 
-## Graph Exploration (4 tools) <!-- spec 008: was 6; get_related_files removed -->
+## Graph Exploration (4 tools) 
 
 ### get_callers
 
-Get functions that call this entity (reverse CALLS edges). <!-- spec 005: entity_id only -->
+Get functions that call this entity (reverse CALLS edges). 
 
 **Parameters:**
 ```typescript
@@ -193,7 +184,7 @@ Get functions that call this entity (reverse CALLS edges). <!-- spec 005: entity
 
 ### get_callees
 
-Get functions this entity calls (forward CALLS edges). <!-- spec 005: entity_id only -->
+Get functions this entity calls (forward CALLS edges). 
 
 **Parameters:**
 ```typescript
@@ -217,7 +208,7 @@ Get functions this entity calls (forward CALLS edges). <!-- spec 005: entity_id 
 
 ### get_dependencies
 
-Get entities this entity depends on (filtered by relationship type and direction). <!-- spec 005: entity_id only -->
+Get entities this entity depends on (filtered by relationship type and direction). 
 
 **Parameters:**
 ```typescript
@@ -246,7 +237,7 @@ Get entities this entity depends on (filtered by relationship type and direction
 
 ### get_class_hierarchy
 
-Get inheritance tree (base classes and derived classes). <!-- spec 005: entity_id only -->
+Get inheritance tree (base classes and derived classes). 
 
 **Parameters:**
 ```typescript
@@ -271,7 +262,7 @@ Get inheritance tree (base classes and derived classes). <!-- spec 005: entity_i
 
 ### get_related_entities
 
-Get all direct neighbors grouped by relationship type. <!-- spec 005: entity_id only -->
+Get all direct neighbors grouped by relationship type. 
 
 **Parameters:**
 ```typescript
@@ -295,16 +286,11 @@ Get all direct neighbors grouped by relationship type. <!-- spec 005: entity_id 
 
 ---
 
-### get_related_files
-  // <!-- spec 008: get_related_files removed -->
-
----
-
 ## Behavior Analysis (2 tools)
 
 ### get_behavior_slice
 
-Compute transitive call cone with capabilities touched, globals used, side effects. <!-- spec 005: entity_id only -->
+Compute transitive call cone with capabilities touched, globals used, side effects. 
 
 **Parameters:**
 ```typescript
@@ -336,11 +322,8 @@ Compute transitive call cone with capabilities touched, globals used, side effec
     access_type: "direct" | "transitive"
   }>,
 
-  // <!-- spec 008: side_effects dict removed; confidence field removed -->
-
   fan_in: number,             // Aggregate metrics for seed
   fan_out: number,
-  // <!-- spec 005: resolution field removed -->
 }
 ```
 
@@ -348,7 +331,7 @@ Compute transitive call cone with capabilities touched, globals used, side effec
 
 ### get_state_touches
 
-Analyze which global variables an entity uses (direct and transitive). <!-- spec 005: entity_id only -->
+Analyze which global variables an entity uses (direct and transitive). 
 
 **Parameters:**
 ```typescript
@@ -363,15 +346,9 @@ Analyze which global variables an entity uses (direct and transitive). <!-- spec
 {
   entity_id: string,
   direct_uses: EntitySummary[],           // Globals directly used (USES edges, depth=1)
-  // <!-- spec 008: direct_side_effects removed -->
   transitive_uses: EntitySummary[],       // Globals reachable within 2 hops of CALLS → USES
-  // <!-- spec 008: transitive_side_effects removed -->
 }
 ```
-
----
-
-<!-- spec 008: get_hotspots tool REMOVED-->
 
 ---
 
@@ -395,7 +372,6 @@ List all capability groups with metadata.
     description: string,
     function_count: number,
     stability: string
-    // <!-- spec 005: doc_quality_dist removed from capability responses -->
   }>
 }
 ```
@@ -422,13 +398,12 @@ Get detailed capability information including dependencies and functions.
   description: string,
   function_count: number,
   stability: string,
-  // <!-- spec 005: doc_quality_dist removed -->
   dependencies: Array<{
     target_capability: string,
     edge_type: string,  // requires_core, requires_policy, uses_utility, etc.
     call_count: number
   }>,
-  entry_points: EntitySummary[],       // Entry points routing into this capability (via transitive call cone) <!-- spec 008: semantic change from "classified as" to "routes into" -->
+  entry_points: EntitySummary[],       // Entry points routing into this capability (via transitive call cone)
   functions?: EntitySummary[]          // Full list (if include_functions=true)
 }
 ```
@@ -462,7 +437,7 @@ Compare multiple capabilities showing shared/unique dependencies and bridges.
 
 ### list_entry_points
 
-List entry points (do_*, spell_*, spec_* functions). <!-- spec 008: capability param removed; use get_capability_detail to find entry points for a capability -->
+List entry points (do_*, spell_*, spec_* functions). 
 
 **Parameters:**
 ```typescript
@@ -484,7 +459,7 @@ List entry points (do_*, spell_*, spec_* functions). <!-- spec 008: capability p
 
 ### get_entry_point_info
 
-Analyze which capabilities an entry point exercises. <!-- spec 005: entity_id only -->
+Analyze which capabilities an entry point exercises. 
 
 **Parameters:**
 ```typescript
@@ -518,7 +493,6 @@ Analyze which capabilities an entry point exercises. <!-- spec 005: entity_id on
 **Successful Responses with Status Indicators (Degraded States):**
 - `search_mode: "keyword_fallback"` — Embedding service unavailable
 - `truncated: true` — Result set truncated (total_available > node_count)
-<!-- spec 005: resolution_status indicators removed (resolve_entity retired) -->
 
 **Example Error Response (MCP Error):**
 ```json

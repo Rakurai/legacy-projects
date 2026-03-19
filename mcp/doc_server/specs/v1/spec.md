@@ -1,6 +1,6 @@
 # Feature Specification: MCP Documentation Server
 
-<!-- Canonical V1 specification. Incorporates changes from 003-fix-mcp-db-build, 004-local-fastembed-provider, 005-mcp-key-issue, 006-legacy-common-integration, 007-data-completeness, and 008-dead-code-api-cleanup. -->
+
 **Feature Branch**: `001-mcp-doc-server`
 **Created**: 2026-03-14
 **Status**: Implemented (V1)
@@ -10,19 +10,19 @@
 
 ### User Story 1 - Entity Lookup and Documentation Access (Priority: P1) 🎯 MVP
 
-An AI assistant needs to understand what a specific function, class, or variable does in the Legacy MUD codebase. The assistant can search for "damage" and receive entity IDs in the results, then pass those IDs to `get_entity` for complete documentation including the function signature, parameter descriptions, return values, usage examples, source code location, and optionally the actual C++ source code. Entity IDs are deterministic (`{prefix}:{7hex}`) and stable across database rebuilds from the same artifacts. <!-- spec 005: resolve_entity retired; search is the sole discovery path; entity_id is deterministic -->
+An AI assistant needs to understand what a specific function, class, or variable does in the Legacy MUD codebase. The assistant can search for "damage" and receive entity IDs in the results, then pass those IDs to `get_entity` for complete documentation including the function signature, parameter descriptions, return values, usage examples, source code location, and optionally the actual C++ source code. Entity IDs are deterministic (`{prefix}:{7hex}`) and stable across database rebuilds from the same artifacts.
 
 **Why this priority**: Entity lookup is the foundational capability. Without reliable entity resolution and documentation retrieval, no other analysis can proceed. This is the MVP that makes the pre-computed documentation artifacts accessible to AI assistants.
 
-**Independent Test**: Can be fully tested by querying known entities (e.g., `damage` function, `Character` class, `game_loop_unix` function) and verifying that returned documentation matches the pre-computed artifacts in `artifacts/generated_docs/`. Entity IDs are deterministic and stable across rebuilds. Success means an assistant can explore the codebase without parsing raw JSON files. <!-- spec 005: deterministic IDs --> <!-- spec 006: doc source is generated_docs/, not doc_db.json -->
+**Independent Test**: Can be fully tested by querying known entities (e.g., `damage` function, `Character` class, `game_loop_unix` function) and verifying that returned documentation matches the pre-computed artifacts in `artifacts/generated_docs/`. Entity IDs are deterministic and stable across rebuilds. Success means an assistant can explore the codebase without parsing raw JSON files.
 
 **Acceptance Scenarios**:
 
-1. **Given** a search query with a unique match, **When** assistant searches, **Then** receive exact match with full documentation, source location, and metrics via entity_id <!-- spec 005: search replaces resolve_entity -->
+1. **Given** a search query with a unique match, **When** assistant searches, **Then** receive exact match with full documentation, source location, and metrics via entity_id
 2. **Given** an ambiguous search query (e.g., "save" matches multiple functions), **When** assistant searches, **Then** receive ranked result list with file paths, signatures, and brief descriptions to disambiguate
 3. **Given** an entity identifier, **When** assistant requests full entity details with source code, **Then** receive complete documentation plus actual C++ source text from database
-4. **Given** a source file path, **When** assistant requests all entities in that file, **Then** receive list of all functions, classes, variables, and structs defined in that file with summaries <!-- spec 008: list_file_entities tool removed; achievable via search with file_path filter -->
-5. **Given** a source file path, **When** assistant requests file summary, **Then** receive aggregated statistics including entity counts by type and capability distribution <!-- spec 005: doc_quality_distribution removed from file summary --> <!-- spec 008: get_file_summary tool removed -->
+4. **Given** a source file path, **When** assistant requests all entities in that file, **Then** receive list of all functions, classes, variables, and structs defined in that file with summaries
+5. **Given** a source file path, **When** assistant requests file summary, **Then** receive aggregated statistics including entity counts by type and capability distribution
 
 ---
 
@@ -32,7 +32,7 @@ An AI assistant working on poison damage mechanics needs to find all entities re
 
 **Why this priority**: Search enables discovery of relevant code without knowing exact names. This is essential for exploratory tasks like "find all inventory management code" or "locate authentication logic". Search builds on Phase 1 entity infrastructure and adds discovery capabilities.
 
-**Independent Test**: Can be tested by issuing natural language queries (e.g., "poison damage over time", "player authentication", "room descriptions") and verifying that results include relevant entities with high scores. Test fallback mode by omitting the embedding provider configuration (or setting `EMBEDDING_PROVIDER` to none) and confirming keyword-only results are returned with explicit fallback status. <!-- Updated per spec 004: test fallback by provider config, not endpoint disabling -->
+**Independent Test**: Can be tested by issuing natural language queries (e.g., "poison damage over time", "player authentication", "room descriptions") and verifying that results include relevant entities with high scores. Test fallback mode by omitting the embedding provider configuration (or setting `EMBEDDING_PROVIDER` to none) and confirming keyword-only results are returned with explicit fallback status.
 
 **Acceptance Scenarios**:
 
@@ -40,7 +40,7 @@ An AI assistant working on poison damage mechanics needs to find all entities re
 2. **Given** an exact entity name in search query, **When** assistant searches, **Then** that entity receives a score boost and appears at top of results
 3. **Given** search filters for kind=function and capability=combat, **When** assistant searches, **Then** receive only functions from combat capability group
 4. **Given** embedding service is unavailable, **When** assistant searches, **Then** receive keyword-only results with search_mode="keyword_fallback" explicitly indicated
-<!-- spec 005: Acceptance scenario 5 (min_doc_quality filter) removed; min_doc_quality parameter retired -->
+
 
 ---
 
@@ -57,9 +57,9 @@ An AI assistant analyzing the `do_kill` command needs to understand what other f
 1. **Given** a function name, **When** assistant requests callers at depth=2, **Then** receive both direct callers (depth 1) and their callers (depth 2) with path information
 2. **Given** a function name, **When** assistant requests callees at depth=3, **Then** receive transitive call tree up to 3 levels deep with each entity appearing once at shortest path distance
 3. **Given** a class name, **When** assistant requests class hierarchy, **Then** receive inheritance tree showing both parent classes and derived classes
-4. **Given** a source file, **When** assistant requests related files, **Then** receive files connected via include relationships, co-dependency, or shared entity definitions <!-- spec 008: get_related_files tool removed -->
+4. **Given** a source file, **When** assistant requests related files, **Then** receive files connected via include relationships, co-dependency, or shared entity definitions
 5. **Given** a large call tree exceeding result limit, **When** assistant requests dependencies, **Then** receive truncated results with metadata indicating total available count and what was returned
-<!-- spec 005: resolution envelope no longer present on graph tools; tools accept only entity_id -->
+
 
 ---
 
@@ -75,7 +75,7 @@ An AI assistant planning to migrate `do_kill` needs to understand its behavioral
 
 1. **Given** an entry point function, **When** assistant requests behavior slice with max_depth=5, **Then** receive call cone with direct callees and full transitive closure separated
 2. **Given** a behavior slice result, **When** reviewing capabilities touched, **Then** see which capability groups are exercised directly vs. transitively with function counts per group
-3. **Given** a behavior slice result, **When** reviewing side effects, **Then** see effects categorized as messaging, persistence, state_mutation, or scheduling with direct/transitive labels <!-- spec 008: side_effects and SideEffectMarker removed; side-effect analysis deferred to V2 -->
+3. **Given** a behavior slice result, **When** reviewing side effects, **Then** see effects categorized as messaging, persistence, state_mutation, or scheduling with direct/transitive labels
 4. **Given** a function that touches global state, **When** assistant requests state touches, **Then** receive list of global variables used directly and transitively
 5. **Given** behavior slice computation hitting max_cone_size limit, **When** assistant receives results, **Then** see truncation metadata and partial results with warning
 
@@ -91,37 +91,37 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 **Acceptance Scenarios**:
 
-1. **Given** no parameters, **When** assistant lists capabilities, **Then** receive all 30 groups with types, descriptions, function counts, and stability indicators <!-- spec 005: doc_quality_dist removed from capability responses -->
+1. **Given** no parameters, **When** assistant lists capabilities, **Then** receive all 30 groups with types, descriptions, function counts, and stability indicators
 2. **Given** a capability name, **When** assistant requests capability detail, **Then** receive group definition, typed dependency edges, entry points, and optionally full function list
 3. **Given** two or more capability names, **When** assistant compares capabilities, **Then** receive shared dependencies, unique dependencies per group, and bridge entities connecting them
-4. **Given** a filter for capability=combat, **When** assistant lists entry points, **Then** receive only entry points that directly exercise combat capability functions <!-- spec 008: capability param removed from list_entry_points; entry points have capability=NULL by design; use get_capability_detail for entry points routing into a capability -->
+4. **Given** a filter for capability=combat, **When** assistant lists entry points, **Then** receive only entry points that directly exercise combat capability functions
 5. **Given** an entry point function name, **When** assistant requests entry point info, **Then** receive which capabilities the entry point touches with direct vs. transitive counts
 
 ---
 
 ### Edge Cases
 
-- **Unknown entity name**: System returns empty search results with `search_mode` indicator (not an MCP error) <!-- spec 005: resolve_entity retired; search handles discovery -->
+- **Unknown entity name**: System returns empty search results with `search_mode` indicator (not an MCP error)
 - **Ambiguous entity name with 50+ candidates**: Results are truncated to top 20 candidates ranked by score, with truncation metadata indicating total available; no pagination mechanism exists, users must refine query to see different results
 - **Circular dependencies in call graph**: BFS traversal with visited set prevents infinite loops; each entity appears once at shortest path distance
 - **Embedding service down during search**: System returns successful MCP response with keyword-only results and sets `search_mode: "keyword_fallback"` to indicate degraded state (not an MCP error)
-- **No embedding provider configured**: System operates in keyword-only mode permanently until provider is configured. All searches return `search_mode: "keyword_fallback"`. <!-- Added per spec 004 -->
-- **Embedding provider error at query time**: System logs error, degrades to keyword-only for that request, returns `search_mode: "keyword_fallback"` <!-- Added per spec 004 -->
-- **Stale embedding artifact**: Source documentation has changed but artifact file still exists. System loads stale artifact without warning. Developer must delete artifact to trigger regeneration. <!-- Added per spec 004 -->
-- **Corrupt embedding artifact**: Artifact file exists but is corrupted (partial write, invalid pickle). Build fails with clear error rather than loading garbage vectors. <!-- Added per spec 004 -->
-- **First-run model download**: Local ONNX model files not yet cached on machine. System logs that download is occurring; handles download failures with clear error. <!-- Added per spec 004 -->
-- **Embedding dimension mismatch at startup**: Configured dimension does not match provider's actual output. Server fails fast with clear error. <!-- Added per spec 004 -->
+- **No embedding provider configured**: System operates in keyword-only mode permanently until provider is configured. All searches return `search_mode: "keyword_fallback"`.
+- **Embedding provider error at query time**: System logs error, degrades to keyword-only for that request, returns `search_mode: "keyword_fallback"`
+- **Stale embedding artifact**: Source documentation has changed but artifact file still exists. System loads stale artifact without warning. Developer must delete artifact to trigger regeneration.
+- **Corrupt embedding artifact**: Artifact file exists but is corrupted (partial write, invalid pickle). Build fails with clear error rather than loading garbage vectors.
+- **First-run model download**: Local ONNX model files not yet cached on machine. System logs that download is occurring; handles download failures with clear error.
+- **Embedding dimension mismatch at startup**: Configured dimension does not match provider's actual output. Server fails fast with clear error.
 - **Very large behavior slice (>1000 functions)**: Computation stops at configurable `max_cone_size` (default 200), returns partial results with truncation warning
 - **Entity exists in database but source file deleted from disk**: Source code retrieval returns stored source_text from database (extracted at build time)
 - **Source code on disk has changed since database build**: Stored source_text becomes stale; documentation remains valid. Users must rebuild database after code changes.
 - **Graph traversal depth exceeds reasonable limit**: Depth is capped at maximum 5 for behavior analysis, 3 for general traversal to prevent performance degradation
-- **Entity has no documentation (brief is null)**: System returns entity with empty details/rationale fields; agents use `brief is not null` as the practical quality signal. Entity still receives a minimal embedding from kind+name+signature if doc-less. <!-- spec 005: doc_quality removed; null-brief check replaces quality bucket --> <!-- spec 007: doc-less entities get minimal embeddings -->
-- **Multiple files define entities with same compound_id**: Deterministic IDs from signature_map keys ensure unique identification <!-- spec 005: entity_id is deterministic, not Doxygen-format -->
+- **Entity has no documentation (brief is null)**: System returns entity with empty details/rationale fields; agents use `brief is not null` as the practical quality signal. Entity still receives a minimal embedding from kind+name+signature if doc-less.
+- **Multiple files define entities with same compound_id**: Deterministic IDs from signature_map keys ensure unique identification
 - **Database connection failure**: System returns MCP error (hard failure) rather than successful response; client must handle connection retry or alert user
 - **Invalid tool parameters** (e.g., depth=-1, invalid entity_id format): System returns MCP error with validation message rather than successful response with error indicator
 - **Build script encounters missing artifact file**: Build process fails with clear error message indicating which artifact is missing and expected path
 - **Build script encounters malformed artifact** (invalid JSON, corrupt pickle): Build process fails with validation error and line/byte position if applicable
-- **Build script encounters entity with invalid source location**: Build raises `BuildError` if line range exceeds file length (stale code graph). Entity with missing source file is logged as warning and proceeds with source_text=NULL. <!-- spec 007: invalid line range = build failure (stale graph); missing file = warning -->
+- **Build script encounters entity with invalid source location**: Build raises `BuildError` if line range exceeds file length (stale code graph). Entity with missing source file is logged as warning and proceeds with source_text=NULL.
 
 ## Requirements *(mandatory)*
 
@@ -129,19 +129,16 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Entity Resolution & Lookup
 
-- **FR-001**: System MUST support entity discovery through `search` tool with multi-stage pipeline: exact signature match → exact name match → prefix match → full-text search → semantic search <!-- spec 005: resolve_entity retired; search subsumes the resolution pipeline -->
+- **FR-001**: System MUST support entity discovery through `search` tool with multi-stage pipeline: exact signature match → exact name match → prefix match → full-text search → semantic search
 - **FR-002**: System MUST return ranked results with match metadata including match type, score, kind, file path, capability, and brief
-- **FR-003**: System MUST support retrieving full entity records by `entity_id` (required parameter) including identity, documentation fields, source location, capability, metrics, and optionally source code <!-- spec 005: entity_id is the sole lookup key; signature no longer accepted -->
-- **FR-004**: ~~System MUST include resolution envelope in all responses from tools accepting entity names~~ <!-- spec 005: REMOVED — ResolutionEnvelope retired; tools accept only entity_id -->
-- **FR-005**: ~~System MUST list all entities defined in a source file, filterable by entity kind (function, class, variable, struct, etc.)~~ <!-- spec 008: REMOVED — list_file_entities tool removed -->
-- **FR-006**: ~~System MUST provide file-level summaries including entity count by kind, capability distribution, and top entities by fan-in~~ <!-- spec 008: REMOVED — get_file_summary tool removed --> <!-- spec 005: doc_quality_distribution removed from file summary -->
+- **FR-003**: System MUST support retrieving full entity records by `entity_id` (required parameter) including identity, documentation fields, source location, capability, metrics, and optionally source code
 
 #### Search
 
 - **FR-007**: System MUST perform hybrid search combining pgvector cosine similarity and Postgres full-text search with exact name/signature boost
-- **FR-008**: System MUST degrade gracefully to keyword-only search when no embedding provider is configured or when a configured provider encounters an error, and report degradation via search_mode field <!-- Updated per spec 004: provider-based system replaces single endpoint -->
-- **FR-009**: System MUST support search filtering by entity kind and capability group <!-- spec 005: min_doc_quality filter removed -->
-- **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, and search_mode <!-- spec 008: provenance field removed from SearchResult -->
+- **FR-008**: System MUST degrade gracefully to keyword-only search when no embedding provider is configured or when a configured provider encounters an error, and report degradation via search_mode field
+- **FR-009**: System MUST support search filtering by entity kind and capability group
+- **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, and search_mode
 - **FR-011**: System MUST normalize and combine search scores from semantic and keyword sources into unified ranking
 - **FR-012**: Search tool MUST accept a `source` parameter (defaulting to `entity`) that is V2-reserved for unified search across entity docs and subsystem docs; in V1 only `entity` is functional
 
@@ -149,8 +146,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 - **FR-013**: System MUST support caller and callee traversal at configurable depth (1-3 levels) with deduplication ensuring each entity appears once at shortest path
 - **FR-014**: System MUST support dependency filtering by relationship type (calls, uses, inherits, includes, containment) and direction (incoming/outgoing)
-- **FR-015**: System MUST provide class hierarchy exploration in both directions (parent classes and derived classes) <!-- spec 008: added direction parameter typed as Literal["ancestors","descendants","both"] -->
-- **FR-016**: ~~System MUST identify related files via include relationships, co-dependency, or shared entity definitions~~ <!-- spec 008: REMOVED — get_related_files tool removed -->
+- **FR-015**: System MUST provide class hierarchy exploration in both directions (parent classes and derived classes)
 - **FR-017**: System MUST include truncation metadata in all graph and list results showing truncated status, total_available count, and returned count; system does NOT support pagination (results are hard-truncated to top N, clients must refine queries to access different result subsets)
 
 #### Behavior Analysis
@@ -158,15 +154,13 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-018**: System MUST compute call cones via breadth-first search from seed functions, separating direct callees from transitive cone
 - **FR-019**: System MUST report capabilities touched with direct vs. transitive counts and function lists per capability
 - **FR-020**: System MUST report global variables used with direct vs. transitive access indicators
-- **FR-021**: ~~System MUST categorize side-effect markers as messaging, persistence, state_mutation, or scheduling with direct/transitive labels~~ <!-- spec 008: REMOVED — side-effect markers system removed -->
-- **FR-022**: ~~System MUST support hotspot detection ranked by fan_in, fan_out, bridge (cross-capability), or underdocumented, with kind and capability filters~~ <!-- spec 008: REMOVED — get_hotspots tool removed -->
 
 #### Capability System
 
-- **FR-023**: System MUST list all capability groups with type, description, function count, and stability indicator <!-- spec 005: doc_quality_dist removed from capability responses -->
+- **FR-023**: System MUST list all capability groups with type, description, function count, and stability indicator
 - **FR-024**: System MUST provide detailed capability information including group definition, typed dependency edges, entry points, and optionally full function list
 - **FR-025**: System MUST support comparing multiple capabilities showing shared dependencies, unique dependencies, and bridge entities
-- **FR-026**: System MUST list entry points (do_*, spell_*, spec_* functions) filterable by name pattern <!-- spec 008: capability filter removed; entry points have capability=NULL by design -->
+- **FR-026**: System MUST list entry points (do_*, spell_*, spec_* functions) filterable by name pattern
 - **FR-027**: System MUST report which capabilities an entry point exercises with direct vs. transitive function counts
 
 #### Resources & Prompts
@@ -176,14 +170,12 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Build Script & Data Pipeline
 
-- **FR-030**: Build script MUST ingest all source artifacts from the configured artifacts directory: entity database (code_graph.json), dependency graph (code_graph.gml), per-compound documentation files (generated_docs/*.json), capability definitions (capability_defs.json), and capability graph (capability_graph.json). Embedding artifacts are optional — generated on demand when a provider is configured. `doc_db.json` and `signature_map.json` are no longer required. <!-- Updated per specs 003/004: added signature_map, removed embeddings_cache.pkl from required list, embeddings now optional/auto-generated --> <!-- spec 006: doc_db.json and signature_map.json removed from required artifacts; generated_docs/ is the document source -->
-- **FR-031**: Build script MUST merge entity metadata with documentation records. The signature map is computed on-the-fly from `EntityDatabase` and `DocumentDB` at build time — `signature_map.json` is no longer loaded as an artifact. Entity models, document models, and graph loader are imported from `legacy_common` (not reimplemented in `build_helpers/`). <!-- Updated per spec 003 FR-002: sig_map replaces compound_id+signature join --> <!-- spec 006: signature_map computed on-the-fly; build_helpers/artifact_models.py and embed_text.py deleted; models imported from legacy_common -->
-- **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column. Build MUST raise `BuildError` if body-located entities exist but zero source texts are extracted (indicates `PROJECT_ROOT` misconfiguration). Build MUST raise `BuildError` if a source file exists but the line range is invalid (indicates stale code graph). Individual file-not-found or encoding errors MUST be logged as warnings but MUST NOT fail the build. <!-- spec 007: fail-fast validation; narrowed exceptions to (OSError, UnicodeDecodeError) -->
+- **FR-030**: Build script MUST ingest all source artifacts from the configured artifacts directory: entity database (code_graph.json), dependency graph (code_graph.gml), per-compound documentation files (generated_docs/*.json), capability definitions (capability_defs.json), and capability graph (capability_graph.json). Embedding artifacts are optional — generated on demand when a provider is configured. `doc_db.json` and `signature_map.json` are no longer required.
+- **FR-031**: Build script MUST merge entity metadata with documentation records. The signature map is computed on-the-fly from `EntityDatabase` and `DocumentDB` at build time — `signature_map.json` is no longer loaded as an artifact. Entity models, document models, and graph loader are imported from `legacy_common` (not reimplemented in `build_helpers/`).
+- **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column. Build MUST raise `BuildError` if body-located entities exist but zero source texts are extracted (indicates `PROJECT_ROOT` misconfiguration). Build MUST raise `BuildError` if a source file exists but the line range is invalid (indicates stale code graph). Individual file-not-found or encoding errors MUST be logged as warnings but MUST NOT fail the build.
 - **FR-033**: Build script MUST extract C++ definition lines and store in database definition_text column
-- **FR-034**: ~~Build script MUST compute doc_quality classification (high/medium/low)~~ <!-- spec 005: REMOVED — doc_quality and doc_state columns dropped -->
 - **FR-035**: Build script MUST compute fan_in and fan_out metrics by counting CALLS edges in dependency graph
 - **FR-036**: Build script MUST compute is_bridge flag by checking whether function's incoming vs. outgoing CALLS neighbors span different capability groups
-- **FR-037**: ~~Build script MUST compute side_effect_markers by checking each function's CALLS edges against curated side-effect function list and categorizing as messaging, persistence, state_mutation, or scheduling~~ <!-- spec 008: REMOVED — side-effect markers system removed (curated function list was unvalidated) -->
 - **FR-038**: Build script MUST set is_entry_point flag for functions matching patterns: do_*, spell_*, spec_*
 - **FR-039**: Build script MUST generate weighted tsvector for full-text search with weights: name=A, brief/details=B, definition_text=C, source_text=D
 - **FR-040**: Build script MUST be idempotent, producing identical database state on repeated runs from same input artifacts
@@ -193,13 +185,12 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 - **FR-042**: Server MUST serve only pre-computed data loaded from database; no runtime LLM inference
 - **FR-043**: Server MUST provide responses that are deterministic and reproducible given identical database state
-- **FR-044**: ~~Server MUST tag all derived/analysis data items with provenance labels (inferred, heuristic, precomputed, measured)~~ <!-- spec 008: REMOVED — provenance labels removed from all response models -->
 - **FR-045**: Server MUST maintain consistency between documentation records and source code through build-time extraction performed by build script; consistency is guaranteed only at build time, and users must rebuild the database after code changes (per assumption A-006)
 
 #### Error Handling
 
 - **FR-046**: Server MUST return MCP errors for hard failures including database connectivity errors, invalid tool parameters, malformed requests, or internal server errors
-- **FR-047**: Server MUST return successful MCP responses with explicit status indicators for degraded or partial results including embedding service unavailable (search_mode: keyword_fallback), result truncation (truncated: true), or empty search results <!-- spec 005: resolution_status indicators removed (resolve_entity retired) -->
+- **FR-047**: Server MUST return successful MCP responses with explicit status indicators for degraded or partial results including embedding service unavailable (search_mode: keyword_fallback), result truncation (truncated: true), or empty search results
 
 #### Observability
 
@@ -213,18 +204,17 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-052**: Implementation MUST define V2-reserved response shapes (SubsystemSummary, SubsystemDocSummary, ContextBundle) in the model layer, even though they are unused by V1 tools, to prevent response-shape drift when V2 lands
 - **FR-053**: V1 tools MUST NOT expose wave ordering data from capability artifacts in any tool response, maintaining the boundary between factual documentation and migration prescription
 
-<!-- FRs added per spec 003 (build script fixes) -->
+
 #### Build Script: Capability Mapping & Data Corrections
 
 - **FR-054**: Build script MUST assign capability group names to entities by building a name→capability mapping from `capability_graph.json` → `capabilities[name].members[].name` (approximately 848 assignments out of ~5,305 entities). The `doc.system` field is not used for capability assignment.
 - **FR-055**: Build script MUST read capability descriptions from the `"desc"` key in `capability_defs.json` (not `"description"`)
 - **FR-056**: Build script MUST compute `function_count` from `capability_graph.json` → `capabilities[name].function_count` (not from a `"functions"` key in capability_defs.json)
 - **FR-057**: Build script MUST parse capability edges from `capability_graph.json` → `"dependencies"` as a nested dict (`source_cap → target_cap → {edge_type, call_count, in_dag}`), not from an `"edges"` flat list
-- **FR-058**: ~~Build script MUST compute `doc_quality_dist` for each capability by aggregating doc_quality from entities assigned to that capability group~~ <!-- spec 005: REMOVED — doc_quality_dist dropped from capabilities table -->
 - **FR-059**: Build script MUST assign entity capabilities before computing bridge flags (pipeline ordering dependency)
 - **FR-060**: Build script MUST create all secondary indexes using the same engine/connection that creates tables, using `CREATE INDEX IF NOT EXISTS` for idempotent re-runs (14 secondary indexes required)
 
-<!-- FRs added per spec 004 (embedding provider) -->
+
 #### Embedding Provider
 
 - **FR-061**: System MUST support a configurable embedding provider with at least two modes: "local" (bundled, no external service) and "hosted" (OpenAI-compatible endpoint), selectable via `EMBEDDING_PROVIDER` environment variable
@@ -233,14 +223,14 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-064**: The database build process MUST load embedding vectors from a cached artifact file if one matching the current model configuration exists. Artifact files are named `embed_cache_{model_slug}_{dim}.pkl` (pickle format).
 - **FR-065**: The database build process MUST generate embeddings on demand when no matching artifact file exists and an embedding provider is configured, then save the result as an artifact for future builds.
 - **FR-066**: The database schema MUST use a vector column dimension that matches the configured embedding provider's output dimension (via `EMBEDDING_DIMENSION` env var, default 768), not a hardcoded value.
-- **FR-067**: The text used for embedding each entity with documentation MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields via `Document.to_doxygen()` (name, kind, brief, details, params, returns, notes, rationale). <!-- spec 007: clarified "with documentation" vs doc-less entities -->
+- **FR-067**: The text used for embedding each entity with documentation MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields via `Document.to_doxygen()` (name, kind, brief, details, params, returns, notes, rationale).
 - **FR-068**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency.
 - **FR-069**: The old hardcoded `embeddings_cache.pkl` artifact MUST NOT be required by build validation.
 - **FR-070**: The system MUST validate at startup that the configured vector dimension matches the embedding provider's actual output dimension and fail fast with a clear error if they disagree.
 - **FR-071**: The local embedding provider MUST NOT block the server's event loop during query-time embedding. Embedding computation MUST be offloaded to a background thread.
-- **FR-072**: Entities without a `Document` but with a name, signature, or kind MUST receive a minimal embedding generated from a Doxygen-formatted text combining `kind`, `name`, `signature`, and `file_path`. This includes structural compounds (file, dir, namespace). Only entities where all three of name, signature, and kind are empty/null may be skipped. <!-- spec 007: replaces "no documentable content" with explicit minimal embedding for doc-less entities -->
+- **FR-072**: Entities without a `Document` but with a name, signature, or kind MUST receive a minimal embedding generated from a Doxygen-formatted text combining `kind`, `name`, `signature`, and `file_path`. This includes structural compounds (file, dir, namespace). Only entities where all three of name, signature, and kind are empty/null may be skipped.
 
-<!-- FRs added per spec 005 (deterministic IDs, doc merge fix, tool simplification) -->
+
 #### Deterministic Entity IDs
 
 - **FR-073**: Build pipeline MUST compute entity IDs as `{prefix}:{sha256(canonical_key)[:7]}` where the canonical key is the signature_map tuple `(compound_id, signature_or_name)`
@@ -258,7 +248,6 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-085**: Schema MUST remove column: `doc_quality_dist` from the capabilities table
 - **FR-086**: Build pipeline MUST carry all documentation fields (brief, details, params, returns, notes, rationale, usages) from doc_db through the merge without loss
 
-<!-- FRs added per spec 007 (data completeness fixes) -->
 #### Build Script: Data Completeness
 
 - **FR-087**: Build pipeline MUST store `params` as `NULL` when the value is `None`, `{}`, or absent — not as an empty JSON object. The `JSONB` column MUST use `none_as_null=True`.
@@ -270,22 +259,18 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 ### Measurable Outcomes
 
-- **SC-001**: AI assistants can resolve any entity name via search and receive correct documentation in under 100 milliseconds for single-entity lookup <!-- spec 005: search replaces resolve_entity -->
+- **SC-001**: AI assistants can resolve any entity name via search and receive correct documentation in under 100 milliseconds for single-entity lookup
 - **SC-002**: Hybrid search queries return relevant results ranked by combined semantic and keyword score in under 500 milliseconds including embedding query
 - **SC-003**: Graph traversal at depth 3 completes and returns results in under 200 milliseconds for typical entities (fan-in/fan-out < 50)
 - **SC-004**: Behavior slice computation for entry points completes in under 1 second when call cone contains fewer than 200 functions
 - **SC-005**: Server starts and loads dependency graph (25,000 edges) into memory in under 5 seconds
-- **SC-006**: When no embedding provider is configured or the provider encounters an error, search automatically falls back to keyword mode with explicit degradation reporting and no failures <!-- Updated per spec 004: reflects provider-based system -->
-- **SC-007**: Ambiguous search queries return ranked results with sufficient context for human or AI to select correct match without additional queries <!-- spec 005: search replaces resolve_entity -->
-- **SC-008**: ~~95% of entity lookups result in exact match (resolution_status=exact)~~ <!-- spec 005: REMOVED — resolve_entity retired; agents use search + entity_id pattern -->
+- **SC-006**: When no embedding provider is configured or the provider encounters an error, search automatically falls back to keyword mode with explicit degradation reporting and no failures
+- **SC-007**: Ambiguous search queries return ranked results with sufficient context for human or AI to select correct match without additional queries
 - **SC-009**: Build script processes all artifacts (5,293 entities, 25,000 edges, 30 capabilities) and populates database in under 5 minutes
 - **SC-010**: Build script produces identical database state on repeated runs from same input artifacts (idempotent operation)
-- **SC-011**: All derived metrics (fan_in, fan_out, is_bridge) are correctly computed from source artifacts and match validation samples <!-- spec 005: doc_quality removed from derived metrics --> <!-- spec 008: side_effect_markers removed from derived metrics -->
-- **SC-012**: Source code extraction captures ≥90% of entities with valid body locations, storing complete function/class definitions in database. Build fails with `BuildError` on zero extraction or invalid line ranges. <!-- spec 007: ≥90% threshold; fail-fast on zero/invalid -->
+- **SC-011**: All derived metrics (fan_in, fan_out, is_bridge) are correctly computed from source artifacts and match validation samples
+- **SC-012**: Source code extraction captures ≥90% of entities with valid body locations, storing complete function/class definitions in database. Build fails with `BuildError` on zero extraction or invalid line ranges.
 - **SC-013**: Full-text search tsvector enables relevant keyword matches for natural language queries against entity documentation and source code
-- **SC-014**: ~~All server responses include structured provenance labels enabling consumers to assess data reliability (precomputed, inferred, heuristic, measured)~~ <!-- spec 008: REMOVED — provenance labels removed -->
-
-<!-- Success criteria added per specs 003/004 -->
 - **SC-015**: After a full build, approximately 848 entities have non-null capability assignment (from capability_graph.json members)
 - **SC-016**: After a full build, at least 10 entities are flagged as bridge functions (is_bridge=true)
 - **SC-017**: After a full build, all 30 capabilities have function_count > 0 and non-empty descriptions
@@ -295,14 +280,14 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-021**: Embedding artifact generation for the full entity set completes within 5 minutes on a standard development machine
 - **SC-022**: Query-time embedding adds less than 100ms of latency to search requests when using the local provider
 
-<!-- Success criteria added per spec 005 -->
+
 - **SC-023**: Two consecutive builds from the same artifacts produce identical entity ID sets (100% determinism)
 - **SC-024**: Zero ID collisions across ~5,305 entities (enforced by build-time collision detection)
 - **SC-025**: After a full build, at least 95% of doc_db.json entries with non-empty brief have non-null brief in the database
 - **SC-026**: An agent can complete search → get_entity → get_callers → get_behavior_slice using only entity_ids, with zero signature-based lookups
-- **SC-027**: No tool in the MCP catalog accepts a `signature` parameter for entity lookup (15 tools total) <!-- spec 008: 19 → 15 tools; get_hotspots, get_related_files, get_file_summary, list_file_entities removed -->
+- **SC-027**: No tool in the MCP catalog accepts a `signature` parameter for entity lookup (15 tools total)
 
-<!-- Success criteria added per spec 007 -->
+
 - **SC-028**: After a successful build, ≥95% of all entities have non-null `embedding` in the database (doc-less entities receive minimal embeddings)
 - **SC-029**: After a successful build, `params IS NOT NULL` count matches meaningful parameter content (~1,800–2,100, not ~5,055)
 - **SC-030**: Build with invalid `PROJECT_ROOT` exits with `BuildError` within the source extraction stage
@@ -313,19 +298,19 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 - **A-001**: Pre-computed artifacts in `artifacts/` are complete, up-to-date, and internally consistent at time of database build; build script is run offline before server startup and not during server operation
 - **A-002**: PostgreSQL database with pgvector extension is available and accessible via connection string in `.env` file
-- **A-003**: Embedding is available via a configurable provider: local (bundled ONNX model, default), hosted (OpenAI-compatible endpoint), or none (keyword-only). System must function correctly without any embedding provider configured. <!-- Updated per spec 004: replaces single hosted endpoint assumption -->
+- **A-003**: Embedding is available via a configurable provider: local (bundled ONNX model, default), hosted (OpenAI-compatible endpoint), or none (keyword-only). System must function correctly without any embedding provider configured.
 - **A-004**: NetworkX in-memory graph constructed from ~25,000 edges fits in available memory (estimated ~100-200 MB) and is read-only after initial load (no thread safety concerns for concurrent reads)
 - **A-005**: MCP client (VS Code, Claude Desktop) supports stdio transport and can invoke MCP tools/resources/prompts
 - **A-006**: Source code files on disk match artifacts at database build time; users rebuild database after code changes
-- **A-007**: ~~The signature map (`signature_map.json`) bridges entity IDs from `code_graph.json` to `(compound_id, signature)` documentation keys in `doc_db.json`. It is a **derived artifact** — regenerated from `code_graph.json` + `doc_db.json` via `build_signature_map.py`.~~ The signature map is now computed on-the-fly at build time from the loaded `EntityDatabase` and `DocumentDB`. `signature_map.json` is no longer a required artifact. <!-- Updated per spec 003: replaces compound_id+signature assumption --> <!-- spec 006: signature_map computed on-the-fly; json artifact no longer required -->
+- **A-007**: The signature map is now computed on-the-fly at build time from the loaded `EntityDatabase` and `DocumentDB`. `signature_map.json` is no longer a required artifact.
 - **A-008**: Capability definitions, dependency edges, and function membership lists in `capability_defs.json` and `capability_graph.json` are authoritative
 - **A-009**: Full-text search weighted tsvector composition (name=A, brief/details=B, definition=C, source_text=D) provides reasonable ranking for prose queries
 - **A-010**: BFS traversal with visited set and configurable depth limits prevents performance degradation from circular dependencies or deep call chains
-- **A-011**: The `capability_graph.json` member names match entity names in the entity database exactly. The `doc.system` field remains unused for capability assignment. <!-- Added per spec 003 -->
-- **A-012**: The BAAI/bge-base-en-v1.5 model produces 768-dimensional vectors. This is verified at runtime; if a future model version changes dimensions, the config must be updated accordingly. <!-- Added per spec 004 -->
-- **A-013**: Embedding ~5,300 entities locally takes approximately 1–3 minutes on a modern CPU. Single-query local embedding takes approximately 5–20ms. Both are acceptable for their respective use cases. <!-- Added per spec 004 -->
-- **A-014**: After switching embedding providers, the developer is responsible for re-running the database build. The server does not detect dimension mismatches between the configured provider and vectors already in the database. <!-- Added per spec 004 -->
-- **A-015**: The ONNX model files are cached locally by the FastEmbed library (in `~/.cache/fastembed/`) after initial download. First run requires internet access; subsequent runs are fully offline. <!-- Added per spec 004 -->
+- **A-011**: The `capability_graph.json` member names match entity names in the entity database exactly. The `doc.system` field remains unused for capability assignment.
+- **A-012**: The BAAI/bge-base-en-v1.5 model produces 768-dimensional vectors. This is verified at runtime; if a future model version changes dimensions, the config must be updated accordingly.
+- **A-013**: Embedding ~5,300 entities locally takes approximately 1–3 minutes on a modern CPU. Single-query local embedding takes approximately 5–20ms. Both are acceptable for their respective use cases.
+- **A-014**: After switching embedding providers, the developer is responsible for re-running the database build. The server does not detect dimension mismatches between the configured provider and vectors already in the database.
+- **A-015**: The ONNX model files are cached locally by the FastEmbed library (in `~/.cache/fastembed/`) after initial download. First run requires internet access; subsequent runs are fully offline.
 
 ## Clarifications
 

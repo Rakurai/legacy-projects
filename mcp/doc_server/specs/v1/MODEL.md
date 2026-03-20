@@ -89,7 +89,7 @@ CREATE INDEX idx_entities_embedding ON entities USING ivfflat (embedding vector_
 - `fan_out`: COUNT(edges WHERE source_id = entity_id AND edge_type = 'CALLS')
 - `is_bridge`: EXISTS(edge e1 JOIN edge e2 WHERE e1.source_cap != e2.target_cap AND e1.entity = e2.entity). Requires capability assignment to be completed first (pipeline ordering).
 - `is_entry_point`: name LIKE 'do_%' OR name LIKE 'spell_%' OR name LIKE 'spec_%'
--
+- **Entity Deduplication**: Build pipeline groups entities by `entity.id.member` (Doxygen member hash) to deduplicate declaration/definition splits. For each group, the definition fragment (where `entity.body is not None`) is selected as the survivor, and documentation from declaration fragments is merged onto it. Entities without a member hash (pure compounds) pass through unchanged. This ensures one database record per logical entity.
 
 ### 1.2 Edges Table
 
@@ -403,7 +403,7 @@ Discriminated union for search results (V1: entity only; V2: entity + subsystem 
 class SearchResult(BaseModel):
     """Search result with discriminated type."""
     result_type: Literal["entity", "subsystem_doc"]  # V2: subsystem_doc not used in V1
-    score: float = Field(ge=0, le=1, description="Normalized combined score")
+    score: float = Field(ge=0, description="Raw combined score; exact-name matches score ≥ 10.0")
     search_mode: Literal["hybrid", "semantic_only", "keyword_fallback"] = Field(description="Which search mode was used")
 
     entity_summary: EntitySummary | SubsystemDocSummary | dict  # EntitySummary in V1; V2 adds SubsystemDocSummary

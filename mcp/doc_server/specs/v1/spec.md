@@ -116,6 +116,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **Source code on disk has changed since database build**: Stored source_text becomes stale; documentation remains valid. Users must rebuild database after code changes.
 - **Graph traversal depth exceeds reasonable limit**: Depth is capped at maximum 5 for behavior analysis, 3 for general traversal to prevent performance degradation
 - **Entity has no documentation (brief is null)**: System returns entity with empty details/rationale fields; agents use `brief is not null` as the practical quality signal. Entity still receives a minimal embedding from kind+name+signature if doc-less.
+- **Declaration/definition split entities**: Build pipeline deduplicates by grouping on `entity.id.member` hash, selecting the definition fragment (with body) as survivor, and merging documentation from declaration. Final database contains one record per logical entity.
 - **Multiple files define entities with same compound_id**: Deterministic IDs from signature_map keys ensure unique identification
 - **Database connection failure**: System returns MCP error (hard failure) rather than successful response; client must handle connection retry or alert user
 - **Invalid tool parameters** (e.g., depth=-1, invalid entity_id format): System returns MCP error with validation message rather than successful response with error indicator
@@ -139,7 +140,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-008**: System MUST degrade gracefully to keyword-only search when no embedding provider is configured or when a configured provider encounters an error, and report degradation via search_mode field
 - **FR-009**: System MUST support search filtering by entity kind and capability group
 - **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, and search_mode
-- **FR-011**: System MUST normalize and combine search scores from semantic and keyword sources into unified ranking
+- **FR-011**: System MUST normalize keyword scores within each query result set before combining with semantic scores, apply a relevance threshold (0.2 combined score) to filter noise results, and return raw combined scores (not normalized to [0,1] per-query)
 - **FR-012**: Search tool MUST accept a `source` parameter (defaulting to `entity`) that is V2-reserved for unified search across entity docs and subsystem docs; in V1 only `entity` is functional
 
 #### Graph Exploration
@@ -171,89 +172,90 @@ An AI assistant needs to understand the architectural organization of the codeba
 #### Build Script & Data Pipeline
 
 - **FR-030**: Build script MUST ingest all source artifacts from the configured artifacts directory: entity database (code_graph.json), dependency graph (code_graph.gml), per-compound documentation files (generated_docs/*.json), capability definitions (capability_defs.json), and capability graph (capability_graph.json). Embedding artifacts are optional — generated on demand when a provider is configured. `doc_db.json` and `signature_map.json` are no longer required.
-- **FR-031**: Build script MUST merge entity metadata with documentation records. The signature map is computed on-the-fly from `EntityDatabase` and `DocumentDB` at build time — `signature_map.json` is no longer loaded as an artifact. Entity models, document models, and graph loader are imported from `legacy_common` (not reimplemented in `build_helpers/`).
-- **FR-032**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column. Build MUST raise `BuildError` if body-located entities exist but zero source texts are extracted (indicates `PROJECT_ROOT` misconfiguration). Build MUST raise `BuildError` if a source file exists but the line range is invalid (indicates stale code graph). Individual file-not-found or encoding errors MUST be logged as warnings but MUST NOT fail the build.
-- **FR-033**: Build script MUST extract C++ definition lines and store in database definition_text column
-- **FR-035**: Build script MUST compute fan_in and fan_out metrics by counting CALLS edges in dependency graph
-- **FR-036**: Build script MUST compute is_bridge flag by checking whether function's incoming vs. outgoing CALLS neighbors span different capability groups
-- **FR-038**: Build script MUST set is_entry_point flag for functions matching patterns: do_*, spell_*, spec_*
-- **FR-039**: Build script MUST generate weighted tsvector for full-text search with weights: name=A, brief/details=B, definition_text=C, source_text=D
-- **FR-040**: Build script MUST be idempotent, producing identical database state on repeated runs from same input artifacts
-- **FR-041**: Build script MUST complete processing of all artifacts and database population in under 5 minutes for ~5,300 entities
+- **FR-031**: Build script MUST load the dependency graph in two phases: first loading raw GML node IDs (via `load_graph_node_ids`) before entity merging to identify which compounds are graph-referenced, then loading full graph edges (via `load_graph_edges`) after entity ID assignment for metric computation.
+- **FR-032**: Build script MUST deduplicate declaration/definition split entities by grouping on `entity.id.member` (Doxygen's authoritative member hash), selecting the definition fragment (where `entity.body is not None`) as the survivor, and merging documentation from declaration fragments onto the survivor when needed. Entities without a member hash (pure compounds) pass through as single entities. The signature map is computed on-the-fly from `EntityDatabase` and `DocumentDB` at build time — `signature_map.json` is no longer loaded as an artifact. Entity models, document models, and graph loader are imported from `legacy_common` (not reimplemented in `build_helpers/`).
+- **FR-033**: Build script MUST extract source code from disk at build time using entity source location data and store in database source_text column. Build MUST raise `BuildError` if body-located entities exist but zero source texts are extracted (indicates `PROJECT_ROOT` misconfiguration). Build MUST raise `BuildError` if a source file exists but the line range is invalid (indicates stale code graph). Individual file-not-found or encoding errors MUST be logged as warnings but MUST NOT fail the build.
+- **FR-034**: Build script MUST extract C++ definition lines and store in database definition_text column
+- **FR-036**: Build script MUST compute fan_in and fan_out metrics by counting CALLS edges in dependency graph
+- **FR-037**: Build script MUST compute is_bridge flag by checking whether function's incoming vs. outgoing CALLS neighbors span different capability groups
+- **FR-039**: Build script MUST set is_entry_point flag for functions matching patterns: do_*, spell_*, spec_*
+- **FR-040**: Build script MUST generate weighted tsvector for full-text search with weights: name=A, brief/details=B, definition_text=C, source_text=D
+- **FR-041**: Build script MUST be idempotent, producing identical database state on repeated runs from same input artifacts
+- **FR-042**: Build script MUST complete processing of all artifacts and database population in under 5 minutes for ~5,300 entities
 
 #### Data Quality & Consistency
 
-- **FR-042**: Server MUST serve only pre-computed data loaded from database; no runtime LLM inference
-- **FR-043**: Server MUST provide responses that are deterministic and reproducible given identical database state
-- **FR-045**: Server MUST maintain consistency between documentation records and source code through build-time extraction performed by build script; consistency is guaranteed only at build time, and users must rebuild the database after code changes (per assumption A-006)
+- **FR-043**: Server MUST serve only pre-computed data loaded from database; no runtime LLM inference
+- **FR-044**: Server MUST provide responses that are deterministic and reproducible given identical database state
+- **FR-046**: Server MUST maintain consistency between documentation records and source code through build-time extraction performed by build script; consistency is guaranteed only at build time, and users must rebuild the database after code changes (per assumption A-006)
 
 #### Error Handling
 
-- **FR-046**: Server MUST return MCP errors for hard failures including database connectivity errors, invalid tool parameters, malformed requests, or internal server errors
-- **FR-047**: Server MUST return successful MCP responses with explicit status indicators for degraded or partial results including embedding service unavailable (search_mode: keyword_fallback), result truncation (truncated: true), or empty search results
+- **FR-047**: Server MUST return MCP errors for hard failures including database connectivity errors, invalid tool parameters, malformed requests, or internal server errors
+- **FR-048**: Server MUST return successful MCP responses with explicit status indicators for degraded or partial results including embedding service unavailable (search_mode: keyword_fallback), result truncation (truncated: true), or empty search results
 
 #### Observability
 
-- **FR-048**: Server MUST emit structured logs to stderr in JSON or key-value format including tool invocations, database query execution, performance metrics, errors, and warnings
-- **FR-049**: Server MUST support configurable log levels (DEBUG, INFO, WARNING, ERROR) via environment variable, defaulting to INFO level
-- **FR-050**: Server MUST log at INFO level: server startup/shutdown, tool invocations with parameters, database connection events, embedding service availability changes, and performance metrics exceeding thresholds
-- **FR-051**: Server MUST log at ERROR level: database connection failures, invalid tool parameters, internal errors, and any conditions resulting in MCP error responses
+- **FR-049**: Server MUST emit structured logs to stderr in JSON or key-value format including tool invocations, database query execution, performance metrics, errors, and warnings
+- **FR-050**: Server MUST support configurable log levels (DEBUG, INFO, WARNING, ERROR) via environment variable, defaulting to INFO level
+- **FR-051**: Server MUST log at INFO level: server startup/shutdown, tool invocations with parameters, database connection events, embedding service availability changes, and performance metrics exceeding thresholds
+- **FR-052**: Server MUST log at ERROR level: database connection failures, invalid tool parameters, internal errors, and any conditions resulting in MCP error responses
 
 #### V2 Forward-Compatibility
 
-- **FR-052**: Implementation MUST define V2-reserved response shapes (SubsystemSummary, SubsystemDocSummary, ContextBundle) in the model layer, even though they are unused by V1 tools, to prevent response-shape drift when V2 lands
-- **FR-053**: V1 tools MUST NOT expose wave ordering data from capability artifacts in any tool response, maintaining the boundary between factual documentation and migration prescription
+- **FR-053**: Implementation MUST define V2-reserved response shapes (SubsystemSummary, SubsystemDocSummary, ContextBundle) in the model layer, even though they are unused by V1 tools, to prevent response-shape drift when V2 lands
+- **FR-054**: V1 tools MUST NOT expose wave ordering data from capability artifacts in any tool response, maintaining the boundary between factual documentation and migration prescription
 
 
 #### Build Script: Capability Mapping & Data Corrections
 
-- **FR-054**: Build script MUST assign capability group names to entities by building a name→capability mapping from `capability_graph.json` → `capabilities[name].members[].name` (approximately 848 assignments out of ~5,305 entities). The `doc.system` field is not used for capability assignment.
-- **FR-055**: Build script MUST read capability descriptions from the `"desc"` key in `capability_defs.json` (not `"description"`)
-- **FR-056**: Build script MUST compute `function_count` from `capability_graph.json` → `capabilities[name].function_count` (not from a `"functions"` key in capability_defs.json)
-- **FR-057**: Build script MUST parse capability edges from `capability_graph.json` → `"dependencies"` as a nested dict (`source_cap → target_cap → {edge_type, call_count, in_dag}`), not from an `"edges"` flat list
-- **FR-059**: Build script MUST assign entity capabilities before computing bridge flags (pipeline ordering dependency)
-- **FR-060**: Build script MUST create all secondary indexes using the same engine/connection that creates tables, using `CREATE INDEX IF NOT EXISTS` for idempotent re-runs (14 secondary indexes required)
+- **FR-055**: Build script MUST assign capability group names to entities by building a name→capability mapping from `capability_graph.json` → `capabilities[name].members[].name` (approximately 848 assignments out of ~5,305 entities). The `doc.system` field is not used for capability assignment.
+- **FR-056**: Build script MUST read capability descriptions from the `"desc"` key in `capability_defs.json` (not `"description"`)
+- **FR-057**: Build script MUST compute `function_count` from `capability_graph.json` → `capabilities[name].function_count` (not from a `"functions"` key in capability_defs.json)
+- **FR-058**: Build script MUST parse capability edges from `capability_graph.json` → `"dependencies"` as a nested dict (`source_cap → target_cap → {edge_type, call_count, in_dag}`), not from an `"edges"` flat list
+- **FR-060**: Build script MUST assign entity capabilities before computing bridge flags (pipeline ordering dependency)
+- **FR-061**: Build script MUST create all secondary indexes using the same engine/connection that creates tables, using `CREATE INDEX IF NOT EXISTS` for idempotent re-runs (14 secondary indexes required)
 
 
 #### Embedding Provider
 
-- **FR-061**: System MUST support a configurable embedding provider with at least two modes: "local" (bundled, no external service) and "hosted" (OpenAI-compatible endpoint), selectable via `EMBEDDING_PROVIDER` environment variable
-- **FR-062**: System MUST support a "no provider" mode where embedding is entirely disabled and all search degrades to keyword-only. This MUST be the default when no provider is configured.
-- **FR-063**: When configured for local mode, the system MUST default to the bundled ONNX-based embedding model BAAI/bge-base-en-v1.5 (768-dim). The model name MUST be configurable via `EMBEDDING_LOCAL_MODEL`.
-- **FR-064**: The database build process MUST load embedding vectors from a cached artifact file if one matching the current model configuration exists. Artifact files are named `embed_cache_{model_slug}_{dim}.pkl` (pickle format).
-- **FR-065**: The database build process MUST generate embeddings on demand when no matching artifact file exists and an embedding provider is configured, then save the result as an artifact for future builds.
-- **FR-066**: The database schema MUST use a vector column dimension that matches the configured embedding provider's output dimension (via `EMBEDDING_DIMENSION` env var, default 768), not a hardcoded value.
-- **FR-067**: The text used for embedding each entity with documentation MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields via `Document.to_doxygen()` (name, kind, brief, details, params, returns, notes, rationale).
-- **FR-068**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency.
-- **FR-069**: The old hardcoded `embeddings_cache.pkl` artifact MUST NOT be required by build validation.
-- **FR-070**: The system MUST validate at startup that the configured vector dimension matches the embedding provider's actual output dimension and fail fast with a clear error if they disagree.
-- **FR-071**: The local embedding provider MUST NOT block the server's event loop during query-time embedding. Embedding computation MUST be offloaded to a background thread.
-- **FR-072**: Entities without a `Document` but with a name, signature, or kind MUST receive a minimal embedding generated from a Doxygen-formatted text combining `kind`, `name`, `signature`, and `file_path`. This includes structural compounds (file, dir, namespace). Only entities where all three of name, signature, and kind are empty/null may be skipped.
+- **FR-062**: System MUST support a configurable embedding provider with at least two modes: "local" (bundled, no external service) and "hosted" (OpenAI-compatible endpoint), selectable via `EMBEDDING_PROVIDER` environment variable
+- **FR-063**: System MUST support a "no provider" mode where embedding is entirely disabled and all search degrades to keyword-only. This MUST be the default when no provider is configured.
+- **FR-064**: When configured for local mode, the system MUST default to the bundled ONNX-based embedding model BAAI/bge-base-en-v1.5 (768-dim). The model name MUST be configurable via `EMBEDDING_LOCAL_MODEL`.
+- **FR-065**: The database build process MUST load embedding vectors from a cached artifact file if one matching the current model configuration exists. Artifact files are named `embed_cache_{model_slug}_{dim}.pkl` (pickle format).
+- **FR-066**: The database build process MUST generate embeddings on demand when no matching artifact file exists and an embedding provider is configured, then save the result as an artifact for future builds.
+- **FR-067**: The database schema MUST use a vector column dimension that matches the configured embedding provider's output dimension (via `EMBEDDING_DIMENSION` env var, default 768), not a hardcoded value.
+- **FR-068**: The text used for embedding each entity with documentation MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields via `Document.to_doxygen()` (name, kind, brief, details, params, returns, notes, rationale).
+- **FR-069**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency.
+- **FR-070**: The old hardcoded `embeddings_cache.pkl` artifact MUST NOT be required by build validation.
+- **FR-071**: The system MUST validate at startup that the configured vector dimension matches the embedding provider's actual output dimension and fail fast with a clear error if they disagree.
+- **FR-072**: The local embedding provider MUST NOT block the server's event loop during query-time embedding. Embedding computation MUST be offloaded to a background thread.
+- **FR-073**: Entities without a `Document` but with a name, signature, or kind MUST receive a minimal embedding generated from a Doxygen-formatted text combining `kind`, `name`, `signature`, and `file_path`. This includes structural compounds (file, dir, namespace). Only entities where all three of name, signature, and kind are empty/null may be skipped.
 
 
 #### Deterministic Entity IDs
 
-- **FR-073**: Build pipeline MUST compute entity IDs as `{prefix}:{sha256(canonical_key)[:7]}` where the canonical key is the signature_map tuple `(compound_id, signature_or_name)`
-- **FR-074**: Prefix MUST be determined by entity kind: `fn` for function/define, `var` for variable, `cls` for class/struct, `file` for file, `sym` for everything else
-- **FR-075**: Build pipeline MUST halt with a clear error on any ID collision (two different canonical keys producing the same prefixed hash)
-- **FR-076**: `resolve_entity` tool MUST be removed from the MCP tool catalog (total tools: 20 → 19)
-- **FR-077**: All tools that previously accepted `entity_id` and `signature` parameters MUST accept only `entity_id` as a required parameter
-- **FR-078**: `ResolutionEnvelope` MUST be removed from all tool response shapes
-- **FR-079**: `search` tool MUST remove the `min_doc_quality` parameter
-- **FR-080**: `list_capabilities` and `get_capability_detail` responses MUST remove the `doc_quality_dist` field
-- **FR-081**: `EntitySummary` MUST remove `doc_state` and `doc_quality` fields
-- **FR-082**: `EntityDetail` MUST remove `compound_id`, `member_id`, `doc_state`, and `doc_quality` fields
-- **FR-083**: `search` is the sole path from human-readable text to entity IDs — no other tool performs name-to-ID resolution
-- **FR-084**: Schema MUST remove columns: `compound_id`, `member_id`, `doc_state`, `doc_quality` from the entities table
-- **FR-085**: Schema MUST remove column: `doc_quality_dist` from the capabilities table
-- **FR-086**: Build pipeline MUST carry all documentation fields (brief, details, params, returns, notes, rationale, usages) from doc_db through the merge without loss
+- **FR-074**: Build pipeline MUST compute entity IDs as `{prefix}:{sha256(canonical_key)[:7]}` where the canonical key is the signature_map tuple `(compound_id, signature_or_name)`
+- **FR-075**: Prefix MUST be determined by entity kind: `fn` for function/define, `var` for variable, `cls` for class/struct, `file` for file, `sym` for everything else
+- **FR-076**: Build pipeline MUST halt with a clear error on any ID collision (two different canonical keys producing the same prefixed hash)
+- **FR-077**: `resolve_entity` tool MUST be removed from the MCP tool catalog (total tools: 20 → 19)
+- **FR-078**: All tools that previously accepted `entity_id` and `signature` parameters MUST accept only `entity_id` as a required parameter
+- **FR-079**: `ResolutionEnvelope` MUST be removed from all tool response shapes
+- **FR-080**: `search` tool MUST remove the `min_doc_quality` parameter
+- **FR-081**: `list_capabilities` and `get_capability_detail` responses MUST remove the `doc_quality_dist` field
+- **FR-082**: `EntitySummary` MUST remove `doc_state` and `doc_quality` fields
+- **FR-083**: `EntityDetail` MUST remove `compound_id`, `member_id`, `doc_state`, and `doc_quality` fields
+- **FR-084**: `search` is the sole path from human-readable text to entity IDs — no other tool performs name-to-ID resolution
+- **FR-085**: Schema MUST remove columns: `compound_id`, `member_id`, `doc_state`, `doc_quality` from the entities table
+- **FR-086**: Schema MUST remove column: `doc_quality_dist` from the capabilities table
+- **FR-087**: Build pipeline MUST carry all documentation fields (brief, details, params, returns, notes, rationale, usages) from doc_db through the merge without loss
 
 #### Build Script: Data Completeness
 
-- **FR-087**: Build pipeline MUST store `params` as `NULL` when the value is `None`, `{}`, or absent — not as an empty JSON object. The `JSONB` column MUST use `none_as_null=True`.
-- **FR-088**: Build pipeline MUST generate embeddings for entities without a `Document` by constructing a minimal Doxygen-formatted text from `kind`, `name`, `signature`, and `file_path` — including structural compounds (file, dir, namespace). The tag mapping extends `Document.to_doxygen()` with structural compound tags (file, dir, typedef, union).
-- **FR-089**: Build pipeline MUST log a structured summary after source extraction: body_located, extracted, failed, skipped, success_rate
-- **FR-090**: Build pipeline MUST log a structured summary after embedding generation: doc_embeds, minimal_embeds, no_embed, coverage%
+- **FR-088**: Build pipeline MUST store `params` as `NULL` when the value is `None`, `{}`, or absent — not as an empty JSON object. The `JSONB` column MUST use `none_as_null=True`.
+- **FR-089**: Build pipeline MUST generate embeddings for entities without a `Document` by constructing a minimal Doxygen-formatted text from `kind`, `name`, `signature`, and `file_path` — including structural compounds (file, dir, namespace). The tag mapping extends `Document.to_doxygen()` with structural compound tags (file, dir, typedef, union).
+- **FR-090**: Build pipeline MUST log a structured summary after source extraction: body_located, extracted, failed, skipped, success_rate
+- **FR-091**: Build pipeline MUST log a structured summary after embedding generation: doc_embeds, minimal_embeds, no_embed, coverage%
 
 ## Success Criteria *(mandatory)*
 
@@ -321,7 +323,6 @@ An AI assistant needs to understand the architectural organization of the codeba
 - Q: Error response format - when to use MCP errors vs. success with error indicators? → A: Structured MCP errors for failures, success payloads with status fields for degraded/partial results (database errors and invalid parameters return MCP errors; degraded states like embedding service down or truncated results return success with explicit status indicators)
 - Q: Request concurrency model - sequential vs. concurrent processing? → A: Async/event-loop based concurrency (server uses async/await for I/O-bound operations like database queries and embedding requests; NetworkX graph is read-only and accessed without locking)
 - Q: Logging strategy for server operations and diagnostics? → A: Structured logging to stderr with configurable levels (INFO by default - JSON or key-value format logs including tool invocations, database queries, performance metrics, errors; level controlled via environment variable)
-- **Note**: Added explicit build script requirements (FR-029 through FR-040) after user identified gap - build script is half the deliverable and needs testable functional requirements for artifact ingestion, derived data computation, source extraction, and idempotency
 
 ## Deployment Context *(optional)*
 

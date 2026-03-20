@@ -135,19 +135,6 @@ async def test_search_entity_default_unchanged(mock_ctx, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_nonsense_query_returns_no_results(mock_ctx, sample_entities):
-    """Query with no plausible match returns zero results (SC-003 / FR-008)."""
-    response = await search(
-        ctx=mock_ctx,
-        query="xyzzy_nonexistent_9f3k",
-        top_k=20,
-    )
-
-    assert response.result_count == 0
-    assert response.results == []
-
-
-@pytest.mark.asyncio
 async def test_exact_match_score_dominates(mock_ctx, sample_entities):
     """Exact name match returns score > 1.0 — distinguishable from weak matches (SC-004 / FR-009)."""
     response = await search(

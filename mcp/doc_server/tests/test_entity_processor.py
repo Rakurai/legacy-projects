@@ -134,16 +134,20 @@ def _make_entity(
     decl_fn: str,
     file_fn: str | None = None,
     kind: str = "function",
+    member_hash: str | None = None,
+    has_body: bool = False,
 ) -> DoxygenEntity:
-    """Build a DoxygenEntity with a declaration location and optional file location."""
+    """Build a DoxygenEntity with a declaration location and optional file/body locations."""
     decl = DoxygenLocation(fn=decl_fn, line=1, type="decl")
-    file_loc = DoxygenLocation(fn=file_fn, line=1, type="decl") if file_fn else None
+    file_loc = DoxygenLocation(fn=file_fn, line=1, type="file") if file_fn else None
+    body_loc = DoxygenLocation(fn=file_fn or decl_fn, line=1, type="body") if has_body else None
     return DoxygenEntity(
-        id=EntityID(compound=compound_id),
+        id=EntityID(compound=compound_id, member=member_hash),
         kind=kind,
         name=name,
         decl=decl,
         file=file_loc,
+        body=body_loc,
     )
 
 
@@ -151,9 +155,12 @@ class TestMergeEntitiesDedup:
     """Tests for declaration/definition split deduplication in merge_entities()."""
 
     def test_split_pair_produces_one_entity_with_surviving_doc(self) -> None:
-        """Split pair: definition in graph with its own doc → one MergedEntity."""
-        decl_entity = _make_entity("stc", "stc_decl", "include/stc.hh")
-        def_entity = _make_entity("stc", "stc_def", "include/stc.hh", file_fn="src/stc.cc")
+        """Split pair: definition (with body) in graph with its own doc → one MergedEntity."""
+        shared_member = "stc_member_hash"
+        decl_entity = _make_entity("stc", "stc_decl", "include/stc.hh", member_hash=shared_member, has_body=False)
+        def_entity = _make_entity(
+            "stc", "stc_def", "include/stc.hh", file_fn="src/stc.cc", member_hash=shared_member, has_body=True
+        )
         mock_doc = MagicMock()
 
         entity_db = MagicMock()
@@ -161,16 +168,19 @@ class TestMergeEntitiesDedup:
         doc_db = MagicMock()
         doc_db.get_doc.side_effect = lambda cid, sig: mock_doc if cid == "stc_def" else None
 
-        result = merge_entities(entity_db, doc_db, frozenset({"stc_def"}))
+        result = merge_entities(entity_db, doc_db, frozenset({shared_member}))
 
         assert len(result) == 1
         assert result[0].entity.id.compound == "stc_def"
         assert result[0].doc is mock_doc
 
     def test_split_pair_copies_doc_from_sibling(self) -> None:
-        """Survivor has no doc → doc is copied from the sibling fragment."""
-        decl_entity = _make_entity("stc", "stc_decl", "include/stc.hh")
-        def_entity = _make_entity("stc", "stc_def", "include/stc.hh", file_fn="src/stc.cc")
+        """Survivor (definition with body) has no doc → doc is copied from the sibling fragment."""
+        shared_member = "stc_member_hash"
+        decl_entity = _make_entity("stc", "stc_decl", "include/stc.hh", member_hash=shared_member, has_body=False)
+        def_entity = _make_entity(
+            "stc", "stc_def", "include/stc.hh", file_fn="src/stc.cc", member_hash=shared_member, has_body=True
+        )
         mock_doc = MagicMock()
 
         entity_db = MagicMock()
@@ -179,7 +189,7 @@ class TestMergeEntitiesDedup:
         # Doc is on the declaration side; definition (survivor) has none
         doc_db.get_doc.side_effect = lambda cid, sig: mock_doc if cid == "stc_decl" else None
 
-        result = merge_entities(entity_db, doc_db, frozenset({"stc_def"}))
+        result = merge_entities(entity_db, doc_db, frozenset({shared_member}))
 
         assert len(result) == 1
         assert result[0].entity.id.compound == "stc_def"
@@ -187,8 +197,18 @@ class TestMergeEntitiesDedup:
 
     def test_neither_compound_in_graph_raises(self) -> None:
         """Split pair with neither compound in code_graph.gml → BuildError."""
-        decl_entity = _make_entity("damage", "damage_decl", "include/damage.hh")
-        def_entity = _make_entity("damage", "damage_def", "include/damage.hh", file_fn="src/damage.cc")
+        shared_member = "damage_member_hash"
+        decl_entity = _make_entity(
+            "damage", "damage_decl", "include/damage.hh", member_hash=shared_member, has_body=False
+        )
+        def_entity = _make_entity(
+            "damage",
+            "damage_def",
+            "include/damage.hh",
+            file_fn="src/damage.cc",
+            member_hash=shared_member,
+            has_body=True,
+        )
 
         entity_db = MagicMock()
         entity_db.entities.values.return_value = [decl_entity, def_entity]

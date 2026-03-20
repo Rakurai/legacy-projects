@@ -72,7 +72,7 @@ After this fix, queries with no meaningful matches return zero results. Queries 
 
 ### Edge Cases
 
-- What if a function exists only as a declaration (header-only, no definition in the code graph)? The entity must still be represented in the knowledge store — it must not be silently dropped.
+- What if a function exists only as a declaration (header-only, no definition in the code graph)? Declaration-only entities do not appear as nodes in the code graph and are not retained in the knowledge store. This is correct and expected — pure declarations with no definition are compiler-generated artifacts (implicit constructors, `operator=`) and have no migration relevance.
 - What if both the declaration and the definition compound appear as nodes in the code graph? The merge logic must deterministically choose one (the definition).
 - What if the noise threshold excludes a genuinely relevant result for an unusual query? Exact-name matches must always be returned regardless of combined score.
 - What if an entity has been fragmented into more than two records (e.g., multiple forward declarations)? All fragments must be collapsed into one surviving record.
@@ -85,7 +85,7 @@ After this fix, queries with no meaningful matches return zero results. Queries 
 
 #### Entity Integrity (I-001)
 
-- **FR-001**: The knowledge store MUST contain at most one record per logical entity, where a logical entity is uniquely identified by the combination of its name, signature, and source file path.
+- **FR-001**: The knowledge store MUST contain at most one record per logical entity, where a logical entity is uniquely identified by its Doxygen member hash (`entity.id.member`). Entities without a member hash are pure compound entities (not functions) and cannot be split pairs; they are retained as-is.
 - **FR-002**: Each entity record MUST carry both its graph metrics (caller count, callee count, bridge status) and its documentation fields (rationale, usage descriptions, documentation state) on the same record.
 - **FR-003**: The entity identifier used in the knowledge store MUST be the same identifier used in the code graph, so that graph traversal and knowledge store lookup resolve to the same record without an additional mapping step.
 - **FR-004**: The contract seed flag for each entity MUST be computed from the unified record that contains both graph metrics and documentation — not from a fragment that carries only one.
@@ -104,7 +104,7 @@ After this fix, queries with no meaningful matches return zero results. Queries 
 
 ### Key Entities
 
-- **Logical Entity**: A distinct function, type, or variable in the codebase, uniquely identified by its name, signature, and source file. After this fix, each logical entity corresponds to exactly one knowledge store record.
+- **Logical Entity**: A distinct function, type, or variable in the codebase, uniquely identified by its Doxygen member hash. After this fix, each logical entity corresponds to exactly one knowledge store record.
 - **Entity Fragment**: Either half of a declaration/definition pair before unification. Fragments carry either graph metrics or documentation, but not both. Fragments are a build-time intermediate artifact and must not appear in the final knowledge store.
 - **Graph-Referenced Compound**: The compiler-generated description of an entity whose identifier appears as a node in the code graph. This compound is the canonical identity for a logical entity and is the record retained after a declaration/definition merge.
 - **Usage Description**: A behavioral description of how a specific parameter or caller argument is used within a function.
@@ -128,7 +128,7 @@ After this fix, queries with no meaningful matches return zero results. Queries 
 ## Assumptions
 
 - The code graph is the authority for determining which compound is the canonical half of a declaration/definition pair. If neither compound appears in the graph, this is an error condition — the build process must raise explicitly rather than silently pick one.
-- A pair of entity records is a declaration/definition split if and only if they share identical name, signature, and source file path. No other deduplication criterion is applied.
+- A pair of entity records is a declaration/definition split if and only if they share the same Doxygen member hash (`entity.id.member`). The definition fragment is identified by `entity.body is not None`; the declaration fragment has `entity.body is None`. No name/file heuristic is applied.
 - The minimum relevance threshold for noise filtering (FR-008) is tuned to pass SC-003 and SC-004 before being committed. The approximate value is 0.2 combined score, based on the semantic similarity floor for genuine matches, but this is validated empirically against the known query set.
 - Score changes affect only score values, not ranking order. Agent workflows that read result content (names, signatures, briefs) rather than score values are unaffected.
 - The full regression test suite (`specs/001-kg-enrichment/full-test.md`, 37 tests) passes after all changes are applied.

@@ -9,6 +9,7 @@ ready for database insertion. Computes:
 - search vectors (weighted tsvector composition)
 """
 
+from collections import defaultdict
 from collections.abc import ItemsView
 from pathlib import Path
 
@@ -189,11 +190,6 @@ class MergedEntity:
         return self._capability
 
 
-def _node_id(entity: DoxygenEntity) -> str:
-    """Return the graph node ID for an entity (member hash or compound ID)."""
-    return str(entity.id.member) if entity.id.member else str(entity.id.compound)
-
-
 def merge_entities(
     entity_db: EntityDatabase,
     doc_db: DocumentDB,
@@ -202,9 +198,10 @@ def merge_entities(
     """
     Merge entity database and documentation database, deduplicating split pairs.
 
-    Groups entities by (name, kind, declaration file). For groups with more than
-    one entity (declaration/definition splits), selects the graph-referenced
-    compound as the survivor and merges documentation from the sibling.
+    Groups entities by entity.id.member (Doxygen's authoritative member hash).
+    Entities where id.member is None are pure compounds and pass through as
+    single-entity groups. For multi-entity groups (declaration/definition splits),
+    selects the definition fragment (entity.body is not None) as the survivor.
 
     Args:
         entity_db: Entity database from code_graph.json (legacy_common)
@@ -215,18 +212,15 @@ def merge_entities(
         List of merged entity records with at most one record per logical entity
 
     Raises:
-        BuildError: If a split entity has no graph-referenced compound
+        BuildError: If a split entity has no definition fragment in the graph
     """
-    from collections import defaultdict
-
     log.info("Merging entities and documentation")
 
-    # Group entities by logical identity: (name, kind, declaration file)
-    groups: dict[tuple[str, str, str], list[tuple[DoxygenEntity, Document | None]]] = defaultdict(list)
+    # Group entities by logical identity: member hash (or compound ID for non-members)
+    groups: dict[str, list[tuple[DoxygenEntity, Document | None]]] = defaultdict(list)
 
     for entity in entity_db.entities.values():
-        file_key = entity.decl.fn if entity.decl else entity.file.fn if entity.file else ""
-        dedup_key = (entity.name, entity.kind, file_key)
+        dedup_key = str(entity.id.member) if entity.id.member else f"_compound_{entity.id.compound}"
         compound_id = entity.id.compound
         doc = doc_db.get_doc(compound_id, entity.signature)
         groups[dedup_key].append((entity, doc))
@@ -244,22 +238,31 @@ def merge_entities(
                 unmatched_entities += 1
             merged.append(MergedEntity(entity, doc, (compound_id, second_element)))
         else:
-            # Declaration/definition split — find graph-referenced survivor
-            in_graph = [(e, d) for e, d in fragments if _node_id(e) in graph_node_ids]
+            # Declaration/definition split — find graph-referenced fragments
+            in_graph = [
+                (e, d)
+                for e, d in fragments
+                if (str(e.id.member) if e.id.member else str(e.id.compound)) in graph_node_ids
+            ]
 
             if not in_graph:
-                name = _dedup_key[0]
+                first_entity = fragments[0][0]
                 raise BuildError(
-                    f"Split entity '{name}' has no graph-referenced compound — "
+                    f"Split entity '{first_entity.name}' has no graph-referenced compound — "
                     f"neither compound appears in code_graph.gml"
                 )
 
-            if len(in_graph) > 1:
-                # Multiple in graph: prefer definition file (.cc/.cpp)
-                cc_candidates = [(e, d) for e, d in in_graph if e.file and e.file.fn.endswith((".cc", ".cpp"))]
-                survivor_entity, survivor_doc = cc_candidates[0] if cc_candidates else in_graph[0]
-            else:
-                survivor_entity, survivor_doc = in_graph[0]
+            # Find the definition fragment (entity.body is not None)
+            body_candidates = [(e, d) for e, d in in_graph if e.body is not None]
+
+            if not body_candidates:
+                first_entity = fragments[0][0]
+                raise BuildError(
+                    f"Split entity '{first_entity.name}' has no definition fragment with body — "
+                    f"all fragments are declaration-only"
+                )
+
+            survivor_entity, survivor_doc = body_candidates[0]
 
             # Copy doc from sibling if survivor has none
             if survivor_doc is None:
@@ -273,13 +276,6 @@ def merge_entities(
 
             if survivor_doc is None:
                 unmatched_entities += 1
-
-            log.info(
-                "Split entity merged",
-                name=survivor_entity.name,
-                surviving_compound=survivor_entity.id.compound,
-                discarded_compounds=[e.id.compound for e, _ in fragments if e is not survivor_entity],
-            )
 
             merged_pair_count += 1
             merged.append(MergedEntity(survivor_entity, survivor_doc, (compound_id, second_element)))

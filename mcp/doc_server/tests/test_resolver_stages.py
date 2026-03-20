@@ -76,7 +76,9 @@ async def test_resolve_semantic_stage_with_mock_client(test_session: AsyncSessio
 
 
 @pytest.mark.asyncio
-async def test_resolve_semantic_stage_propagates_client_error(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_semantic_stage_propagates_client_error(
+    test_session: AsyncSession, sample_entities: list[Entity]
+):
     """Stage 6 propagates embedding provider errors — fail-fast, no silent fallback."""
     mock_provider = MagicMock()
     mock_provider.dimension = 768

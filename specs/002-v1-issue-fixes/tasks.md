@@ -15,7 +15,7 @@
 
 **Purpose**: Confirm baseline before changes
 
-- [ ] T001 Run existing test suite to establish baseline: `cd mcp/doc_server && uv run pytest tests/ -v` — all tests must pass before any changes are made
+- [X] T001 Run existing test suite to establish baseline: `cd mcp/doc_server && uv run pytest tests/ -v` — all tests must pass before any changes are made
 
 ---
 
@@ -25,7 +25,7 @@
 
 **⚠️ CRITICAL**: US1/US2 implementation (Phase 3) cannot begin until this phase is complete.
 
-- [ ] T002 Add `load_graph_node_ids(artifacts_path: Path) -> frozenset[str]` to `mcp/doc_server/build_helpers/graph_loader.py` — reads raw GML via `nx.read_gml`, returns `frozenset(G.nodes())`; no entity lookup; fully typed; `from loguru import logger as log` for any logging
+- [X] T002 Add `load_graph_node_ids(artifacts_path: Path) -> frozenset[str]` to `mcp/doc_server/build_helpers/graph_loader.py` — reads raw GML via `nx.read_gml`, returns `frozenset(G.nodes())`; no entity lookup; fully typed; `from loguru import logger as log` for any logging
 
 **Checkpoint**: Foundation ready — US1/US2 entity merge work can begin
 
@@ -41,22 +41,22 @@
 
 > **Before starting T004**: Confirm the exact attribute name for file path on `DoxygenEntity` from type stubs in `packages/legacy_common/` (likely `entity.location.file` or `entity.location` — verify before writing the dedup key). This takes ~5 minutes and prevents a rework loop.
 
-- [ ] T003 [US1] Add `TestMergeEntitiesDedup` test class to `mcp/doc_server/tests/test_entity_processor.py` with three cases: (a) split pair → one MergedEntity with merged doc; (b) neither compound in GML node set → `BuildError`; (c) single entity (no split) → unchanged — draft skeleton can be written in parallel with T004, but finalize and run only after T004's new `merge_entities(graph_node_ids)` signature is in place; depends on T004 to run
+- [X] T003 [US1] Add `TestMergeEntitiesDedup` test class to `mcp/doc_server/tests/test_entity_processor.py` with three cases: (a) split pair → one MergedEntity with merged doc; (b) neither compound in GML node set → `BuildError`; (c) single entity (no split) → unchanged — draft skeleton can be written in parallel with T004, but finalize and run only after T004's new `merge_entities(graph_node_ids)` signature is in place; depends on T004 to run
 
-- [ ] T004 [P] [US1] Modify `merge_entities()` in `mcp/doc_server/build_helpers/entity_processor.py`:
+- [X] T004 [P] [US1] Modify `merge_entities()` in `mcp/doc_server/build_helpers/entity_processor.py`:
   - Change signature to `merge_entities(entity_db, doc_db, graph_node_ids: frozenset[str]) -> list[MergedEntity]`
   - After collecting all entities, group by `(entity.name, entity.signature, entity.location.file)` — verify exact DoxygenEntity attribute for file path from type stubs in `packages/legacy_common/`
   - For single-entity groups: construct `MergedEntity` as before
   - For multi-entity groups: select survivor whose `entity.id.member or entity.id.compound` is in `graph_node_ids`; if neither → `raise BuildError(...)`; if both → prefer definition file (`.cc`/`.cpp`); copy `doc` from sibling onto survivor when `survivor.doc is None`; emit `log.info("split entity merged", name=..., surviving_compound=..., discarded_compound=...)`
   - Return deduplicated list
 
-- [ ] T005 [US1] Update `build_mcp_db.py::main()` — call `load_graph_node_ids(config.artifacts_path)` before the `merge_entities()` call; pass the returned `frozenset[str]` as the `graph_node_ids` argument to `merge_entities()`; depends on T002 and T004
+- [X] T005 [US1] Update `build_mcp_db.py::main()` — call `load_graph_node_ids(config.artifacts_path)` before the `merge_entities()` call; pass the returned `frozenset[str]` as the `graph_node_ids` argument to `merge_entities()`; depends on T002 and T004
 
-- [ ] T006 [US1] Run test suite: `cd mcp/doc_server && uv run pytest tests/test_entity_processor.py -v` — T003 tests must pass; no existing tests may regress; depends on T003, T004
+- [X] T006 [US1] Run test suite: `cd mcp/doc_server && uv run pytest tests/test_entity_processor.py -v` — T003 tests must pass; no existing tests may regress; depends on T003, T004
 
-- [ ] T007 [US1] Rebuild database: `cd mcp/doc_server && uv run python -m build_script.build_mcp_db` — confirm build log emits "split entity merged" entries for known split pairs (`stc`, `damage`, `interpret`); confirm entity count decreases vs pre-fix baseline; depends on T005
+- [X] T007 [US1] Rebuild database: `cd mcp/doc_server && uv run python -m build_script.build_mcp_db` — confirm build log emits "split entity merged" entries for known split pairs (`stc`, `damage`, `interpret`); confirm entity count decreases vs pre-fix baseline; depends on T005
 
-- [ ] T008 [US1] Verify I-004 regression via running MCP server: (a) `search(query="stc")` → one result with `fan_in=640` and `is_contract_seed=true`; `explain_interface` on returned entity_id → `calling_patterns` non-empty; (b) `search(query="damage")` → one result (not two); (c) `search(query="interpret")` → one result with `calling_patterns` non-empty via `explain_interface` — covers US2 scenario 2 (general case); depends on T007
+- [X] T008 [US1] Verify I-004 regression via running MCP server: (a) `search(query="stc")` → one result with `fan_in=640` and `is_contract_seed=true`; `explain_interface` on returned entity_id → `calling_patterns` non-empty; (b) `search(query="damage")` → one result (not two); (c) `search(query="interpret")` → one result with `calling_patterns` non-empty via `explain_interface` — covers US2 scenario 2 (general case); depends on T007
 
 **Checkpoint**: US1 and US2 fully functional. Single entity record per logical entity. Contract seed discovery and graph traversal return complete data.
 
@@ -70,22 +70,22 @@
 
 ### Implementation for User Story 3
 
-- [ ] T009 [P] [US3] Add score threshold contract tests to `mcp/doc_server/tests/test_search_tool.py`:
+- [X] T009 [P] [US3] Add score threshold contract tests to `mcp/doc_server/tests/test_search_tool.py`:
   - `test_nonsense_query_returns_no_results` — mock search to return a result with score below threshold, assert it is excluded
   - `test_exact_match_score_dominates` — mock exact match to score ≥ 10.0, assert it is included regardless of threshold
   - Parallel with T010–T012 since different file
 
-- [ ] T010 [US3] Add intra-query keyword score normalization to `_merge_scores()` in `mcp/doc_server/server/search.py`:
+- [X] T010 [US3] Add intra-query keyword score normalization to `_merge_scores()` in `mcp/doc_server/server/search.py`:
   - Before applying `_KEYWORD_WEIGHT`, normalize: `if keyword_scores: max_kw = max(keyword_scores.values()); keyword_scores = {eid: s / max_kw for eid, s in keyword_scores.items()}`
   - This bounds keyword contribution to `[0, 0.4]` regardless of `ts_rank()` magnitude
 
-- [ ] T011 [US3] Add `_SCORE_THRESHOLD: float = 0.2` constant at module level in `mcp/doc_server/server/search.py`; replace the per-query normalization block in `hybrid_search()` (lines ~167–169 and the `min(score / normalizer, 1.0)` application) with: exclude results where `score < _SCORE_THRESHOLD`; exact matches score ≥ 10.0 and always pass — no special-casing needed; note: if empirical validation in T013 shows SC-003 is not met, adjust `_SCORE_THRESHOLD` upward and re-run T013; depends on T010
+- [X] T011 [US3] Add `_SCORE_THRESHOLD: float = 0.2` constant at module level in `mcp/doc_server/server/search.py`; replace the per-query normalization block in `hybrid_search()` (lines ~167–169 and the `min(score / normalizer, 1.0)` application) with: exclude results where `score < _SCORE_THRESHOLD`; exact matches score ≥ 10.0 and always pass — no special-casing needed; note: if empirical validation in T013 shows SC-003 is not met, adjust `_SCORE_THRESHOLD` upward and re-run T013; depends on T010
 
-- [ ] T012 [US3] Apply the same threshold filter to `hybrid_search_usages()` in `mcp/doc_server/server/search.py` — remove per-query normalization block (~lines 313–314), apply `_SCORE_THRESHOLD` exclusion uniformly (no exact-match carve-out for usage search per FR-008); depends on T010
+- [X] T012 [US3] Apply the same threshold filter to `hybrid_search_usages()` in `mcp/doc_server/server/search.py` — remove per-query normalization block (~lines 313–314), apply `_SCORE_THRESHOLD` exclusion uniformly (no exact-match carve-out for usage search per FR-008); depends on T010
 
-- [ ] T013 [US3] Validate threshold against SC-003 and SC-004: run the MCP server against the built database; confirm `search(query="xyzzy_nonexistent_9f3k")` returns zero results (SC-003); confirm `search(query="stc")` returns stc as first result (SC-004); if SC-003 fails, adjust `_SCORE_THRESHOLD` in T011 and rerun; depends on T011, T012
+- [X] T013 [US3] Validate threshold against SC-003 and SC-004: run the MCP server against the built database; confirm `search(query="xyzzy_nonexistent_9f3k")` returns zero results (SC-003); confirm `search(query="stc")` returns stc as first result (SC-004); if SC-003 fails, adjust `_SCORE_THRESHOLD` in T011 and rerun; depends on T011, T012
 
-- [ ] T014 [US3] Run test suite: `cd mcp/doc_server && uv run pytest tests/test_search_tool.py -v` — T009 tests must pass; no existing tests may regress; depends on T009, T011, T012
+- [X] T014 [US3] Run test suite: `cd mcp/doc_server && uv run pytest tests/test_search_tool.py -v` — T009 tests must pass; no existing tests may regress; depends on T009, T011, T012
 
 **Checkpoint**: US3 fully functional. Nonsense queries return zero results. Exact-name queries return the target entity.
 
@@ -93,11 +93,11 @@
 
 ## Phase 5: Polish & Cross-Cutting Concerns
 
-- [ ] T015 [P] Run full regression suite: `cd mcp/doc_server && uv run pytest tests/ -v` — all tests must pass including pre-existing 37 tests
+- [X] T015 [P] Run full regression suite: `cd mcp/doc_server && uv run pytest tests/ -v` — all tests must pass including pre-existing 37 tests
 
-- [ ] T016 [P] Type check: `cd mcp/doc_server && uv run mypy server/ build_helpers/` — strict mode, zero errors; `build_helpers/` included because I-001 adds new typed functions there
+- [X] T016 [P] Type check: `cd mcp/doc_server && uv run mypy server/ build_helpers/` — strict mode, zero errors; `build_helpers/` included because I-001 adds new typed functions there
 
-- [ ] T017 [P] Lint and format: `uv run ruff check . && uv run ruff format .` — zero violations
+- [X] T017 [P] Lint and format: `uv run ruff check . && uv run ruff format .` — zero violations
 
 ---
 

@@ -23,11 +23,12 @@ class TestMergeScores:
         assert result[0] == ("a", 10.0)
 
     def test_keyword_only(self):
-        """Keyword match only gets keyword weight."""
+        """Keyword match normalized to 1.0 within result set, then gets keyword weight."""
         result = _merge_scores(set(), {"a": 0.5}, {}, limit=10)
         assert len(result) == 1
         assert result[0][0] == "a"
-        assert abs(result[0][1] - 0.5 * 0.4) < 1e-9
+        # Single entity normalizes to 1.0: 1.0 * _KEYWORD_WEIGHT = 0.4
+        assert abs(result[0][1] - 1.0 * 0.4) < 1e-9
 
     def test_semantic_only(self):
         """Semantic match only gets semantic weight."""
@@ -37,9 +38,10 @@ class TestMergeScores:
         assert abs(result[0][1] - 0.8 * 0.6) < 1e-9
 
     def test_all_three_combined(self):
-        """Entity matching all three strategies gets combined score."""
+        """Entity matching all three strategies gets combined score with normalized keyword."""
         result = _merge_scores({"a"}, {"a": 0.5}, {"a": 0.8}, limit=10)
-        expected = 10.0 + 0.8 * 0.6 + 0.5 * 0.4
+        # Keyword score 0.5 normalizes to 1.0 (only entity), contributing 1.0 * 0.4
+        expected = 10.0 + 0.8 * 0.6 + 1.0 * 0.4
         assert len(result) == 1
         assert abs(result[0][1] - expected) < 1e-9
 

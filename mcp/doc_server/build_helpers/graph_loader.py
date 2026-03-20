@@ -17,6 +17,28 @@ from legacy_common.doxygen_graph import load_graph
 from server.logging_config import log
 
 
+def load_graph_node_ids(artifacts_path: Path) -> frozenset[str]:
+    """
+    Load GML node IDs from code_graph.gml without entity lookup.
+
+    Reads the raw GML file and returns all node IDs as a frozenset.
+    Used in the build pipeline before merge_entities() to identify
+    which compounds are graph-referenced.
+
+    Args:
+        artifacts_path: Path to artifacts directory
+
+    Returns:
+        frozenset of all node ID strings in the graph
+    """
+    gml_path = artifacts_path / "code_graph.gml"
+    log.info("Loading graph node IDs from GML", path=str(gml_path))
+    g = load_graph(gml_path)
+    node_ids = frozenset(g.nodes())
+    log.info("Graph node IDs loaded", count=len(node_ids))
+    return node_ids
+
+
 def load_graph_edges(artifacts_dir: Path, merged_entities: list[MergedEntity]) -> list[tuple[str, str, str]]:
     """
     Load edges from code_graph.gml and convert node IDs to entity IDs.

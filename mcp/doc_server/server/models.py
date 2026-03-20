@@ -207,7 +207,7 @@ class SearchResult(BaseModel):
     """
 
     result_type: str  # "entity" in V1; V2 adds "subsystem_doc"
-    score: float = Field(ge=0, le=1, description="Normalized combined score")
+    score: float = Field(ge=0, description="Combined relevance score; exact-name matches score ≥ 10.0")
     search_mode: SearchMode
     entity_summary: EntitySummary | None = None  # Present when result_type="entity"
     matching_usages: list[MatchingUsage] | None = None  # Present when source="usages"

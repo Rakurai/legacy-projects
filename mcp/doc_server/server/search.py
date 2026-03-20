@@ -36,6 +36,9 @@ _EXACT_WEIGHT = 10.0
 _SEMANTIC_WEIGHT = 0.6
 _KEYWORD_WEIGHT = 0.4
 
+# Minimum combined score for a result to be returned (FR-008)
+_SCORE_THRESHOLD: float = 0.2
+
 
 def _apply_filters(
     stmt: Select[tuple[Entity]],
@@ -108,6 +111,13 @@ def _merge_scores(
     limit: int,
 ) -> list[tuple[str, float]]:
     """Merge scores from all strategies, return sorted (entity_id, combined_score) pairs."""
+    # Normalize keyword scores within this result set before applying weight,
+    # so keyword contribution is bounded to [0, _KEYWORD_WEIGHT] regardless of ts_rank magnitude.
+    if keyword_scores:
+        max_kw = max(keyword_scores.values())
+        if max_kw > 0:
+            keyword_scores = {eid: s / max_kw for eid, s in keyword_scores.items()}
+
     all_ids = exact_ids | keyword_scores.keys() | semantic_scores.keys()
     scored: list[tuple[str, float]] = []
 
@@ -164,19 +174,17 @@ async def hybrid_search(
     result = await session.execute(select(Entity).where(Entity.entity_id.in_(top_ids)))
     entity_map = {e.entity_id: e for e in result.scalars().all()}
 
-    # Normalize max score for 0-1 range
-    max_score = ranked[0][1] if ranked else 1.0
-    normalizer = max_score if max_score > 0 else 1.0
-
     results: list[SearchResult] = []
     for eid, score in ranked:
+        if score < _SCORE_THRESHOLD:
+            continue
         entity = entity_map.get(eid)
         if not entity:
             continue
         results.append(
             SearchResult(
                 result_type="entity",
-                score=min(score / normalizer, 1.0),
+                score=score,
                 search_mode=search_mode,
                 entity_summary=entity_to_summary(entity),
             )
@@ -233,10 +241,19 @@ async def hybrid_search_usages(
         .order_by(kw_rank.desc())
         .limit(limit * 5)
     )
+    raw_kw_scores: dict[tuple[str, str, str], float] = {}
     kw_result = await session.execute(kw_stmt)
     for row in kw_result.all():
         key = (row.callee_id, row.caller_compound, row.caller_sig)
-        usage_scores[key] = float(row.score) * _KEYWORD_WEIGHT
+        raw_kw_scores[key] = float(row.score)
+
+    # Normalize keyword scores within this result set before applying weight
+    if raw_kw_scores:
+        max_kw = max(raw_kw_scores.values())
+        if max_kw > 0:
+            raw_kw_scores = {k: s / max_kw for k, s in raw_kw_scores.items()}
+    for key, s in raw_kw_scores.items():
+        usage_scores[key] = s * _KEYWORD_WEIGHT
 
     # Semantic scores over usage embeddings
     if search_mode == SearchMode.HYBRID and query_embedding is not None:
@@ -309,12 +326,11 @@ async def hybrid_search_usages(
     entity_result = await session.execute(select(Entity).where(Entity.entity_id.in_(ranked_callee_ids)))  # type: ignore[attr-defined]
     entity_map = {e.entity_id: e for e in entity_result.scalars().all()}
 
-    # Apply callee-level filters
-    max_score = ranked_callees[0][1] if ranked_callees else 1.0
-    normalizer = max_score if max_score > 0 else 1.0
-
+    # Apply callee-level filters and threshold
     results: list[SearchResult] = []
     for callee_id, score in ranked_callees:
+        if score < _SCORE_THRESHOLD:
+            continue
         entity = entity_map.get(callee_id)
         if not entity:
             continue
@@ -325,7 +341,7 @@ async def hybrid_search_usages(
         results.append(
             SearchResult(
                 result_type="entity",
-                score=min(score / normalizer, 1.0),
+                score=score,
                 search_mode=search_mode,
                 entity_summary=entity_to_summary(entity),
                 matching_usages=callee_usages.get(callee_id),

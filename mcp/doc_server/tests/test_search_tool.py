@@ -129,3 +129,49 @@ async def test_search_entity_default_unchanged(mock_ctx, sample_entities):
     # Default results should NOT have matching_usages (entity search)
     for result in response.results:
         assert result.matching_usages is None
+
+
+# ---------- Score threshold contract tests (I-002) ----------
+
+
+@pytest.mark.asyncio
+async def test_nonsense_query_returns_no_results(mock_ctx, sample_entities):
+    """Query with no plausible match returns zero results (SC-003 / FR-008)."""
+    response = await search(
+        ctx=mock_ctx,
+        query="xyzzy_nonexistent_9f3k",
+        top_k=20,
+    )
+
+    assert response.result_count == 0
+    assert response.results == []
+
+
+@pytest.mark.asyncio
+async def test_exact_match_score_dominates(mock_ctx, sample_entities):
+    """Exact name match returns score > 1.0 — distinguishable from weak matches (SC-004 / FR-009)."""
+    response = await search(
+        ctx=mock_ctx,
+        query="damage",
+        top_k=10,
+    )
+
+    assert response.result_count > 0
+    # Exact match entity (name="damage") must be first and score > 1.0
+    assert response.results[0].entity_summary is not None  # type: ignore
+    assert response.results[0].entity_summary.name == "damage"  # type: ignore
+    assert response.results[0].score > 1.0
+
+
+@pytest.mark.asyncio
+async def test_returned_results_score_gte_threshold(mock_ctx, sample_entities):
+    """All returned results have score >= _SCORE_THRESHOLD (FR-008)."""
+    response = await search(
+        ctx=mock_ctx,
+        query="damage",
+        top_k=20,
+    )
+
+    threshold = 0.2
+    for result in response.results:
+        assert result.score >= threshold, f"Result with score {result.score} below threshold {threshold}"

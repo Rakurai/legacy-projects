@@ -38,6 +38,7 @@ from build_helpers.graph_loader import (
     compute_bridge_flags,
     compute_fan_metrics,
     load_graph_edges,
+    load_graph_node_ids,
 )
 from build_helpers.loaders import (
     load_capability_defs,
@@ -388,7 +389,8 @@ async def main() -> None:
     entity_db = load_entities(config.artifacts_path)
     doc_db = load_documents(config.artifacts_path)
 
-    merged_entities = merge_entities(entity_db, doc_db)
+    graph_node_ids = load_graph_node_ids(config.artifacts_path)
+    merged_entities = merge_entities(entity_db, doc_db, graph_node_ids)
 
     id_map = assign_deterministic_ids(merged_entities)
 

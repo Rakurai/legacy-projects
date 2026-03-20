@@ -5,7 +5,9 @@ from pathlib import Path
 import pytest
 from loguru import logger
 
-from build_helpers.entity_processor import BuildError, MergedEntity, extract_source_code
+from unittest.mock import MagicMock
+
+from build_helpers.entity_processor import BuildError, MergedEntity, extract_source_code, merge_entities
 from legacy_common.doxygen_parse import DoxygenEntity, DoxygenLocation, EntityID
 
 
@@ -124,3 +126,90 @@ class TestExtractSourceCodePartialExtractionWarns:
             logger.remove(sink_id)
 
         assert any("missing.cc" in w for w in warnings)
+
+
+def _make_entity(
+    name: str,
+    compound_id: str,
+    decl_fn: str,
+    file_fn: str | None = None,
+    kind: str = "function",
+) -> DoxygenEntity:
+    """Build a DoxygenEntity with a declaration location and optional file location."""
+    decl = DoxygenLocation(fn=decl_fn, line=1, type="decl")
+    file_loc = DoxygenLocation(fn=file_fn, line=1, type="decl") if file_fn else None
+    return DoxygenEntity(
+        id=EntityID(compound=compound_id),
+        kind=kind,
+        name=name,
+        decl=decl,
+        file=file_loc,
+    )
+
+
+class TestMergeEntitiesDedup:
+    """Tests for declaration/definition split deduplication in merge_entities()."""
+
+    def test_split_pair_produces_one_entity_with_surviving_doc(self) -> None:
+        """Split pair: definition in graph with its own doc → one MergedEntity."""
+        decl_entity = _make_entity("stc", "stc_decl", "include/stc.hh")
+        def_entity = _make_entity("stc", "stc_def", "include/stc.hh", file_fn="src/stc.cc")
+        mock_doc = MagicMock()
+
+        entity_db = MagicMock()
+        entity_db.entities.values.return_value = [decl_entity, def_entity]
+        doc_db = MagicMock()
+        doc_db.get_doc.side_effect = lambda cid, sig: mock_doc if cid == "stc_def" else None
+
+        result = merge_entities(entity_db, doc_db, frozenset({"stc_def"}))
+
+        assert len(result) == 1
+        assert result[0].entity.id.compound == "stc_def"
+        assert result[0].doc is mock_doc
+
+    def test_split_pair_copies_doc_from_sibling(self) -> None:
+        """Survivor has no doc → doc is copied from the sibling fragment."""
+        decl_entity = _make_entity("stc", "stc_decl", "include/stc.hh")
+        def_entity = _make_entity("stc", "stc_def", "include/stc.hh", file_fn="src/stc.cc")
+        mock_doc = MagicMock()
+
+        entity_db = MagicMock()
+        entity_db.entities.values.return_value = [decl_entity, def_entity]
+        doc_db = MagicMock()
+        # Doc is on the declaration side; definition (survivor) has none
+        doc_db.get_doc.side_effect = lambda cid, sig: mock_doc if cid == "stc_decl" else None
+
+        result = merge_entities(entity_db, doc_db, frozenset({"stc_def"}))
+
+        assert len(result) == 1
+        assert result[0].entity.id.compound == "stc_def"
+        assert result[0].doc is mock_doc  # copied from sibling
+
+    def test_neither_compound_in_graph_raises(self) -> None:
+        """Split pair with neither compound in code_graph.gml → BuildError."""
+        decl_entity = _make_entity("damage", "damage_decl", "include/damage.hh")
+        def_entity = _make_entity("damage", "damage_def", "include/damage.hh", file_fn="src/damage.cc")
+
+        entity_db = MagicMock()
+        entity_db.entities.values.return_value = [decl_entity, def_entity]
+        doc_db = MagicMock()
+        doc_db.get_doc.return_value = None
+
+        with pytest.raises(BuildError, match="damage"):
+            merge_entities(entity_db, doc_db, frozenset())
+
+    def test_single_entity_unchanged(self) -> None:
+        """Single entity (no split) passes through without modification."""
+        entity = _make_entity("solo", "solo_compound", "include/solo.hh")
+        mock_doc = MagicMock()
+
+        entity_db = MagicMock()
+        entity_db.entities.values.return_value = [entity]
+        doc_db = MagicMock()
+        doc_db.get_doc.return_value = mock_doc
+
+        result = merge_entities(entity_db, doc_db, frozenset({"solo_compound"}))
+
+        assert len(result) == 1
+        assert result[0].entity is entity
+        assert result[0].doc is mock_doc

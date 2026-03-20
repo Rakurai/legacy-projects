@@ -9,6 +9,7 @@ Doc-less entities get minimal Doxygen-formatted text from kind + name + signatur
 """
 
 import pickle
+import re
 import tempfile
 from pathlib import Path
 
@@ -32,6 +33,113 @@ _KIND_TAG_MAP: dict[str, str] = {
     "typedef": "@typedef",
     "union": "@union",
 }
+
+
+def _validate_type_identifier(embedding_type: str) -> None:
+    """Validate type identifier format (alphanumeric, underscores, hyphens only).
+
+    Args:
+        embedding_type: Type identifier to validate
+
+    Raises:
+        ValueError: If embedding_type contains invalid characters
+    """
+    if not re.match(r"^[a-zA-Z0-9_-]+$", embedding_type):
+        raise ValueError(
+            f"Invalid embedding_type '{embedding_type}': "
+            "must contain only alphanumeric characters, underscores, and hyphens"
+        )
+
+
+def save_embedding_cache(
+    embeddings: dict[str | tuple[str, ...], list[float]],
+    artifacts_path: Path,
+    model_slug: str,
+    dimension: int,
+    embedding_type: str,
+) -> None:
+    """Save embeddings to type-specific cache file.
+
+    Args:
+        embeddings: Dict mapping identifiers to embedding vectors
+        artifacts_path: Path to artifacts directory
+        model_slug: Embedding model identifier (normalized, lowercase)
+        dimension: Vector dimension
+        embedding_type: Type identifier string (alphanumeric, underscores, hyphens)
+
+    Raises:
+        ValueError: If embedding_type contains invalid characters
+        OSError: If cache file cannot be written
+        PickleError: If embeddings dict cannot be serialized
+    """
+    _validate_type_identifier(embedding_type)
+
+    cache_filename = f"embed_cache_{model_slug}_{dimension}_{embedding_type}.pkl"
+    cache_path = artifacts_path / cache_filename
+
+    artifacts_path.mkdir(parents=True, exist_ok=True)
+
+    # Atomic write via temp file + rename
+    fd, tmp_path = tempfile.mkstemp(dir=str(artifacts_path), suffix=".pkl.tmp")
+    try:
+        with open(fd, "wb") as f:
+            pickle.dump(embeddings, f, protocol=pickle.HIGHEST_PROTOCOL)
+        Path(tmp_path).rename(cache_path)
+        log.info("Saved embedding cache", type=embedding_type, count=len(embeddings), path=str(cache_path))
+    except Exception:
+        Path(tmp_path).unlink(missing_ok=True)
+        raise
+
+
+def load_embedding_cache(
+    artifacts_path: Path,
+    model_slug: str,
+    dimension: int,
+    embedding_type: str,
+) -> dict[str | tuple[str, ...], list[float]] | None:
+    """Load embeddings from type-specific cache file.
+
+    Args:
+        artifacts_path: Path to artifacts directory
+        model_slug: Embedding model identifier (normalized, lowercase)
+        dimension: Vector dimension
+        embedding_type: Type identifier string
+
+    Returns:
+        Cached embeddings if file exists and is valid, None otherwise
+
+    Raises:
+        ValueError: If embedding_type contains invalid characters
+    """
+    _validate_type_identifier(embedding_type)
+
+    cache_filename = f"embed_cache_{model_slug}_{dimension}_{embedding_type}.pkl"
+    cache_path = artifacts_path / cache_filename
+
+    if not cache_path.exists():
+        # Legacy file detection for entity type
+        if embedding_type == "entity":
+            legacy_filename = f"embed_cache_{model_slug}_{dimension}.pkl"
+            legacy_path = artifacts_path / legacy_filename
+            if legacy_path.exists():
+                log.warning(
+                    "Legacy cache file detected",
+                    legacy_path=str(legacy_path),
+                    new_path=str(cache_path),
+                    message="Rename or delete legacy file to migrate",
+                )
+
+        log.info("No cache found", type=embedding_type, model=model_slug, dimension=dimension)
+        return None
+
+    try:
+        with cache_path.open("rb") as f:
+            embeddings: dict[str | tuple[str, ...], list[float]] = pickle.load(f)
+        log.info("Loaded embedding cache", type=embedding_type, count=len(embeddings), path=str(cache_path))
+        return embeddings
+    except (pickle.UnpicklingError, EOFError) as exc:
+        log.warning("Cache file corrupted, will regenerate", type=embedding_type, path=str(cache_path), error=str(exc))
+        return None
 
 
 def build_minimal_embed_text(merged: MergedEntity) -> str | None:
@@ -72,34 +180,30 @@ def load_embeddings(
     config: ServerConfig,
     id_map: dict[str, str],
 ) -> dict[str, list[float]] | None:
-    """Load embeddings from a config-derived artifact file.
+    """Load entity embeddings from cache file, re-keying old IDs to deterministic IDs.
 
-    Re-keys old entity_id keys to deterministic IDs via id_map.
+    This is a compatibility wrapper around load_embedding_cache() that handles
+    id_map translation for entity embeddings.
 
     Returns:
         Dict mapping new deterministic entity_id → embedding vector, or None
         if the file doesn't exist.
 
     Raises:
-        RuntimeError: If the artifact exists but is corrupt.
+        RuntimeError: If the artifact exists but is corrupt (from legacy code path).
     """
-    embeddings_path = get_embed_cache_path(artifacts_dir, config)
+    # Use new generalized cache loader with type="entity"
+    raw_embeddings = load_embedding_cache(
+        artifacts_path=artifacts_dir,
+        model_slug=config.embedding_model_slug,
+        dimension=config.embedding_dimension,
+        embedding_type="entity",
+    )
 
-    if not embeddings_path.exists():
-        log.info("No embedding artifact found", path=str(embeddings_path))
+    if raw_embeddings is None:
         return None
 
-    log.info("Loading embeddings cache", path=str(embeddings_path))
-
-    try:
-        with embeddings_path.open("rb") as f:
-            raw_embeddings = pickle.load(f)
-    except (pickle.UnpicklingError, EOFError) as e:
-        raise RuntimeError(
-            f"Corrupt embedding artifact at {embeddings_path}. "
-            f"Delete the file and re-run the build to regenerate. Error: {e}"
-        ) from e
-
+    # Re-key old entity_id keys to deterministic IDs via id_map
     new_id_set = set(id_map.values())
     embeddings: dict[str, list[float]] = {}
     for key, embedding in raw_embeddings.items():
@@ -112,7 +216,7 @@ def load_embeddings(
             # Already a new-format key (from a previous build with new code)
             embeddings[key_str] = embedding
 
-    log.info("Embeddings loaded", embedding_count=len(embeddings))
+    log.info("Embeddings re-keyed", embedding_count=len(embeddings))
     return embeddings
 
 
@@ -122,9 +226,10 @@ def generate_embeddings(
     config: ServerConfig,
     merged_entities: list[MergedEntity],
 ) -> dict[str, list[float]]:
-    """Generate embeddings for all entities — doc-rich via to_doxygen(), doc-less via minimal text.
+    """Generate entity embeddings — doc-rich via to_doxygen(), doc-less via minimal text.
 
     Entity IDs are already computed (deterministic) on the merged entities.
+    Saves to cache with type="entity".
     """
     log.info("Generating embeddings from merged entities")
 
@@ -165,19 +270,16 @@ def generate_embeddings(
 
     log.info("Embeddings generated", count=len(embeddings))
 
-    # Save artifact (atomic write via temp file + rename)
-    artifact_path = get_embed_cache_path(artifacts_dir, config)
-    artifacts_dir.mkdir(parents=True, exist_ok=True)
+    # Save to cache using generalized cache function with type="entity"
+    from typing import cast
 
-    fd, tmp_path = tempfile.mkstemp(dir=str(artifacts_dir), suffix=".pkl.tmp")
-    try:
-        with open(fd, "wb") as f:
-            pickle.dump(embeddings, f, protocol=pickle.HIGHEST_PROTOCOL)
-        Path(tmp_path).rename(artifact_path)
-        log.info("Embedding artifact saved", path=str(artifact_path))
-    except Exception:
-        Path(tmp_path).unlink(missing_ok=True)
-        raise
+    save_embedding_cache(
+        embeddings=cast(dict[str | tuple[str, ...], list[float]], embeddings),
+        artifacts_path=artifacts_dir,
+        model_slug=config.embedding_model_slug,
+        dimension=config.embedding_dimension,
+        embedding_type="entity",
+    )
 
     return embeddings
 

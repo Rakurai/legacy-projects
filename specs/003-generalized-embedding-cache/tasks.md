@@ -25,11 +25,11 @@
 
 **⚠️ CRITICAL**: No user story implementation can begin until this phase is complete.
 
-- [ ] T002 Add type identifier validation function `_validate_type_identifier()` in `mcp/doc_server/build_helpers/embeddings.py` — validates alphanumeric + underscores + hyphens only; raises `ValueError` if invalid
-- [ ] T003 Refactor `save_embedding_cache()` in `mcp/doc_server/build_helpers/embeddings.py` to accept `embedding_type: str` parameter and incorporate it into filename: `embed_cache_{model_slug}_{dimension}_{type}.pkl`
-- [ ] T004 Refactor `load_embedding_cache()` in `mcp/doc_server/build_helpers/embeddings.py` to accept `embedding_type: str` parameter and locate type-specific cache file
-- [ ] T005 Add legacy file detection logic to `load_embedding_cache()` for entity type: if `embedding_type == "entity"` and new file not found, check for legacy file without suffix and log warning message
-- [ ] T006 Update logging in both functions to include `type=embedding_type` parameter in all log statements for cache hit/miss/corruption
+- [X] T002 Add type identifier validation function `_validate_type_identifier()` in `mcp/doc_server/build_helpers/embeddings_loader.py` — validates alphanumeric + underscores + hyphens only; raises `ValueError` if invalid
+- [X] T003 Refactor `save_embedding_cache()` in `mcp/doc_server/build_helpers/embeddings_loader.py` to accept `embedding_type: str` parameter and incorporate it into filename: `embed_cache_{model_slug}_{dimension}_{type}.pkl`
+- [X] T004 Refactor `load_embedding_cache()` in `mcp/doc_server/build_helpers/embeddings_loader.py` to accept `embedding_type: str` parameter and locate type-specific cache file
+- [X] T005 Add legacy file detection logic to `load_embedding_cache()` for entity type: if `embedding_type == "entity"` and new file not found, check for legacy file without suffix and log warning message
+- [X] T006 Update logging in both functions to include `type=embedding_type` parameter in all log statements for cache hit/miss/corruption
 
 **Checkpoint**: Foundation ready — user story implementation can begin
 
@@ -43,11 +43,11 @@
 
 ### Implementation for User Story 1
 
-- [ ] T007 [US1] Update entity embedding cache save call in `mcp/doc_server/build_script/build_mcp_db.py` to pass `embedding_type="entity"` parameter
-- [ ] T008 [US1] Update entity embedding cache load call in `mcp/doc_server/build_script/build_mcp_db.py` to pass `embedding_type="entity"` parameter
-- [ ] T009 [US1] Run build script and verify `embed_cache_{model}_{dim}_entity.pkl` file is created in artifacts directory
-- [ ] T010 [US1] Run build script again (without clearing cache) and verify entity embeddings are loaded from cache with log message "Loaded N embeddings from cache for type 'entity'"
-- [ ] T011 [US1] Verify entity embedding phase completes in under 10 seconds on cache hit
+- [X] T007 [US1] Update entity embedding cache save call in `mcp/doc_server/build_helpers/embeddings_loader.py` `generate_embeddings()` to pass `embedding_type="entity"` parameter
+- [X] T008 [US1] Update entity embedding cache load call in `mcp/doc_server/build_helpers/embeddings_loader.py` `load_embeddings()` to pass `embedding_type="entity"` parameter
+- [X] T009 [US1] Run build script and verify `embed_cache_{model}_{dim}_entity.pkl` file is created in artifacts directory
+- [X] T010 [US1] Run build script again (without clearing cache) and verify entity embeddings are loaded from cache with log message "Loaded N embeddings from cache for type 'entity'"
+- [X] T011 [US1] Verify entity embedding phase completes in under 10 seconds on cache hit
 
 **Checkpoint**: US1 fully functional — entity embeddings cached with new naming, backward compatibility addressed via clear warning message for legacy files
 
@@ -61,11 +61,11 @@
 
 ### Implementation for User Story 2
 
-- [ ] T012 [P] [US2] Update usage embedding cache save call in `mcp/doc_server/build_script/build_mcp_db.py` to pass `embedding_type="usages"` parameter
-- [ ] T013 [P] [US2] Update usage embedding cache load call in `mcp/doc_server/build_script/build_mcp_db.py` to pass `embedding_type="usages"` parameter
-- [ ] T014 [US2] Run build script and verify both `embed_cache_{model}_{dim}_entity.pkl` and `embed_cache_{model}_{dim}_usages.pkl` files are created in artifacts directory
-- [ ] T015 [US2] Delete entity cache file only, rebuild, and verify usage cache is reused (log: "Loaded N embeddings from cache for type 'usages'") while entity cache is regenerated
-- [ ] T016 [US2] Delete usage cache file only, rebuild, and verify entity cache is reused (log: "Loaded N embeddings from cache for type 'entity'") while usage cache is regenerated
+- [X] T012 [P] [US2] Update usage embedding cache save call in `mcp/doc_server/build_mcp_db.py` `populate_entity_usages()` to pass `embedding_type="usages"` parameter
+- [X] T013 [P] [US2] Update usage embedding cache load call in `mcp/doc_server/build_mcp_db.py` `populate_entity_usages()` to pass `embedding_type="usages"` parameter
+- [X] T014 [US2] Run build script and verify both `embed_cache_{model}_{dim}_entity.pkl` and `embed_cache_{model}_{dim}_usages.pkl` files are created in artifacts directory
+- [X] T015 [US2] Delete entity cache file only, rebuild, and verify usage cache is reused (log: "Loaded N embeddings from cache for type 'usages'") while entity cache is regenerated
+- [ ] T016 [US2] Delete usage cache file only, rebuild, and verify entity cache is reused (log: "Loaded N embeddings from cache for type 'entity'") while usage cache is regenerated (SKIPPED per user request)
 
 **Checkpoint**: US2 fully functional — entity and usage embeddings cached independently in separate files
 
@@ -79,11 +79,11 @@
 
 ### Implementation for User Story 3
 
-- [ ] T017 [P] [US3] Add unit test `test_save_load_with_custom_type` in `mcp/doc_server/tests/test_embeddings.py` — saves embeddings with `embedding_type="subsystem"`, verifies file created with correct name, loads and verifies data matches
-- [ ] T018 [P] [US3] Add unit test `test_multiple_types_independent` in `mcp/doc_server/tests/test_embeddings.py` — saves three types (entity, usages, subsystem), deletes one cache file, verifies other two still loadable
-- [ ] T019 [P] [US3] Add unit test `test_invalid_type_identifier_raises` in `mcp/doc_server/tests/test_embeddings.py` — attempts to save with invalid type identifier (e.g., "entity/usages", "type.invalid") and verifies `ValueError` is raised
-- [ ] T020 [US3] Add unit test `test_corrupted_cache_returns_none` in `mcp/doc_server/tests/test_embeddings.py` — creates a corrupted pickle file, attempts to load, verifies `None` returned and warning logged
-- [ ] T021 [US3] Run all unit tests: `cd mcp/doc_server && uv run pytest tests/test_embeddings.py -v` — verify all tests pass
+- [X] T017 [P] [US3] Add unit test `test_save_load_with_custom_type` in `mcp/doc_server/tests/test_embeddings.py` — saves embeddings with `embedding_type="subsystem"`, verifies file created with correct name, loads and verifies data matches
+- [X] T018 [P] [US3] Add unit test `test_multiple_types_independent` in `mcp/doc_server/tests/test_embeddings.py` — saves three types (entity, usages, subsystem), deletes one cache file, verifies other two still loadable
+- [X] T019 [P] [US3] Add unit test `test_invalid_type_identifier_raises` in `mcp/doc_server/tests/test_embeddings.py` — attempts to save with invalid type identifier (e.g., "entity/usages", "type.invalid") and verifies `ValueError` is raised
+- [X] T020 [US3] Add unit test `test_corrupted_cache_returns_none` in `mcp/doc_server/tests/test_embeddings.py` — creates a corrupted pickle file, attempts to load, verifies `None` returned and warning logged
+- [X] T021 [US3] Run all unit tests: `cd mcp/doc_server && uv run pytest tests/test_embeddings.py -v` — verify all tests pass
 
 **Checkpoint**: US3 demonstrated — cache mechanism is extensible without code changes; unit tests prove contract compliance
 
@@ -91,11 +91,11 @@
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-- [ ] T022 [P] Run full build integration test: `cd mcp/doc_server && uv run python -m build_script.build_mcp_db` — verify both entity and usage cache files created, build completes successfully
-- [ ] T023 [P] Run build again without clearing cache and verify both cache files reused (embedding phase completes in under 10 seconds total)
-- [ ] T024 [P] Update quickstart.md if any API changes occurred during implementation (verify against contracts/cache-persistence.md)
-- [ ] T025 [P] Run `uv run mypy build_helpers/` to verify type checking passes with strict mode
-- [ ] T026 [P] Run `uv run ruff check mcp/doc_server/` and `uv run ruff format mcp/doc_server/` — verify zero violations
+- [X] T022 [P] Run full build integration test: `cd mcp/doc_server && uv run python -m build_script.build_mcp_db` — verify both entity and usage cache files created, build completes successfully
+- [X] T023 [P] Run build again without clearing cache and verify both cache files reused (embedding phase completes in under 10 seconds total)
+- [X] T024 [P] Update quickstart.md if any API changes occurred during implementation (verify against contracts/cache-persistence.md)
+- [X] T025 [P] Run `uv run mypy build_helpers/` to verify type checking passes with strict mode
+- [X] T026 [P] Run `uv run ruff check mcp/doc_server/` and `uv run ruff format mcp/doc_server/` — verify zero violations
 
 ---
 

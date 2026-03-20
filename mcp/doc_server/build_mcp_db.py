@@ -16,6 +16,8 @@ Expected runtime: ~20-30 seconds for full rebuild.
 
 import asyncio
 from datetime import datetime
+from pathlib import Path
+from typing import cast
 
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
@@ -23,7 +25,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from build_helpers.embeddings_loader import (
     attach_embeddings,
     generate_embeddings,
+    load_embedding_cache,
     load_embeddings,
+    save_embedding_cache,
 )
 from build_helpers.entity_processor import (
     MergedEntity,
@@ -182,6 +186,8 @@ async def populate_entity_usages(
     session: AsyncSession,
     merged_entities: list[MergedEntity],
     provider: EmbeddingProvider | None,
+    config: ServerConfig,
+    artifacts_dir: Path,
 ) -> None:
     """
     Populate entity_usages table by exploding usages dicts from entity docs (FR-005, FR-006).
@@ -189,9 +195,8 @@ async def populate_entity_usages(
     For each entity with a non-null usages dict, parses each key as
     "{caller_compound}, {caller_sig}" and creates one EntityUsage row per entry.
 
-    Generates embeddings for all usage descriptions in a single batch (T009),
-    inlined here rather than delegated to embeddings_loader — usage embeddings
-    are rebuilt from scratch every time and don't need caching.
+    Usage embeddings are cached separately from entity embeddings with type="usages".
+    Cache key is composite tuple (callee_id, caller_compound, caller_sig).
 
     Full rebuild: entity_usages is dropped and recreated each build (FR-005).
     tsvectors are generated via SQL after insertion for keyword search (FR-006).
@@ -200,7 +205,7 @@ async def populate_entity_usages(
 
     # Collect all usage rows and their descriptions for batch embedding
     rows: list[EntityUsage] = []
-    desc_index: list[int] = []  # index into rows[] for each description to embed
+    usage_keys: list[tuple[str, str, str]] = []  # (callee_id, caller_compound, caller_sig)
 
     for merged in merged_entities:
         if not merged.doc or not merged.doc.usages:
@@ -218,18 +223,47 @@ async def populate_entity_usages(
                     search_vector=None,
                 )
             )
-            desc_index.append(len(rows) - 1)
+            usage_keys.append((callee_id, caller_compound, caller_sig))
 
     log.info("Usage rows collected", count=len(rows))
 
-    # T009: Inline embedding generation — single batch, no caching needed
+    # Load usage embeddings from cache or generate if needed
     if provider is not None and rows:
-        log.info("Generating usage embeddings", count=len(rows))
-        descriptions = [rows[i].description for i in desc_index]
-        vectors = list(provider.embed_documents_sync(descriptions))
-        for list_pos, row_idx in enumerate(desc_index):
-            rows[row_idx].embedding = vectors[list_pos]
-        log.info("Usage embeddings generated")
+        cached_embeddings = load_embedding_cache(
+            artifacts_path=artifacts_dir,
+            model_slug=config.embedding_model_slug,
+            dimension=config.embedding_dimension,
+            embedding_type="usages",
+        )
+
+        if cached_embeddings is not None:
+            # Apply cached embeddings to rows
+            for idx, usage_key in enumerate(usage_keys):
+                if usage_key in cached_embeddings:
+                    rows[idx].embedding = cached_embeddings[usage_key]
+            log.info("Usage embeddings loaded from cache")
+        else:
+            # Generate embeddings and save to cache
+            log.info("Generating usage embeddings", count=len(rows))
+            descriptions = [row.description for row in rows]
+            vectors = list(provider.embed_documents_sync(descriptions))
+
+            # Build embeddings dict keyed by composite tuple
+            usage_embeddings: dict[tuple[str, str, str], list[float]] = {}
+            for idx, (usage_key, vector) in enumerate(zip(usage_keys, vectors, strict=True)):
+                rows[idx].embedding = vector
+                usage_embeddings[usage_key] = vector
+
+            log.info("Usage embeddings generated")
+
+            # Save to cache with type="usages"
+            save_embedding_cache(
+                embeddings=cast(dict[str | tuple[str, ...], list[float]], usage_embeddings),
+                artifacts_path=artifacts_dir,
+                model_slug=config.embedding_model_slug,
+                dimension=config.embedding_dimension,
+                embedding_type="usages",
+            )
     elif provider is None:
         log.warning("No embedding provider — entity_usages will have null embeddings")
 
@@ -427,7 +461,7 @@ async def main() -> None:
 
     async with db_manager.session() as session:
         await populate_entities(session, merged_entities)
-        await populate_entity_usages(session, merged_entities, provider)
+        await populate_entity_usages(session, merged_entities, provider, config, config.artifacts_path)
         await populate_edges(session, edges)
         await populate_capabilities(session, cap_defs, cap_graph)
         await populate_entry_points(session, merged_entities, edges)

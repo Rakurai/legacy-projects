@@ -78,16 +78,24 @@ class ServerConfig(BaseSettings):
         return self.embedding_provider is not None
 
     @property
+    def embedding_model_slug(self) -> str:
+        """Normalized model slug for cache file naming.
+
+        Replaces '/' with '-' to make filesystem-safe.
+        Example: BAAI/bge-base-en-v1.5 → BAAI-bge-base-en-v1-5
+        """
+        if self.embedding_provider == "local":
+            return self.embedding_local_model.replace("/", "-")
+        elif self.embedding_provider == "hosted" and self.embedding_model:
+            return self.embedding_model.replace("/", "-")
+        else:
+            return "unknown"
+
+    @property
     def embed_cache_filename(self) -> str:
         """Artifact filename keyed by model name and dimension.
 
         Uses the active model name (local or hosted) with '/' replaced by '-'.
         Example: embed_cache_BAAI-bge-base-en-v1.5_768.pkl
         """
-        if self.embedding_provider == "local":
-            model_slug = self.embedding_local_model.replace("/", "-")
-        elif self.embedding_provider == "hosted" and self.embedding_model:
-            model_slug = self.embedding_model.replace("/", "-")
-        else:
-            model_slug = "unknown"
-        return f"embed_cache_{model_slug}_{self.embedding_dimension}.pkl"
+        return f"embed_cache_{self.embedding_model_slug}_{self.embedding_dimension}.pkl"

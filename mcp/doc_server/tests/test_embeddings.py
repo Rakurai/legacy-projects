@@ -1,9 +1,17 @@
 """Tests for minimal embedding text generation and doc-less entity coverage."""
 
+import pickle
 from pathlib import Path
 from unittest.mock import MagicMock
 
-from build_helpers.embeddings_loader import build_minimal_embed_text, generate_embeddings
+import pytest
+
+from build_helpers.embeddings_loader import (
+    build_minimal_embed_text,
+    generate_embeddings,
+    load_embedding_cache,
+    save_embedding_cache,
+)
 from build_helpers.entity_processor import MergedEntity
 from legacy_common.doxygen_parse import DoxygenEntity, DoxygenLocation, EntityID
 
@@ -130,7 +138,8 @@ class TestGenerateEmbeddingsIncludesDocLess:
         ]
 
         mock_config = MagicMock()
-        mock_config.embed_cache_filename = "embed_cache_test.pkl"
+        mock_config.embedding_model_slug = "test-model"
+        mock_config.embedding_dimension = 768
 
         result = generate_embeddings(
             artifacts_dir=tmp_path,
@@ -157,7 +166,8 @@ class TestGenerateEmbeddingsIncludesDocLess:
         mock_provider.embed_documents_sync.return_value = [[0.1] * 768] * 5
 
         mock_config = MagicMock()
-        mock_config.embed_cache_filename = "embed_cache_test.pkl"
+        mock_config.embedding_model_slug = "test-model"
+        mock_config.embedding_dimension = 768
 
         result = generate_embeddings(
             artifacts_dir=tmp_path,
@@ -167,3 +177,114 @@ class TestGenerateEmbeddingsIncludesDocLess:
         )
 
         assert len(result) == 5
+
+
+class TestGeneralizedCacheWithCustomType:
+    """T017: Save/load with custom type identifier."""
+
+    def test_save_load_with_custom_type(self, tmp_path: Path) -> None:
+        """Verify cache mechanism handles arbitrary type identifiers."""
+        embeddings = {
+            "subsystem:combat": [0.1, 0.2, 0.3],
+            "subsystem:magic": [0.4, 0.5, 0.6],
+        }
+
+        save_embedding_cache(
+            embeddings=embeddings,
+            artifacts_path=tmp_path,
+            model_slug="test-model",
+            dimension=3,
+            embedding_type="subsystem",
+        )
+
+        # Verify file created with correct name
+        expected_file = tmp_path / "embed_cache_test-model_3_subsystem.pkl"
+        assert expected_file.exists()
+
+        # Load and verify data matches
+        loaded = load_embedding_cache(
+            artifacts_path=tmp_path,
+            model_slug="test-model",
+            dimension=3,
+            embedding_type="subsystem",
+        )
+
+        assert loaded is not None
+        assert loaded == embeddings
+
+
+class TestMultipleTypesIndependent:
+    """T018: Multiple types with independent invalidation."""
+
+    def test_multiple_types_independent(self, tmp_path: Path) -> None:
+        """Verify multiple types can coexist and be invalidated independently."""
+        entity_embeddings = {"fn:abc": [0.1] * 768}
+        usage_embeddings = {("fn:abc", "caller", "sig"): [0.2] * 768}
+        subsystem_embeddings = {"subsystem:combat": [0.3] * 768}
+
+        # Save three types
+        save_embedding_cache(entity_embeddings, tmp_path, "model", 768, "entity")
+        save_embedding_cache(usage_embeddings, tmp_path, "model", 768, "usages")
+        save_embedding_cache(subsystem_embeddings, tmp_path, "model", 768, "subsystem")
+
+        # Verify all three files exist
+        assert (tmp_path / "embed_cache_model_768_entity.pkl").exists()
+        assert (tmp_path / "embed_cache_model_768_usages.pkl").exists()
+        assert (tmp_path / "embed_cache_model_768_subsystem.pkl").exists()
+
+        # Delete one cache file
+        (tmp_path / "embed_cache_model_768_usages.pkl").unlink()
+
+        # Verify other two still loadable
+        entity_loaded = load_embedding_cache(tmp_path, "model", 768, "entity")
+        subsystem_loaded = load_embedding_cache(tmp_path, "model", 768, "subsystem")
+        usage_loaded = load_embedding_cache(tmp_path, "model", 768, "usages")
+
+        assert entity_loaded == entity_embeddings
+        assert subsystem_loaded == subsystem_embeddings
+        assert usage_loaded is None
+
+
+class TestInvalidTypeIdentifierRaises:
+    """T019: Invalid type identifiers raise ValueError."""
+
+    def test_invalid_type_identifier_raises(self, tmp_path: Path) -> None:
+        """Verify invalid type identifiers are rejected."""
+        embeddings = {"test": [0.1, 0.2, 0.3]}
+
+        # Test various invalid characters
+        invalid_types = [
+            "entity/usages",  # slash
+            "type.invalid",  # dot
+            "entity usages",  # space
+            "type@special",  # @
+            "",  # empty string
+        ]
+
+        for invalid_type in invalid_types:
+            with pytest.raises(ValueError, match="Invalid embedding_type"):
+                save_embedding_cache(embeddings, tmp_path, "model", 3, invalid_type)
+
+            with pytest.raises(ValueError, match="Invalid embedding_type"):
+                load_embedding_cache(tmp_path, "model", 3, invalid_type)
+
+
+class TestCorruptedCacheReturnsNone:
+    """T020: Corrupted cache files return None with warning."""
+
+    def test_corrupted_cache_returns_none(self, tmp_path: Path) -> None:
+        """Verify corrupted pickle files return None and log warning."""
+        cache_file = tmp_path / "embed_cache_model_768_entity.pkl"
+
+        # Create a corrupted pickle file
+        cache_file.write_bytes(b"not a valid pickle file")
+
+        # Attempt to load should return None (not raise)
+        result = load_embedding_cache(
+            artifacts_path=tmp_path,
+            model_slug="model",
+            dimension=768,
+            embedding_type="entity",
+        )
+
+        assert result is None

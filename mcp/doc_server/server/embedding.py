@@ -12,6 +12,7 @@ Factory function `create_provider(config)` selects the implementation based on c
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Generator
 from typing import Protocol, runtime_checkable
 
 import numpy as np
@@ -35,20 +36,25 @@ class EmbeddingProvider(Protocol):
         """Number of dimensions in the output vector."""
         ...
 
-    async def embed_query(self, text: str) -> list[float]:
-        """Embed a single query string (async, non-blocking)."""
+    @property
+    def max_batch_size(self) -> int:
+        """Maximum recommended texts per batch call. Provider handles internal chunking."""
         ...
 
-    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        """Batch-embed multiple document strings (async)."""
+    def embed(self, text: str) -> list[float]:
+        """Embed a single text string (sync). Delegates to embed_batch."""
         ...
 
-    def embed_query_sync(self, text: str) -> list[float]:
-        """Embed a single query string (synchronous, for build pipeline)."""
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Batch-embed multiple text strings (sync). Used by build pipeline."""
         ...
 
-    def embed_documents_sync(self, texts: list[str]) -> list[list[float]]:
-        """Batch-embed multiple document strings (synchronous, for build pipeline)."""
+    async def aembed(self, text: str) -> list[float]:
+        """Embed a single text string (async). Used by server runtime."""
+        ...
+
+    async def aembed_batch(self, texts: list[str]) -> list[list[float]]:
+        """Batch-embed multiple text strings (async)."""
         ...
 
 
@@ -61,8 +67,10 @@ class LocalEmbeddingProvider:
     """Embedding provider using a bundled ONNX model via fastembed.
 
     Sync methods call ONNX directly. Async methods offload to a background
-    thread via asyncio.to_thread() to avoid blocking the event loop (FR-012).
+    thread via asyncio.to_thread() to avoid blocking the event loop (CPU-bound).
     """
+
+    _max_batch_size: int = 256
 
     def __init__(self, model_name: str = "BAAI/bge-base-en-v1.5") -> None:
         log.info("Initializing local embedding model", model=model_name)
@@ -77,19 +85,22 @@ class LocalEmbeddingProvider:
     def dimension(self) -> int:
         return self._dimension
 
-    def embed_query_sync(self, text: str) -> list[float]:
-        results = list(self._model.embed([text]))
-        return results[0].tolist() if isinstance(results[0], np.ndarray) else list(results[0])
+    @property
+    def max_batch_size(self) -> int:
+        return self._max_batch_size
 
-    def embed_documents_sync(self, texts: list[str]) -> list[list[float]]:
-        results = list(self._model.embed(texts))
+    def embed(self, text: str) -> list[float]:
+        return self.embed_batch([text])[0]
+
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
+        results = list(self._model.embed(texts, batch_size=self._max_batch_size))
         return [r.tolist() if isinstance(r, np.ndarray) else list(r) for r in results]
 
-    async def embed_query(self, text: str) -> list[float]:
-        return await asyncio.to_thread(self.embed_query_sync, text)
+    async def aembed(self, text: str) -> list[float]:
+        return await asyncio.to_thread(self.embed, text)
 
-    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
-        return await asyncio.to_thread(self.embed_documents_sync, texts)
+    async def aembed_batch(self, texts: list[str]) -> list[list[float]]:
+        return await asyncio.to_thread(self.embed_batch, texts)
 
 
 # ---------------------------------------------------------------------------
@@ -110,9 +121,11 @@ class HostedEmbeddingProvider:
         api_key: str,
         model: str,
         dimension: int,
+        max_batch_size: int = 256,
     ) -> None:
         self._model = model
         self._dimension = dimension
+        self._max_batch_size = max_batch_size
         self._sync_client = OpenAI(base_url=base_url, api_key=api_key)
         self._async_client = AsyncOpenAI(base_url=base_url, api_key=api_key)
         log.info("Hosted embedding provider initialized", base_url=base_url, model=model, dimension=dimension)
@@ -121,51 +134,42 @@ class HostedEmbeddingProvider:
     def dimension(self) -> int:
         return self._dimension
 
-    def _extract_vectors(self, data: list) -> list[list[float]]:
-        """Extract embedding vectors from OpenAI response data objects."""
-        return [item.embedding for item in data]
+    @property
+    def max_batch_size(self) -> int:
+        return self._max_batch_size
 
-    def embed_query_sync(self, text: str) -> list[float]:
-        response = self._sync_client.embeddings.create(
-            model=self._model,
-            input=text,
-            encoding_format="float",
-        )
-        return response.data[0].embedding
+    def _iter_batches(self, texts: list[str]) -> Generator[list[str]]:
+        """Yield successive batches of max_batch_size from texts."""
+        for i in range(0, len(texts), self._max_batch_size):
+            yield texts[i : i + self._max_batch_size]
 
-    def embed_documents_sync(self, texts: list[str]) -> list[list[float]]:
-        # Process in batches of 32 to stay within typical API limits
+    def embed(self, text: str) -> list[float]:
+        return self.embed_batch([text])[0]
+
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
         all_embeddings: list[list[float]] = []
-        batch_size = 32
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i : i + batch_size]
+        for batch in self._iter_batches(texts):
             response = self._sync_client.embeddings.create(
                 model=self._model,
                 input=batch,
                 encoding_format="float",
             )
-            all_embeddings.extend(self._extract_vectors(response.data))
+            all_embeddings.extend(item.embedding for item in response.data)
         return all_embeddings
 
-    async def embed_query(self, text: str) -> list[float]:
-        response = await self._async_client.embeddings.create(
-            model=self._model,
-            input=text,
-            encoding_format="float",
-        )
-        return response.data[0].embedding
+    async def aembed(self, text: str) -> list[float]:
+        results = await self.aembed_batch([text])
+        return results[0]
 
-    async def embed_documents(self, texts: list[str]) -> list[list[float]]:
+    async def aembed_batch(self, texts: list[str]) -> list[list[float]]:
         all_embeddings: list[list[float]] = []
-        batch_size = 32
-        for i in range(0, len(texts), batch_size):
-            batch = texts[i : i + batch_size]
+        for batch in self._iter_batches(texts):
             response = await self._async_client.embeddings.create(
                 model=self._model,
                 input=batch,
                 encoding_format="float",
             )
-            all_embeddings.extend(self._extract_vectors(response.data))
+            all_embeddings.extend(item.embedding for item in response.data)
         return all_embeddings
 
 
@@ -187,6 +191,7 @@ def create_provider(config: ServerConfig) -> EmbeddingProvider | None:
         log.info("No embedding provider configured; semantic search disabled")
         return None
 
+    provider: EmbeddingProvider
     if config.embedding_provider == "local":
         provider = LocalEmbeddingProvider(model_name=config.embedding_local_model)
 

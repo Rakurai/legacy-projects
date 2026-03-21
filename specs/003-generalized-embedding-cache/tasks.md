@@ -286,6 +286,44 @@ With multiple developers after Phase 2 completes:
 - [X] T036 Update `mcp/doc_server/tests/test_embeddings.py`: move entity-specific tests (TestBuildMinimalEmbedTextFunction, TestBuildMinimalEmbedTextFile, TestBuildMinimalEmbedTextEmptySkips, TestGenerateEmbeddingsIncludesDocLess) to new file `tests/test_entity_processor.py` since `build_minimal_embed_text` and entity text logic now live in `entity_processor.py`. Update imports and test the new `build_entity_embed_texts()` function.
 - [X] T037 Add test coverage for generic `sync_embeddings_cache()` in `tests/test_embeddings.py`: test with string keys (entity-like), tuple keys (usage-like), verify incremental sync behavior (cache miss → generate all, partial cache → generate missing only, stale keys → prune), verify logging of sync actions.
 
+### Phase 6.5: EmbeddingProvider API Refactor
+
+**Goal**: Clean up the provider API per the revised TODO — rename the four methods to `embed` / `embed_batch` / `aembed` / `aembed_batch`, add `max_batch_size`, eliminate the batch-loop duplication in `HostedEmbeddingProvider`, and update all call sites.
+
+**Files touched**: `server/embedding.py`, `build_helpers/embeddings_loader.py`, `server/search.py`, `server/resolver.py`, `tests/test_embeddings.py`, `tests/test_resolver_stages.py`, `tests/test_embedding_provider.py`
+
+- [X] T041 Update `EmbeddingProvider` protocol in `server/embedding.py`: remove `embed_query`, `embed_documents`, `embed_query_sync`, `embed_documents_sync`; add `max_batch_size: int` property and methods `embed(str)`, `embed_batch(list[str])`, `aembed(str)`, `aembed_batch(list[str])`.
+
+- [X] T042 Refactor `LocalEmbeddingProvider` in `server/embedding.py`:
+  - Add `max_batch_size` property returning `256`
+  - Rename `embed_documents_sync` → `embed_batch`; pass `batch_size=self.max_batch_size` to `self._model.embed()`
+  - Rename `embed_query_sync` → `embed`; implement as `return self.embed_batch([text])[0]` (no separate code path)
+  - Rename `embed_documents` → `aembed_batch`; implement as `return await asyncio.to_thread(self.embed_batch, texts)` (delegates to renamed sync method)
+  - Rename `embed_query` → `aembed`; implement as `return await asyncio.to_thread(self.embed, text)` (delegates to renamed sync method)
+
+- [X] T043 Refactor `HostedEmbeddingProvider` in `server/embedding.py`:
+  - Add `_max_batch_size: int = 256` constructor parameter (replaces hardcoded `32` in both loops) and `max_batch_size` property
+  - Add `_iter_batches(self, texts: list[str]) -> Generator[list[str]]` helper that yields slices of `self._max_batch_size`; import `Generator` from `collections.abc`
+  - Remove `_extract_vectors()` helper; inline vector extraction as `item.embedding for item in response.data`
+  - Rename `embed_documents_sync` → `embed_batch`: single loop over `self._iter_batches(texts)` using `self._sync_client`
+  - Rename `embed_documents` → `aembed_batch`: single loop over `self._iter_batches(texts)` using `self._async_client`
+  - Rename `embed_query_sync` → `embed`: implement as `return self.embed_batch([text])[0]`
+  - Rename `embed_query` → `aembed`: implement as `return (await self.aembed_batch([text]))[0]`
+
+- [X] T044 [P] Update `build_helpers/embeddings_loader.py`: rename `provider.embed_documents_sync(missing_texts)` → `provider.embed_batch(missing_texts)`.
+
+- [X] T045 [P] Update `server/search.py`: rename both `embedding_provider.embed_query(query)` call sites → `embedding_provider.aembed(query)`.
+
+- [X] T046 [P] Update `server/resolver.py`: rename `embedding_provider.embed_query(query)` → `embedding_provider.aembed(query)`.
+
+- [X] T047 [P] Update `tests/test_embeddings.py`: rename all `mock_provider.embed_documents_sync` mock assertions → `mock_provider.embed_batch`.
+
+- [X] T048 [P] Update `tests/test_resolver_stages.py`: rename mock setup `embed_query = AsyncMock(...)` → `aembed = AsyncMock(...)` (2 sites).
+
+- [X] T049 Update `tests/test_embedding_provider.py`: rename all method references and `hasattr` checks to new names (`embed`, `embed_batch`, `aembed`, `aembed_batch`). Add `max_batch_size` property check. Remove `embed_query`, `embed_documents`, `embed_query_sync`, `embed_documents_sync` assertions.
+
+- [X] T050 Run `uv run pytest tests/ -v` and `uv run ruff check . && uv run mypy server/` — verify zero failures and zero new type errors.
+
 ### Phase 7: Validation
 
 - [ ] T038 Run full build script twice and verify entity embeddings use incremental sync: first build should log "Cache synchronized" with added count matching entity count, second build (no data changes) should log "Cache up to date", third build after adding/removing entities should log added/pruned counts. No more "Generating embeddings from merged entities" on warm builds.

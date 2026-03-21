@@ -250,7 +250,7 @@ async def _resolve_by_semantic(
     limit: int,
 ) -> ResolutionResult | None:
     """Stage 6: Semantic search (pgvector cosine similarity)."""
-    query_embedding = await embedding_provider.embed_query(query)
+    query_embedding = await embedding_provider.aembed(query)
 
     cosine_dist = Entity.embedding.cosine_distance(query_embedding)
     score_expr = (literal(1) - cosine_dist).label("score")

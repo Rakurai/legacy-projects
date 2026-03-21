@@ -150,7 +150,7 @@ async def hybrid_search(
     search_mode: SearchMode = SearchMode.HYBRID
 
     if embedding_provider:
-        query_embedding = await embedding_provider.embed_query(query)
+        query_embedding = await embedding_provider.aembed(query)
     else:
         search_mode = SearchMode.KEYWORD_FALLBACK
 
@@ -220,7 +220,7 @@ async def hybrid_search_usages(
     search_mode: SearchMode = SearchMode.HYBRID
 
     if embedding_provider:
-        query_embedding = await embedding_provider.embed_query(query)
+        query_embedding = await embedding_provider.aembed(query)
     else:
         search_mode = SearchMode.KEYWORD_FALLBACK
 

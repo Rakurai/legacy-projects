@@ -129,7 +129,7 @@ class TestSyncEmbeddingsCacheStringKeys:
     def test_cold_cache_generates_all_embeddings(self, tmp_path: Path) -> None:
         """No cache file → generates all embeddings."""
         mock_provider = MagicMock()
-        mock_provider.embed_documents_sync.return_value = [[0.1] * 3, [0.2] * 3]
+        mock_provider.embed_batch.return_value = [[0.1] * 3, [0.2] * 3]
 
         current_keys = ["key1", "key2"]
         texts_by_key = {"key1": "text1", "key2": "text2"}
@@ -147,7 +147,7 @@ class TestSyncEmbeddingsCacheStringKeys:
         assert len(result) == 2
         assert "key1" in result
         assert "key2" in result
-        mock_provider.embed_documents_sync.assert_called_once()
+        mock_provider.embed_batch.assert_called_once()
 
     def test_warm_cache_no_changes(self, tmp_path: Path) -> None:
         """Cache contains all keys → no generation, cache reused."""
@@ -167,7 +167,7 @@ class TestSyncEmbeddingsCacheStringKeys:
         )
 
         assert result == existing
-        mock_provider.embed_documents_sync.assert_not_called()
+        mock_provider.embed_batch.assert_not_called()
 
     def test_partial_cache_generates_missing_only(self, tmp_path: Path) -> None:
         """Cache has some keys → generates only missing keys."""
@@ -175,7 +175,7 @@ class TestSyncEmbeddingsCacheStringKeys:
         save_embedding_cache(existing, tmp_path, "model", 3, "test")
 
         mock_provider = MagicMock()
-        mock_provider.embed_documents_sync.return_value = [[0.2] * 3]
+        mock_provider.embed_batch.return_value = [[0.2] * 3]
 
         result = sync_embeddings_cache(
             artifacts_path=tmp_path,
@@ -190,7 +190,7 @@ class TestSyncEmbeddingsCacheStringKeys:
         assert len(result) == 2
         assert result["key1"] == [0.1] * 3
         assert result["key2"] == [0.2] * 3
-        mock_provider.embed_documents_sync.assert_called_once_with(["text2"])
+        mock_provider.embed_batch.assert_called_once_with(["text2"])
 
     def test_stale_keys_pruned(self, tmp_path: Path) -> None:
         """Cache has extra keys → prunes stale keys."""
@@ -211,7 +211,7 @@ class TestSyncEmbeddingsCacheStringKeys:
 
         assert len(result) == 2
         assert "key3" not in result
-        mock_provider.embed_documents_sync.assert_not_called()
+        mock_provider.embed_batch.assert_not_called()
 
     def test_missing_and_stale_keys(self, tmp_path: Path) -> None:
         """Cache has some stale, some missing → prunes stale, generates missing."""
@@ -219,7 +219,7 @@ class TestSyncEmbeddingsCacheStringKeys:
         save_embedding_cache(existing, tmp_path, "model", 3, "test")
 
         mock_provider = MagicMock()
-        mock_provider.embed_documents_sync.return_value = [[0.2] * 3]
+        mock_provider.embed_batch.return_value = [[0.2] * 3]
 
         result = sync_embeddings_cache(
             artifacts_path=tmp_path,
@@ -243,7 +243,7 @@ class TestSyncEmbeddingsCacheTupleKeys:
     def test_tuple_keys_work(self, tmp_path: Path) -> None:
         """Tuple keys (callee, caller, sig) work correctly."""
         mock_provider = MagicMock()
-        mock_provider.embed_documents_sync.return_value = [[0.1] * 3]
+        mock_provider.embed_batch.return_value = [[0.1] * 3]
 
         key = ("fn:callee", "caller_compound", "caller_sig")
         texts_by_key = {key: "usage text"}
@@ -269,7 +269,7 @@ class TestSyncEmbeddingsCacheTupleKeys:
         save_embedding_cache(existing, tmp_path, "model", 3, "usages")
 
         mock_provider = MagicMock()
-        mock_provider.embed_documents_sync.return_value = [[0.2] * 3]
+        mock_provider.embed_batch.return_value = [[0.2] * 3]
 
         result = sync_embeddings_cache(
             artifacts_path=tmp_path,

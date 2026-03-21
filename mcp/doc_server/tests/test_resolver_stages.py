@@ -59,7 +59,7 @@ async def test_resolve_semantic_stage_with_mock_client(test_session: AsyncSessio
     # Build a mock embedding provider conforming to EmbeddingProvider protocol
     mock_provider = MagicMock()
     mock_provider.dimension = 768
-    mock_provider.embed_query = AsyncMock(return_value=[0.1] * 768)
+    mock_provider.aembed = AsyncMock(return_value=[0.1] * 768)
 
     result = await resolve_entity(
         session=test_session,
@@ -82,7 +82,7 @@ async def test_resolve_semantic_stage_propagates_client_error(
     """Stage 6 propagates embedding provider errors — fail-fast, no silent fallback."""
     mock_provider = MagicMock()
     mock_provider.dimension = 768
-    mock_provider.embed_query = AsyncMock(side_effect=RuntimeError("API down"))
+    mock_provider.aembed = AsyncMock(side_effect=RuntimeError("API down"))
 
     with pytest.raises(RuntimeError, match="API down"):
         await resolve_entity(

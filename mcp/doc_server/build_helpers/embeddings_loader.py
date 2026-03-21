@@ -167,7 +167,7 @@ def sync_embeddings_cache(
     if missing_keys:
         log.info("Generating embeddings for missing keys", type=embedding_type, count=len(missing_keys))
         missing_texts = [texts_by_key[key] for key in missing_keys]
-        new_vectors = list(provider.embed_documents_sync(missing_texts))
+        new_vectors = list(provider.embed_batch(missing_texts))
 
         for key, vector in zip(missing_keys, new_vectors, strict=True):
             embeddings[key] = vector

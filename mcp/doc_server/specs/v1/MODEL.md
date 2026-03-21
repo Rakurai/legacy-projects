@@ -839,15 +839,17 @@ Cache file naming: `embed_cache_{model_slug}_{dim}_{type}.pkl` where model_slug 
 class EmbeddingProvider(Protocol):
     @property
     def dimension(self) -> int: ...
-    async def embed_query(self, text: str) -> list[float]: ...
-    async def embed_documents(self, texts: list[str]) -> list[list[float]]: ...
-    def embed_query_sync(self, text: str) -> list[float]: ...
-    def embed_documents_sync(self, texts: list[str]) -> list[list[float]]: ...
+    @property
+    def max_batch_size(self) -> int: ...
+    def embed(self, text: str) -> list[float]: ...
+    def embed_batch(self, texts: list[str]) -> list[list[float]]: ...
 ```
 
+The protocol exposes both sync (`embed`, `embed_batch`) and async (`aembed`, `aembed_batch`) surfaces. The provider owns the async strategy — local uses `asyncio.to_thread()`, hosted uses native `AsyncOpenAI`. Server runtime calls `await provider.aembed(query)`; build pipeline calls `provider.embed_batch(texts)`.
+
 **Variants:**
-- `LocalEmbeddingProvider`: Wraps `fastembed.TextEmbedding`. Async methods use `asyncio.to_thread()`.
-- `HostedEmbeddingProvider`: Wraps `openai.OpenAI` (sync) and `openai.AsyncOpenAI` (async).
+- `LocalEmbeddingProvider`: Wraps `fastembed.TextEmbedding`. `max_batch_size=256`. Async via `asyncio.to_thread()`.
+- `HostedEmbeddingProvider`: Wraps `openai.OpenAI` (sync) + `openai.AsyncOpenAI` (async). `max_batch_size=256`.
 
 **Factory:** `create_provider(config) → EmbeddingProvider | None` — returns appropriate variant or None.
 
@@ -860,7 +862,7 @@ Cache files are named `embed_cache_{model_slug}_{dim}_{type}.pkl` (e.g., `embed_
 Per-type synchronization (when provider is configured):
 1. Load existing cache file for that type if it exists
 2. Compute missing keys (in current build but not in cache) and stale keys (in cache but not in current build)
-3. Generate embeddings only for missing keys via `provider.embed_documents_sync()`
+3. Generate embeddings only for missing keys via `provider.embed_batch()`
 4. Prune stale keys from cache dict
 5. Save updated cache file if any changes occurred; skip save if cache was already current
 6. If no provider configured: skip all embeddings for that type (null columns), log warning

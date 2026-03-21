@@ -231,7 +231,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-069**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency.
 - **FR-070**: The old hardcoded `embeddings_cache.pkl` artifact MUST NOT be required by build validation.
 - **FR-071**: The system MUST validate at startup that the configured vector dimension matches the embedding provider's actual output dimension and fail fast with a clear error if they disagree.
-- **FR-072**: The local embedding provider MUST NOT block the server's event loop during query-time embedding. Embedding computation MUST be offloaded to a background thread.
+- **FR-072**: Query-time embedding MUST NOT block the server's event loop. Server call sites (search.py, resolver.py) MUST use `await provider.aembed(query)`. The provider owns the async surface — `LocalEmbeddingProvider` offloads to `asyncio.to_thread()`, `HostedEmbeddingProvider` uses native `AsyncOpenAI` HTTP. The build pipeline uses sync `provider.embed_batch()` exclusively.
 - **FR-073**: Entities without a `Document` but with a name, signature, or kind MUST receive a minimal embedding generated from a Doxygen-formatted text combining `kind`, `name`, `signature`, and `file_path`. This includes structural compounds (file, dir, namespace). Only entities where all three of name, signature, and kind are empty/null may be skipped.
 
 

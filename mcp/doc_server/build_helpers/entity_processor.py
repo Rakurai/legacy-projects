@@ -541,3 +541,73 @@ def compute_enriched_fields(merged_entities: list[MergedEntity]) -> None:
 # dependency graph in graph_loader.py after edges are loaded.
 # These functions will be called from the main build pipeline
 # after graph construction.
+
+
+# Doxygen tag mapping for embedding text generation
+_KIND_TAG_MAP: dict[str, str] = {
+    "function": "@fn",
+    "variable": "@var",
+    "class": "@class",
+    "struct": "@struct",
+    "file": "@file",
+    "dir": "@dir",
+    "namespace": "@namespace",
+    "define": "@def",
+    "group": "@defgroup",
+    "enum": "@enum",
+    "typedef": "@typedef",
+    "union": "@union",
+}
+
+
+def build_minimal_embed_text(merged: MergedEntity) -> str | None:
+    """Build a minimal Doxygen-formatted embedding text for a doc-less entity.
+
+    Returns None when name, signature, and kind are all empty — nothing
+    meaningful to embed.
+    """
+    kind = merged.entity.kind or ""
+    name = merged.entity.name or ""
+    sig = merged.signature or ""
+    file_path = merged.entity.body.fn if merged.entity.body else merged.entity.decl.fn if merged.entity.decl else None
+
+    if not kind and not name and not sig:
+        return None
+
+    tag = _KIND_TAG_MAP.get(kind, "@fn")
+    display = sig if sig else name
+
+    lines = ["/**"]
+    lines.append(f" * {tag} {display}")
+
+    if file_path:
+        lines.append(" *")
+        lines.append(f" * @file {file_path}")
+
+    lines.append(" */")
+    return "\n".join(lines)
+
+
+def build_entity_embed_texts(merged_entities: list[MergedEntity]) -> dict[str, str]:
+    """Build embeddable text strings for all entities.
+
+    For doc-rich entities, uses Document.to_doxygen().
+    For doc-less entities, builds minimal Doxygen-formatted text.
+
+    Args:
+        merged_entities: List of merged entities to generate texts for
+
+    Returns:
+        Dict mapping entity_id to embeddable text string
+    """
+    texts_by_key: dict[str, str] = {}
+
+    for merged in merged_entities:
+        if merged.doc is not None:
+            texts_by_key[merged.entity_id] = merged.doc.to_doxygen()
+        else:
+            minimal_text = build_minimal_embed_text(merged)
+            if minimal_text is not None:
+                texts_by_key[merged.entity_id] = minimal_text
+
+    return texts_by_key

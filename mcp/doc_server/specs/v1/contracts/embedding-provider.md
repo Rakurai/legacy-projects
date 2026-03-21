@@ -111,11 +111,19 @@ Wraps `openai.OpenAI` (sync) and `openai.AsyncOpenAI` (async).
 - Same pattern as `hybrid_search`
 - Calls `await provider.embed_query(query)` in the semantic resolution stage
 
-### `build_mcp_db.py` Stage 10
+### `build_mcp_db.py` Embedding Stages
 
-- Calls `create_provider(config)` to get a provider (may be None)
-- If provider exists and no artifact cached: calls `provider.embed_documents_sync(texts)` for batch generation
-- Saves result to artifact file for future builds
+The build pipeline uses a four-layer architecture for embeddings:
+
+- **Layer 1 — Cache operations** (`build_helpers/embeddings_loader.py`): `save_embedding_cache()`, `load_embedding_cache()`, `sync_embeddings_cache()`. Fully schema-agnostic — operates on generic key → text → embedding mappings with no knowledge of entities, usages, or Doxygen.
+- **Layer 2 — Domain logic** (`build_helpers/entity_processor.py`): `build_entity_embed_texts()` and `build_minimal_embed_text()`. Constructs embedding text for each entity from its doc fields or minimal Doxygen-formatted text.
+- **Layer 3 — Orchestration** (`build_mcp_db.py`): Calls `build_entity_embed_texts()` to produce `{entity_id: text}` maps, calls `sync_embeddings_cache()` with the result, attaches returned vectors to merged entities. `populate_entity_usages()` builds `{usage_key: description}` maps and calls `sync_embeddings_cache()` with `embedding_type="usages"`.
+- **Layer 4 — Provider** (`server/embedding.py`): `create_provider(config)` returns `EmbeddingProvider | None`. Called once in the orchestration layer before embedding stages begin.
+
+Synchronization flow per type:
+1. `build_entity_embed_texts(merged_entities)` → `dict[str, str]` (entity_id → embed text, doc-less entities with no name/sig/kind excluded)
+2. `sync_embeddings_cache(artifacts_path, model_slug, dim, "entity", entity_keys, texts_by_key, provider)` → `dict[str, list[float]]`
+3. `for merged in merged_entities: merged.embedding = embeddings.get(merged.entity_id)`
 
 ---
 
@@ -163,4 +171,4 @@ The text used as input to the embedding model for each entity is a structured Do
 
 Where `tag` is derived from entity kind: function→`@fn`, variable→`@var`, class→`@class`, struct→`@struct`, etc.
 
-**Skip rule**: Entities with no documentable content (all of brief, details, params, returns, notes, rationale are null) receive null embeddings.
+**Skip rule for doc-less entities**: Entities with no `Document` but with a non-empty name, signature, or kind receive a minimal embedding via `build_minimal_embed_text()`. Only entities where all three of name, signature, and kind are empty/null are excluded entirely (null embedding).

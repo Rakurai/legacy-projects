@@ -1,11 +1,10 @@
 """Tests for entity_processor source extraction with fail-fast validation."""
 
 from pathlib import Path
+from unittest.mock import MagicMock
 
 import pytest
 from loguru import logger
-
-from unittest.mock import MagicMock
 
 from build_helpers.entity_processor import BuildError, MergedEntity, extract_source_code, merge_entities
 from legacy_common.doxygen_parse import DoxygenEntity, DoxygenLocation, EntityID
@@ -166,7 +165,7 @@ class TestMergeEntitiesDedup:
         entity_db = MagicMock()
         entity_db.entities.values.return_value = [decl_entity, def_entity]
         doc_db = MagicMock()
-        doc_db.get_doc.side_effect = lambda cid, sig: mock_doc if cid == "stc_def" else None
+        doc_db.get_doc.side_effect = lambda cid, _: mock_doc if cid == "stc_def" else None
 
         result = merge_entities(entity_db, doc_db, frozenset({shared_member}))
 
@@ -187,7 +186,7 @@ class TestMergeEntitiesDedup:
         entity_db.entities.values.return_value = [decl_entity, def_entity]
         doc_db = MagicMock()
         # Doc is on the declaration side; definition (survivor) has none
-        doc_db.get_doc.side_effect = lambda cid, sig: mock_doc if cid == "stc_decl" else None
+        doc_db.get_doc.side_effect = lambda cid, _: mock_doc if cid == "stc_decl" else None
 
         result = merge_entities(entity_db, doc_db, frozenset({shared_member}))
 
@@ -233,3 +232,171 @@ class TestMergeEntitiesDedup:
         assert len(result) == 1
         assert result[0].entity is entity
         assert result[0].doc is mock_doc
+
+
+class TestBuildMinimalEmbedTextFunction:
+    """Function entity → @fn tag + signature output."""
+
+    def test_function_entity_produces_fn_tag(self) -> None:
+        from build_helpers.entity_processor import build_minimal_embed_text
+
+        merged = _make_merged("damage", body_fn="src/fight.cc", body_line=1, body_end_line=10)
+        merged.entity.kind = "function"
+        result = build_minimal_embed_text(merged)
+
+        assert result is not None
+        assert "@fn" in result
+        assert "damage" in result
+
+    def test_function_entity_includes_file_path(self) -> None:
+        from build_helpers.entity_processor import build_minimal_embed_text
+
+        merged = _make_merged("damage", body_fn="src/fight.cc", body_line=1, body_end_line=10)
+        merged.entity.kind = "function"
+        result = build_minimal_embed_text(merged)
+
+        assert result is not None
+        assert "@file src/fight.cc" in result
+
+    def test_variable_entity_produces_var_tag(self) -> None:
+        from build_helpers.entity_processor import build_minimal_embed_text
+
+        merged = _make_merged("player_list", body_fn="src/db.cc", body_line=1, body_end_line=5)
+        merged.entity.kind = "variable"
+        result = build_minimal_embed_text(merged)
+
+        assert result is not None
+        assert "@var" in result
+        assert "player_list" in result
+
+    def test_class_entity_produces_class_tag(self) -> None:
+        from build_helpers.entity_processor import build_minimal_embed_text
+
+        merged = _make_merged("Character", body_fn="src/character.cc", body_line=1, body_end_line=50)
+        merged.entity.kind = "class"
+        result = build_minimal_embed_text(merged)
+
+        assert result is not None
+        assert "@class" in result
+        assert "Character" in result
+
+
+class TestBuildMinimalEmbedTextFile:
+    """File compound → @file tag + path output."""
+
+    def test_file_compound_produces_file_tag(self) -> None:
+        from build_helpers.entity_processor import build_minimal_embed_text
+
+        merged = _make_merged("fight.cc", body_fn="src/fight.cc", body_line=1, body_end_line=100)
+        merged.entity.kind = "file"
+        result = build_minimal_embed_text(merged)
+
+        assert result is not None
+        assert "@file" in result
+        assert "fight.cc" in result
+
+    def test_dir_compound_produces_dir_tag(self) -> None:
+        from build_helpers.entity_processor import build_minimal_embed_text
+
+        merged = _make_merged("src")
+        merged.entity.kind = "dir"
+        result = build_minimal_embed_text(merged)
+
+        assert result is not None
+        assert "@dir" in result
+        assert "src" in result
+
+    def test_namespace_produces_namespace_tag(self) -> None:
+        from build_helpers.entity_processor import build_minimal_embed_text
+
+        merged = _make_merged("Logging")
+        merged.entity.kind = "namespace"
+        result = build_minimal_embed_text(merged)
+
+        assert result is not None
+        assert "@namespace" in result
+        assert "Logging" in result
+
+
+class TestBuildMinimalEmbedTextEmptySkips:
+    """Entity with no name/sig/kind → returns None."""
+
+    def test_empty_entity_returns_none(self) -> None:
+        from build_helpers.entity_processor import build_minimal_embed_text
+
+        entity = DoxygenEntity(
+            id=EntityID(compound="empty_compound"),
+            kind="",
+            name="",
+        )
+        merged = MergedEntity(entity=entity, doc=None, sig_key=("empty_compound", "empty_compound"))
+        merged._deterministic_id = "fn:test_empty"
+        result = build_minimal_embed_text(merged)
+
+        assert result is None
+
+
+class TestBuildEntityEmbedTexts:
+    """Test build_entity_embed_texts() function."""
+
+    def test_doc_rich_entities_use_to_doxygen(self) -> None:
+        from build_helpers.entity_processor import build_entity_embed_texts
+
+        mock_doc = MagicMock()
+        mock_doc.to_doxygen.return_value = "/** @fn void fight() */"
+
+        merged = _make_merged("fight", body_fn="src/fight.cc", body_line=1, body_end_line=10)
+        merged.doc = mock_doc
+
+        result = build_entity_embed_texts([merged])
+
+        assert merged.entity_id in result
+        assert result[merged.entity_id] == "/** @fn void fight() */"
+        mock_doc.to_doxygen.assert_called_once()
+
+    def test_doc_less_entities_use_minimal_text(self) -> None:
+        from build_helpers.entity_processor import build_entity_embed_texts
+
+        merged = _make_merged("damage", body_fn="src/fight.cc", body_line=1, body_end_line=10)
+        merged.entity.kind = "function"
+        merged.doc = None
+
+        result = build_entity_embed_texts([merged])
+
+        assert merged.entity_id in result
+        assert "@fn" in result[merged.entity_id]
+        assert "damage" in result[merged.entity_id]
+
+    def test_mixed_entities(self) -> None:
+        from build_helpers.entity_processor import build_entity_embed_texts
+
+        mock_doc = MagicMock()
+        mock_doc.to_doxygen.return_value = "/** @fn void fight() */"
+
+        with_doc = _make_merged("fight", body_fn="src/fight.cc", body_line=1, body_end_line=10)
+        with_doc.doc = mock_doc
+
+        without_doc = _make_merged("damage", body_fn="src/fight.cc", body_line=1, body_end_line=10)
+        without_doc.entity.kind = "function"
+        without_doc.doc = None
+
+        result = build_entity_embed_texts([with_doc, without_doc])
+
+        assert len(result) == 2
+        assert with_doc.entity_id in result
+        assert without_doc.entity_id in result
+
+    def test_empty_entity_skipped(self) -> None:
+        from build_helpers.entity_processor import build_entity_embed_texts
+
+        entity = DoxygenEntity(
+            id=EntityID(compound="empty_compound"),
+            kind="",
+            name="",
+        )
+        merged = MergedEntity(entity=entity, doc=None, sig_key=("empty_compound", "empty_compound"))
+        merged._deterministic_id = "fn:test_empty"
+
+        result = build_entity_embed_texts([merged])
+
+        assert merged.entity_id not in result

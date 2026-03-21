@@ -525,13 +525,18 @@ class ContextBundle(BaseModel):
 9.  Load graph edges (translate to deterministic IDs), compute fan_in/fan_out, bridge flags (requires capabilities)
 10. Compute is_entry_point
 11. Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(...brief/details..., 'B') || setweight(...definition_text..., 'C') || setweight(...source_text..., 'D')
-12. Load or generate embeddings:
-    - Doc-rich entities: embed text via Document.to_doxygen() from legacy_common.doc_db
-    - Doc-less entities: embed via build_minimal_embed_text() using kind + name + signature + file_path (Doxygen-formatted)
-    - Entities with no name, signature, or kind: skip (null embedding)
-    - If matching artifact exists (embed_cache_{model}_{dim}.pkl) → load it
-    - Else if embedding provider configured → generate via provider, save artifact
-    - Else → skip (null embeddings), log warning
+12. Load or generate embeddings (when provider is configured):
+    - Entity text construction (domain layer, build_helpers/entity_processor.py):
+      - Doc-rich entities: Document.to_doxygen() from legacy_common.doc_db
+      - Doc-less entities: build_minimal_embed_text() using kind + name + signature + file_path (Doxygen-formatted)
+      - Entities with no name, signature, or kind: skipped (no text, no embedding)
+    - Cache synchronization (cache layer, build_helpers/embeddings_loader.py):
+      - Load embed_cache_{model}_{dim}_entity.pkl if it exists (legacy embed_cache_{model}_{dim}.pkl logs a warning)
+      - Generate embeddings only for entity_ids absent from cache
+      - Prune entity_ids in cache but not in current build
+      - Save updated cache file if any changes occurred
+    - Attach embeddings to merged entities by entity_id; entity_ids not in cache remain null
+    - If no provider configured: skip (null embeddings), log warning
 13. Drop/recreate schema (tables + indexes via same engine, CREATE INDEX IF NOT EXISTS)
 14. INSERT INTO entities (batch, ~5000 rows)
 15. Parse code_graph.gml → NetworkX graph → extract edges (translate to deterministic IDs)
@@ -726,7 +731,7 @@ async def get_direct_callees(session: AsyncSession, entity_id: str, limit: int =
 - **In-memory**: NetworkX MultiDiGraph (~5300 nodes, ~25K edges) for BFS/traversal
 - **API Models**: Pydantic v2 (EntitySummary, EntityDetail, SearchResult, BehaviorSlice, etc.); ResolutionEnvelope removed
 - **Embedding**: Configurable provider (local FastEmbed ONNX or hosted OpenAI-compatible); vector dimension configurable (default 768)
-- **Build Script**: Offline ETL (artifact parsing → on-the-fly sig_map computation → deterministic ID generation → source extraction with fail-fast → capability assignment → metric computation → embedding load/generate with minimal-embed fallback for doc-less entities → params normalization → DB population via SQLModel session)
+- **Build Script**: Offline ETL (artifact parsing → on-the-fly sig_map computation → deterministic ID generation → source extraction with fail-fast → capability assignment → metric computation → incremental embedding cache sync per type (entity, usages) with minimal-embed fallback for doc-less entities → params normalization → DB population via SQLModel session)
 - **Server Runtime**: Async queries (SQLModel + SQLAlchemy async session) + in-memory graph algorithms (NetworkX) + async embedding (via `to_thread` for local)
 
 All validation rules enforced at database constraints + Pydantic model validation. No runtime LLM inference; all data pre-computed.
@@ -826,7 +831,7 @@ Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`
 | `embedding_api_key` | `str \| null` | `null` | `EMBEDDING_API_KEY` | — |
 | `embedding_model` | `str \| null` | `null` | `EMBEDDING_MODEL` | Required when provider = "hosted" |
 
-Derived: `embed_cache_filename` = `embed_cache_{model_slug}_{dim}.pkl` where model_slug has `/` → `-`.
+Cache file naming: `embed_cache_{model_slug}_{dim}_{type}.pkl` where model_slug has `/` → `-` and `{type}` is the embedding package identifier (e.g., "entity", "usages").
 
 ### EmbeddingProvider Protocol
 
@@ -850,8 +855,13 @@ class EmbeddingProvider(Protocol):
 
 ### Embedding Artifact Lifecycle
 
-1. Build checks if artifact exists at `{artifacts_dir}/{embed_cache_filename}`
-2. If exists → load pickle and attach to entities
-3. If missing and provider configured → generate via `provider.embed_documents_sync()`, save as pickle, attach
-4. If missing and no provider → skip embeddings (null columns), log warning
-5. Invalidation is manual — developer deletes the file
+Cache files are named `embed_cache_{model_slug}_{dim}_{type}.pkl` (e.g., `embed_cache_bge-base-en-v1-5_768_entity.pkl`). Each embedding type has an independent file.
+
+Per-type synchronization (when provider is configured):
+1. Load existing cache file for that type if it exists
+2. Compute missing keys (in current build but not in cache) and stale keys (in cache but not in current build)
+3. Generate embeddings only for missing keys via `provider.embed_documents_sync()`
+4. Prune stale keys from cache dict
+5. Save updated cache file if any changes occurred; skip save if cache was already current
+6. If no provider configured: skip all embeddings for that type (null columns), log warning
+7. Invalidation is manual — developer deletes the type-specific file to force full regeneration

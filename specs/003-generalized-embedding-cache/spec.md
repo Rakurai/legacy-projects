@@ -80,6 +80,8 @@ The build system maintainer needs to add new embedding types in the future (e.g.
 - **FR-007**: Cache files MUST be stored in the artifacts directory alongside other build artifacts (`artifacts/` by default)
 - **FR-008**: Cache file existence MUST be checked before attempting to load. If the file exists, attempt to load via pickle deserialization. If deserialization raises an exception (corruption, invalid format), return None or indicate cache miss. No additional validation (size checks, checksums) is performed.
 - **FR-009**: The build script MUST log cache hit/miss status for each embedding type during the load phase (INFO level: "Loaded {N} embeddings from cache for type '{type}'" or "No cache found for type '{type}', will generate embeddings")
+- **FR-012**: When a cache file is loaded, the build script MUST synchronize it with the current data set: (1) identify keys present in the current build but missing from cache (new items); (2) generate embeddings for missing keys only; (3) identify keys present in cache but not in current build (stale items); (4) prune stale keys from cache; (5) save the updated cache file. Log the synchronization actions taken (added count, pruned count).
+- **FR-013**: The embedding cache synchronization mechanism MUST be schema-agnostic, accepting key lists and text generation as parameters rather than being coupled to specific data types (entities, usages, etc). All embedding functions in the persistence layer MUST operate on generic key-text-embedding mappings without knowledge of the data source.
 
 #### Migration
 

@@ -222,8 +222,10 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-062**: System MUST support a configurable embedding provider with at least two modes: "local" (bundled, no external service) and "hosted" (OpenAI-compatible endpoint), selectable via `EMBEDDING_PROVIDER` environment variable
 - **FR-063**: System MUST support a "no provider" mode where embedding is entirely disabled and all search degrades to keyword-only. This MUST be the default when no provider is configured.
 - **FR-064**: When configured for local mode, the system MUST default to the bundled ONNX-based embedding model BAAI/bge-base-en-v1.5 (768-dim). The model name MUST be configurable via `EMBEDDING_LOCAL_MODEL`.
-- **FR-065**: The database build process MUST load embedding vectors from a cached artifact file if one matching the current model configuration exists. Artifact files are named `embed_cache_{model_slug}_{dim}.pkl` (pickle format).
-- **FR-066**: The database build process MUST generate embeddings on demand when no matching artifact file exists and an embedding provider is configured, then save the result as an artifact for future builds.
+- **FR-065**: The embedding cache MUST use type-specific artifact files named `embed_cache_{model_slug}_{dim}_{type}.pkl` (pickle format), where `{type}` is a string identifier for the embedding package (e.g., "entity", "usages"). Each type has its own independent file so invalidating one type does not affect others. The type identifier must be alphanumeric with underscores and hyphens only.
+- **FR-066**: The database build process MUST synchronize each embedding cache incrementally: load the existing cache file for that type if it exists; generate embeddings only for keys missing from the cache; prune keys present in the cache but absent from the current data set; save the updated cache file. Generation is skipped entirely when no keys are missing.
+- **FR-066a**: The embedding cache synchronization mechanism MUST be schema-agnostic, operating on generic key-text-embedding mappings without knowledge of the specific data type (entities, usages, etc.). Entity-specific text construction (via `Document.to_doxygen()` and minimal Doxygen text for doc-less entities) belongs in the domain layer (`build_helpers/entity_processor.py`), not in the cache layer (`build_helpers/embeddings_loader.py`).
+- **FR-066b**: When loading entity embeddings, if a legacy cache file without type suffix (`embed_cache_{model_slug}_{dim}.pkl`) exists but no `_entity` suffix file exists, the build MUST log a warning indicating the legacy file must be renamed or deleted. The build MUST NOT automatically migrate or fall back to legacy naming.
 - **FR-067**: The database schema MUST use a vector column dimension that matches the configured embedding provider's output dimension (via `EMBEDDING_DIMENSION` env var, default 768), not a hardcoded value.
 - **FR-068**: The text used for embedding each entity with documentation MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields via `Document.to_doxygen()` (name, kind, brief, details, params, returns, notes, rationale).
 - **FR-069**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency.
@@ -295,6 +297,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-030**: Build with invalid `PROJECT_ROOT` exits with `BuildError` within the source extraction stage
 - **SC-031**: Build with valid `PROJECT_ROOT` logs a structured extraction summary (body_located, extracted, failed, skipped, success_rate)
 - **SC-032**: Build logs an embedding generation summary (doc_embeds, minimal_embeds, no_embed, coverage%)
+- **SC-033**: After each build, embedding cache log shows per-type sync status (added, pruned, or "up to date") for entity and usages types
 
 ### Assumptions
 

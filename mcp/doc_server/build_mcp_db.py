@@ -22,17 +22,12 @@ from typing import cast
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
-from build_helpers.embeddings_loader import (
-    attach_embeddings,
-    generate_embeddings,
-    load_embedding_cache,
-    load_embeddings,
-    save_embedding_cache,
-)
+from build_helpers.embeddings_loader import sync_embeddings_cache
 from build_helpers.entity_processor import (
     MergedEntity,
     assign_capabilities,
     assign_deterministic_ids,
+    build_entity_embed_texts,
     compute_enriched_fields,
     compute_is_entry_point,
     extract_source_code,
@@ -227,43 +222,20 @@ async def populate_entity_usages(
 
     log.info("Usage rows collected", count=len(rows))
 
-    # Load usage embeddings from cache or generate if needed
     if provider is not None and rows:
-        cached_embeddings = load_embedding_cache(
+        texts_by_key = {key: rows[idx].description for idx, key in enumerate(usage_keys)}
+        usage_embeddings_raw = sync_embeddings_cache(
             artifacts_path=artifacts_dir,
             model_slug=config.embedding_model_slug,
             dimension=config.embedding_dimension,
             embedding_type="usages",
+            current_keys=cast(list[str | tuple[str, ...]], usage_keys),
+            texts_by_key=cast(dict[str | tuple[str, ...], str], texts_by_key),
+            provider=provider,
         )
-
-        if cached_embeddings is not None:
-            # Apply cached embeddings to rows
-            for idx, usage_key in enumerate(usage_keys):
-                if usage_key in cached_embeddings:
-                    rows[idx].embedding = cached_embeddings[usage_key]
-            log.info("Usage embeddings loaded from cache")
-        else:
-            # Generate embeddings and save to cache
-            log.info("Generating usage embeddings", count=len(rows))
-            descriptions = [row.description for row in rows]
-            vectors = list(provider.embed_documents_sync(descriptions))
-
-            # Build embeddings dict keyed by composite tuple
-            usage_embeddings: dict[tuple[str, str, str], list[float]] = {}
-            for idx, (usage_key, vector) in enumerate(zip(usage_keys, vectors, strict=True)):
-                rows[idx].embedding = vector
-                usage_embeddings[usage_key] = vector
-
-            log.info("Usage embeddings generated")
-
-            # Save to cache with type="usages"
-            save_embedding_cache(
-                embeddings=cast(dict[str | tuple[str, ...], list[float]], usage_embeddings),
-                artifacts_path=artifacts_dir,
-                model_slug=config.embedding_model_slug,
-                dimension=config.embedding_dimension,
-                embedding_type="usages",
-            )
+        usage_embeddings = cast(dict[tuple[str, str, str], list[float]], usage_embeddings_raw)
+        for idx, usage_key in enumerate(usage_keys):
+            rows[idx].embedding = usage_embeddings[usage_key]
     elif provider is None:
         log.warning("No embedding provider — entity_usages will have null embeddings")
 
@@ -426,7 +398,7 @@ async def main() -> None:
     graph_node_ids = load_graph_node_ids(config.artifacts_path)
     merged_entities = merge_entities(entity_db, doc_db, graph_node_ids)
 
-    id_map = assign_deterministic_ids(merged_entities)
+    assign_deterministic_ids(merged_entities)
 
     extract_source_code(merged_entities, config.project_root)
 
@@ -443,16 +415,26 @@ async def main() -> None:
     compute_enriched_fields(merged_entities)
 
     provider = create_provider(config)
-    embeddings = load_embeddings(config.artifacts_path, config, id_map)
 
-    if embeddings is None and provider is not None:
-        log.info("No cached artifact found; generating embeddings via provider")
-        embeddings = generate_embeddings(config.artifacts_path, provider, config, merged_entities)
-    elif embeddings is None and provider is None:
-        log.warning("No embedding provider configured and no artifact found; entities will have null embeddings")
-        embeddings = {}
-
-    attach_embeddings(merged_entities, embeddings)
+    if provider is not None:
+        entity_keys = [m.entity_id for m in merged_entities]
+        texts_by_key = build_entity_embed_texts(merged_entities)
+        embeddings_raw = sync_embeddings_cache(
+            artifacts_path=config.artifacts_path,
+            model_slug=config.embedding_model_slug,
+            dimension=config.embedding_dimension,
+            embedding_type="entity",
+            current_keys=cast(list[str | tuple[str, ...]], entity_keys),
+            texts_by_key=cast(dict[str | tuple[str, ...], str], texts_by_key),
+            provider=provider,
+        )
+        embeddings = cast(dict[str, list[float]], embeddings_raw)
+        for merged in merged_entities:
+            merged.embedding = embeddings.get(merged.entity_id)
+    else:
+        log.warning("No embedding provider configured; entities will have null embeddings")
+        for merged in merged_entities:
+            merged.embedding = None
 
     db_manager = DatabaseManager(config)
 

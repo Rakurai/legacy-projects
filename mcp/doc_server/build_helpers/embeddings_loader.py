@@ -1,11 +1,8 @@
 """
-Embeddings Loader - Load, generate, and attach embedding vectors.
+Embeddings Loader - Schema-agnostic embedding cache operations.
 
-Supports config-aware artifact naming (embed_cache_{model}_{dim}.pkl).
-Can generate embeddings on demand via an EmbeddingProvider when no artifact exists.
-
-Generation iterates merged entities directly, using Document.to_doxygen() for text.
-Doc-less entities get minimal Doxygen-formatted text from kind + name + signature + file_path.
+Supports type-specific cache files: embed_cache_{model}_{dim}_{type}.pkl
+Provides incremental cache synchronization: load, add missing keys, prune stale keys, save.
 """
 
 import pickle
@@ -13,26 +10,8 @@ import re
 import tempfile
 from pathlib import Path
 
-from build_helpers.entity_processor import MergedEntity
-from server.config import ServerConfig
 from server.embedding import EmbeddingProvider
 from server.logging_config import log
-
-# Doxygen tag mapping — extends Document.to_doxygen() tag_map with structural compound tags
-_KIND_TAG_MAP: dict[str, str] = {
-    "function": "@fn",
-    "variable": "@var",
-    "class": "@class",
-    "struct": "@struct",
-    "file": "@file",
-    "dir": "@dir",
-    "namespace": "@namespace",
-    "define": "@def",
-    "group": "@defgroup",
-    "enum": "@enum",
-    "typedef": "@typedef",
-    "union": "@union",
-}
 
 
 def _validate_type_identifier(embedding_type: str) -> None:
@@ -142,169 +121,72 @@ def load_embedding_cache(
         return None
 
 
-def build_minimal_embed_text(merged: MergedEntity) -> str | None:
-    """Build a minimal Doxygen-formatted embedding text for a doc-less entity.
+def sync_embeddings_cache(
+    artifacts_path: Path,
+    model_slug: str,
+    dimension: int,
+    embedding_type: str,
+    current_keys: list[str | tuple[str, ...]],
+    texts_by_key: dict[str | tuple[str, ...], str],
+    provider: EmbeddingProvider,
+) -> dict[str | tuple[str, ...], list[float]]:
+    """Synchronize embeddings cache with current data set.
 
-    Returns None when name, signature, and kind are all empty — nothing
-    meaningful to embed.
-    """
-    kind = merged.entity.kind or ""
-    name = merged.entity.name or ""
-    sig = merged.signature or ""
-    file_path = merged.entity.body.fn if merged.entity.body else merged.entity.decl.fn if merged.entity.decl else None
+    Loads cached embeddings, generates embeddings for missing keys only,
+    prunes stale keys, and saves the updated cache. Fully schema-agnostic.
 
-    if not kind and not name and not sig:
-        return None
-
-    tag = _KIND_TAG_MAP.get(kind, "@fn")
-    display = sig if sig else name
-
-    lines = ["/**"]
-    lines.append(f" * {tag} {display}")
-
-    if file_path:
-        lines.append(" *")
-        lines.append(f" * @file {file_path}")
-
-    lines.append(" */")
-    return "\n".join(lines)
-
-
-def get_embed_cache_path(artifacts_dir: Path, config: ServerConfig) -> Path:
-    """Return the full path to the embedding artifact for the current config."""
-    return artifacts_dir / config.embed_cache_filename
-
-
-def load_embeddings(
-    artifacts_dir: Path,
-    config: ServerConfig,
-    id_map: dict[str, str],
-) -> dict[str, list[float]] | None:
-    """Load entity embeddings from cache file, re-keying old IDs to deterministic IDs.
-
-    This is a compatibility wrapper around load_embedding_cache() that handles
-    id_map translation for entity embeddings.
+    Args:
+        artifacts_path: Path to artifacts directory
+        model_slug: Embedding model identifier
+        dimension: Vector dimension
+        embedding_type: Type identifier for cache file
+        current_keys: List of all keys that should have embeddings
+        texts_by_key: Mapping of keys to text strings to embed
+        provider: Embedding provider for generating vectors
 
     Returns:
-        Dict mapping new deterministic entity_id → embedding vector, or None
-        if the file doesn't exist.
+        Complete embeddings dict with all current_keys populated
 
     Raises:
-        RuntimeError: If the artifact exists but is corrupt (from legacy code path).
+        ValueError: If embedding_type contains invalid characters
     """
-    # Use new generalized cache loader with type="entity"
-    raw_embeddings = load_embedding_cache(
-        artifacts_path=artifacts_dir,
-        model_slug=config.embedding_model_slug,
-        dimension=config.embedding_dimension,
-        embedding_type="entity",
-    )
+    cached_embeddings = load_embedding_cache(artifacts_path, model_slug, dimension, embedding_type)
 
-    if raw_embeddings is None:
-        return None
+    if cached_embeddings is not None:
+        embeddings = cached_embeddings
+        cached_count = len(embeddings)
+    else:
+        embeddings = {}
+        cached_count = 0
 
-    # Re-key old entity_id keys to deterministic IDs via id_map
-    new_id_set = set(id_map.values())
-    embeddings: dict[str, list[float]] = {}
-    for key, embedding in raw_embeddings.items():
-        key_str = str(key)
-        # Try translating as old ID
-        new_id = id_map.get(key_str)
-        if new_id:
-            embeddings[new_id] = embedding
-        elif key_str in new_id_set:
-            # Already a new-format key (from a previous build with new code)
-            embeddings[key_str] = embedding
+    current_keys_set = set(current_keys)
+    cached_keys_set = set(embeddings.keys())
+    missing_keys = current_keys_set - cached_keys_set
+    stale_keys = cached_keys_set - current_keys_set
 
-    log.info("Embeddings re-keyed", embedding_count=len(embeddings))
-    return embeddings
+    if missing_keys:
+        log.info("Generating embeddings for missing keys", type=embedding_type, count=len(missing_keys))
+        missing_texts = [texts_by_key[key] for key in missing_keys]
+        new_vectors = list(provider.embed_documents_sync(missing_texts))
 
+        for key, vector in zip(missing_keys, new_vectors, strict=True):
+            embeddings[key] = vector
 
-def generate_embeddings(
-    artifacts_dir: Path,
-    provider: EmbeddingProvider,
-    config: ServerConfig,
-    merged_entities: list[MergedEntity],
-) -> dict[str, list[float]]:
-    """Generate entity embeddings — doc-rich via to_doxygen(), doc-less via minimal text.
+    if stale_keys:
+        for stale_key in stale_keys:
+            del embeddings[stale_key]
 
-    Entity IDs are already computed (deterministic) on the merged entities.
-    Saves to cache with type="entity".
-    """
-    log.info("Generating embeddings from merged entities")
-
-    # Doc-rich entities: full Doxygen text
-    docs_to_embed = [(m.entity_id, m.doc.to_doxygen()) for m in merged_entities if m.doc is not None]
-
-    # Doc-less entities: minimal Doxygen text
-    minimal_to_embed: list[tuple[str, str]] = []
-    for m in merged_entities:
-        if m.doc is None:
-            text = build_minimal_embed_text(m)
-            if text is not None:
-                minimal_to_embed.append((m.entity_id, text))
-
-    all_to_embed = docs_to_embed + minimal_to_embed
-    entity_ids = [eid for eid, _ in all_to_embed]
-    texts = [text for _, text in all_to_embed]
-
-    no_embed = len(merged_entities) - len(all_to_embed)
-    coverage = round(100.0 * len(all_to_embed) / len(merged_entities), 1) if merged_entities else 0.0
-    log.info(
-        "Embedding generation summary",
-        doc_embeds=len(docs_to_embed),
-        minimal_embeds=len(minimal_to_embed),
-        no_embed=no_embed,
-        coverage=f"{coverage}%",
-    )
-
-    if not texts:
-        log.warning("No docs found in entity set; no embeddings generated")
-        return {}
-
-    vectors = provider.embed_documents_sync(texts)
-
-    embeddings: dict[str, list[float]] = {}
-    for eid, vec in zip(entity_ids, vectors, strict=True):
-        embeddings[eid] = vec
-
-    log.info("Embeddings generated", count=len(embeddings))
-
-    # Save to cache using generalized cache function with type="entity"
-    from typing import cast
-
-    save_embedding_cache(
-        embeddings=cast(dict[str | tuple[str, ...], list[float]], embeddings),
-        artifacts_path=artifacts_dir,
-        model_slug=config.embedding_model_slug,
-        dimension=config.embedding_dimension,
-        embedding_type="entity",
-    )
+    if missing_keys or stale_keys:
+        log.info(
+            "Cache synchronized",
+            type=embedding_type,
+            cached=cached_count,
+            current=len(current_keys_set),
+            added=len(missing_keys),
+            pruned=len(stale_keys),
+        )
+        save_embedding_cache(embeddings, artifacts_path, model_slug, dimension, embedding_type)
+    elif cached_count > 0:
+        log.info("Cache up to date", type=embedding_type, count=cached_count)
 
     return embeddings
-
-
-def attach_embeddings(
-    merged_entities: list[MergedEntity],
-    embeddings: dict[str, list[float]],
-) -> None:
-    """Attach embeddings to merged entities.
-
-    Matches by entity_id. Updates merged_entity in place (adds embedding attribute).
-    """
-    log.info("Attaching embeddings to entities")
-
-    matched_count = 0
-    for merged in merged_entities:
-        entity_id = merged.entity_id
-        if entity_id in embeddings:
-            merged.embedding = embeddings[entity_id]
-            matched_count += 1
-        else:
-            merged.embedding = None
-
-    log.info(
-        "Embeddings attached",
-        matched=matched_count,
-        unmatched=len(merged_entities) - matched_count,
-    )

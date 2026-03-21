@@ -10,15 +10,14 @@ from server.tools.search import search
 
 
 @pytest.mark.asyncio
-async def test_search_tool_keyword_mode(mock_ctx, sample_entities):
-    """Search tool returns results via mock context (keyword fallback)."""
+async def test_search_tool_returns_results(mock_ctx, sample_entities):
+    """Search tool returns results via mock context."""
     response = await search(
         ctx=mock_ctx,
         query="damage",
         top_k=20,
     )
 
-    assert response.search_mode == "keyword_fallback"
     assert response.query == "damage"
     assert response.result_count == len(response.results)
     assert response.result_count >= 1
@@ -151,14 +150,17 @@ async def test_exact_match_score_dominates(mock_ctx, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_returned_results_score_gte_threshold(mock_ctx, sample_entities):
-    """All returned results have score >= _SCORE_THRESHOLD (FR-008)."""
+async def test_returned_results_have_valid_metadata(mock_ctx, sample_entities):
+    """All returned results carry winning_view and score metadata."""
     response = await search(
         ctx=mock_ctx,
         query="damage",
         top_k=20,
     )
 
-    threshold = 0.2
+    assert response.result_count > 0
     for result in response.results:
-        assert result.score >= threshold, f"Result with score {result.score} below threshold {threshold}"
+        assert result.winning_view in ("doc", "symbol")
+        assert result.winning_score >= 0.0
+        assert result.losing_score >= 0.0
+        assert result.score >= 0.0

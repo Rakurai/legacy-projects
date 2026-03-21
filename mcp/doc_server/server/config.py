@@ -17,7 +17,6 @@ class ServerConfig(BaseSettings):
     Server configuration loaded from .env file.
 
     All required fields MUST be present or server will fail to start (fail-fast).
-    Optional fields degrade gracefully (e.g., embedding endpoint unavailable).
     """
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", case_sensitive=False)
@@ -36,10 +35,9 @@ class ServerConfig(BaseSettings):
     # Logging
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = Field(default="INFO")
 
-    # Embedding provider selection
-    embedding_provider: Literal["local", "hosted"] | None = Field(
-        default=None,
-        description="Embedding provider: 'local' (bundled ONNX), 'hosted' (OpenAI-compatible), or None (keyword-only)",
+    # Embedding provider selection (required — server fails fast without it)
+    embedding_provider: Literal["local", "hosted"] = Field(
+        description="Embedding provider: 'local' (bundled ONNX) or 'hosted' (OpenAI-compatible)",
     )
 
     # Local provider config
@@ -62,6 +60,12 @@ class ServerConfig(BaseSettings):
     embedding_api_key: str | None = Field(default=None, description="API key (or 'lm-studio' for local)")
     embedding_model: str | None = Field(default=None, description="Hosted model name")
 
+    # Cross-encoder reranker
+    cross_encoder_model: str = Field(
+        default="Xenova/ms-marco-MiniLM-L-6-v2",
+        description="fastembed cross-encoder model name for reranking",
+    )
+
     @property
     def db_url(self) -> str:
         """PostgreSQL async connection URL (asyncpg driver)."""
@@ -73,11 +77,6 @@ class ServerConfig(BaseSettings):
         return self.project_root / self.artifacts_dir
 
     @property
-    def embedding_enabled(self) -> bool:
-        """Whether an embedding provider is configured."""
-        return self.embedding_provider is not None
-
-    @property
     def embedding_model_slug(self) -> str:
         """Normalized model slug for cache file naming.
 
@@ -86,10 +85,8 @@ class ServerConfig(BaseSettings):
         """
         if self.embedding_provider == "local":
             return self.embedding_local_model.replace("/", "-")
-        elif self.embedding_provider == "hosted" and self.embedding_model:
-            return self.embedding_model.replace("/", "-")
-        else:
-            return "unknown"
+        # hosted — embedding_model is validated as required in create_provider
+        return self.embedding_model.replace("/", "-") if self.embedding_model else "unknown"
 
     @property
     def embed_cache_filename(self) -> str:

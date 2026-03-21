@@ -178,19 +178,12 @@ class HostedEmbeddingProvider:
 # ---------------------------------------------------------------------------
 
 
-def create_provider(config: ServerConfig) -> EmbeddingProvider | None:
+def create_provider(config: ServerConfig) -> EmbeddingProvider:
     """Create an embedding provider based on configuration.
-
-    Returns:
-        LocalEmbeddingProvider, HostedEmbeddingProvider, or None.
 
     Raises:
         ValueError: If provider dimension doesn't match config.embedding_dimension.
     """
-    if config.embedding_provider is None:
-        log.info("No embedding provider configured; semantic search disabled")
-        return None
-
     provider: EmbeddingProvider
     if config.embedding_provider == "local":
         provider = LocalEmbeddingProvider(model_name=config.embedding_local_model)

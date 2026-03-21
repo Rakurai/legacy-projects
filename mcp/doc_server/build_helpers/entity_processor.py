@@ -9,11 +9,13 @@ ready for database insertion. Computes:
 - search vectors (weighted tsvector composition)
 """
 
+import re
 from collections import defaultdict
 from collections.abc import ItemsView
 from pathlib import Path
 
 from legacy_common.doc_db import Document, DocumentDB
+from legacy_common.doxygen_graph import load_graph
 from legacy_common.doxygen_parse import DoxygenEntity, EntityDatabase
 from legacy_common.entity_ids import compute_entity_id
 from server.logging_config import log
@@ -157,7 +159,10 @@ class MergedEntity:
         self.fan_out: int = 0
         self.is_bridge: bool = False
         self.is_entry_point: bool = False
-        self.embedding: list[float] | None = None
+        self.doc_embedding: list[float] | None = None
+        self.symbol_embedding: list[float] | None = None
+        self.qualified_name: str | None = None
+        self.symbol_searchable: str | None = None
         self._capability: str | None = None
 
         # KG enrichment fields (FR-001 through FR-004)
@@ -588,26 +593,145 @@ def build_minimal_embed_text(merged: MergedEntity) -> str | None:
     return "\n".join(lines)
 
 
-def build_entity_embed_texts(merged_entities: list[MergedEntity]) -> dict[str, str]:
-    """Build embeddable text strings for all entities.
+def derive_qualified_names(merged_entities: list[MergedEntity], artifacts_path: Path) -> None:
+    """Derive qualified_name for each entity by walking contained_by edges in the GML graph.
 
-    For doc-rich entities, uses Document.to_doxygen().
-    For doc-less entities, builds minimal Doxygen-formatted text.
-
-    Args:
-        merged_entities: List of merged entities to generate texts for
-
-    Returns:
-        Dict mapping entity_id to embeddable text string
+    Strategy:
+    1. Walk contained_by edges from child → parent to build scope chain
+    2. Fall back to parsing definition_text for :: separators
+    3. Fall back to bare name
     """
-    texts_by_key: dict[str, str] = {}
+    log.info("Deriving qualified names from containment graph")
+
+    gml_path = artifacts_path / "code_graph.gml"
+    g = load_graph(gml_path)
+
+    # Build node_id → entity mapping and contained_by adjacency
+    # GML nodes use bare member hash or compound ID
+    entity_by_node: dict[str, MergedEntity] = {}
+    for merged in merged_entities:
+        member = merged.entity.id.member
+        if member:
+            entity_by_node[member] = merged
+        else:
+            entity_by_node[merged.entity.id.compound] = merged
+
+    # Build child → parent map from contained_by edges
+    child_to_parent: dict[str, str] = {}
+    for source, target, data in g.edges(data=True):
+        if data.get("type", "").lower() == "contained_by":
+            child_to_parent[source] = target
+
+    # Node → name map for scope chain assembly
+    node_name: dict[str, str] = {}
+    for merged in merged_entities:
+        member = merged.entity.id.member
+        node_id = member if member else merged.entity.id.compound
+        node_name[node_id] = merged.entity.name
+
+    derived_count = 0
+    fallback_count = 0
 
     for merged in merged_entities:
-        if merged.doc is not None:
-            texts_by_key[merged.entity_id] = merged.doc.to_doxygen()
-        else:
-            minimal_text = build_minimal_embed_text(merged)
-            if minimal_text is not None:
-                texts_by_key[merged.entity_id] = minimal_text
+        member = merged.entity.id.member
+        node_id = member if member else merged.entity.id.compound
 
-    return texts_by_key
+        # Walk contained_by chain to build scope
+        max_scope_depth = 10
+        scope_parts: list[str] = []
+        current = child_to_parent.get(node_id)
+        while current and len(scope_parts) < max_scope_depth:
+            parent_name = node_name.get(current, "")
+            if parent_name and parent_name not in ("", "/"):
+                scope_parts.append(parent_name)
+            current = child_to_parent.get(current)
+
+        if scope_parts:
+            scope_parts.reverse()
+            merged.qualified_name = "::".join(scope_parts) + "::" + merged.entity.name
+            derived_count += 1
+        elif merged.definition_text and "::" in merged.definition_text:
+            # Fallback: parse definition_text for :: separator
+            match = re.search(r"([\w:]+)::" + re.escape(merged.entity.name), merged.definition_text)
+            if match:
+                merged.qualified_name = match.group(0)
+                fallback_count += 1
+            else:
+                merged.qualified_name = merged.entity.name
+        else:
+            merged.qualified_name = merged.entity.name
+
+    log.info(
+        "Qualified names derived",
+        graph_derived=derived_count,
+        definition_fallback=fallback_count,
+        bare_name=len(merged_entities) - derived_count - fallback_count,
+    )
+
+
+def build_symbol_searchable(merged_entities: list[MergedEntity]) -> None:
+    """Build lowercased, punctuation-stripped symbol_searchable text for pg_trgm."""
+    log.info("Building symbol_searchable column values")
+
+    for merged in merged_entities:
+        parts = [merged.entity.name]
+        if merged.qualified_name:
+            parts.append(merged.qualified_name)
+        parts.append(merged.signature)
+        raw = " ".join(p for p in parts if p)
+        # Lowercase and strip non-alphanumeric (keep spaces for trigram matching)
+        merged.symbol_searchable = re.sub(r"[^a-z0-9_ ]", "", raw.lower())
+
+    log.info("symbol_searchable built", count=len(merged_entities))
+
+
+def build_doc_embed_texts(merged_entities: list[MergedEntity]) -> dict[str, str]:
+    """Build labeled prose field text for doc embedding.
+
+    Assembles BRIEF/DETAILS/PARAMS/RETURNS/NOTES/RATIONALE labels.
+    Falls back to bare name for entities with no prose fields.
+    """
+    texts: dict[str, str] = {}
+    for merged in merged_entities:
+        parts: list[str] = []
+        if merged.doc:
+            if merged.doc.brief:
+                parts.append(f"BRIEF: {merged.doc.brief}")
+            if merged.doc.details:
+                parts.append(f"DETAILS: {merged.doc.details}")
+            if merged.doc.params:
+                params_text = " ".join(f"{k}: {v}" for k, v in merged.doc.params.items())
+                parts.append(f"PARAMS: {params_text}")
+            if merged.doc.returns:
+                parts.append(f"RETURNS: {merged.doc.returns}")
+            if merged.doc.notes:
+                parts.append(f"NOTES: {merged.doc.notes}")
+            if merged.doc.rationale:
+                parts.append(f"RATIONALE: {merged.doc.rationale}")
+        texts[merged.entity_id] = "\n".join(parts) if parts else merged.entity.name
+    return texts
+
+
+def build_symbol_embed_texts(merged_entities: list[MergedEntity]) -> dict[str, str]:
+    """Build qualified signature text for symbol embedding.
+
+    Functions: qualified signature in natural C++ form.
+    Non-functions: qualified name only.
+    """
+    texts: dict[str, str] = {}
+    for merged in merged_entities:
+        if merged.entity.kind == "function":
+            # Use qualified_name in signature if available
+            if merged.qualified_name and "::" in merged.qualified_name:
+                # Replace bare name in signature with qualified name
+                sig = merged.signature
+                name = merged.entity.name
+                if name and name in sig:
+                    texts[merged.entity_id] = sig.replace(name, merged.qualified_name, 1)
+                else:
+                    texts[merged.entity_id] = sig
+            else:
+                texts[merged.entity_id] = merged.signature
+        else:
+            texts[merged.entity_id] = merged.qualified_name or merged.entity.name
+    return texts

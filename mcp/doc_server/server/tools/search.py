@@ -10,7 +10,7 @@ from fastmcp import Context
 from pydantic import BaseModel, Field
 
 from server.app import get_ctx, mcp
-from server.enums import SearchMode, SearchSource
+from server.enums import SearchSource
 from server.logging_config import log
 from server.models import SearchResult
 from server.search import hybrid_search, hybrid_search_usages
@@ -21,7 +21,6 @@ from server.search import hybrid_search, hybrid_search_usages
 class SearchResponse(BaseModel):
     """Response from search tool."""
 
-    search_mode: SearchMode
     results: list[SearchResult]
     query: str
     result_count: int
@@ -40,11 +39,10 @@ async def search(
     top_k: Annotated[int, Field(ge=1, le=100, description="Number of results")] = 10,
 ) -> SearchResponse:
     """
-    Perform hybrid semantic + keyword search.
+    Perform multi-view search over documented code entities.
 
-    Combines exact match (10x boost), semantic similarity (0.6 weight),
-    and keyword relevance (0.4 weight). Degrades to keyword-only if
-    embedding service unavailable.
+    Uses dual retrieval views (symbol + doc), cross-encoder reranking,
+    and per-signal floor filtering.
     """
     lc = get_ctx(ctx)
 
@@ -55,7 +53,7 @@ async def search(
 
     async with lc["db_manager"].session() as session:
         if source == SearchSource.USAGES:
-            results, search_mode = await hybrid_search_usages(
+            results = await hybrid_search_usages(
                 session=session,
                 query=query,
                 embedding_provider=lc["embedding_provider"],
@@ -64,17 +62,18 @@ async def search(
                 limit=top_k,
             )
         else:
-            results, search_mode = await hybrid_search(
+            results = await hybrid_search(
                 session=session,
                 query=query,
                 embedding_provider=lc["embedding_provider"],
                 kind=kind,
                 capability=capability,
                 limit=top_k,
+                doc_view=lc.get("doc_view"),
+                symbol_view=lc.get("symbol_view"),
             )
 
     return SearchResponse(
-        search_mode=search_mode,
         results=results,
         query=query,
         result_count=len(results),

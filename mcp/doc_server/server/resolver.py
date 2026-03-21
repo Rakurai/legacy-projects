@@ -90,7 +90,7 @@ async def resolve_entity(
         log.info("Resolved by keyword search", query=query, candidates=len(result.candidates))
         return result
 
-    # Stage 6: Semantic search (if embedding provider available)
+    # Stage 6: Semantic search
     if embedding_provider:
         result = await _resolve_by_semantic(session, query, kind, embedding_provider, limit)
         if result:
@@ -101,7 +101,7 @@ async def resolve_entity(
     log.info("Entity not found", query=query)
     return ResolutionResult(
         status=ResolutionStatus.NOT_FOUND,
-        match_type=MatchType.SEMANTIC,  # Last attempted stage
+        match_type=MatchType.SEMANTIC,
         candidates=[],
         resolved_from=query,
     )
@@ -221,9 +221,9 @@ async def _resolve_by_keyword(
 ) -> ResolutionResult | None:
     """Stage 5: Keyword search (PostgreSQL full-text via tsvector)."""
     tsq = func.plainto_tsquery("english", query)
-    rank_expr = func.ts_rank(Entity.search_vector, tsq).label("score")
+    rank_expr = func.ts_rank(Entity.doc_search_vector, tsq).label("score")
 
-    stmt = select(Entity).where(Entity.search_vector.op("@@")(tsq))
+    stmt = select(Entity).where(Entity.doc_search_vector.op("@@")(tsq))
     if kind:
         stmt = stmt.where(Entity.kind == kind)
     stmt = stmt.order_by(rank_expr.desc()).limit(limit)
@@ -252,10 +252,10 @@ async def _resolve_by_semantic(
     """Stage 6: Semantic search (pgvector cosine similarity)."""
     query_embedding = await embedding_provider.aembed(query)
 
-    cosine_dist = Entity.embedding.cosine_distance(query_embedding)
+    cosine_dist = Entity.doc_embedding.cosine_distance(query_embedding)
     score_expr = (literal(1) - cosine_dist).label("score")
 
-    stmt = select(Entity).where(Entity.embedding.isnot(None))
+    stmt = select(Entity).where(Entity.doc_embedding.isnot(None))
     if kind:
         stmt = stmt.where(Entity.kind == kind)
     stmt = stmt.order_by(score_expr.desc()).limit(limit)

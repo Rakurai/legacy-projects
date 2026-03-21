@@ -1,82 +1,69 @@
 """
-Unit tests for search score merging and utility error paths.
+Unit tests for search pipeline internals and utility error paths.
 
 Tests pure-Python functions that don't need a database.
 """
+
+import math
 
 import pytest
 from pydantic import ValidationError
 
 from server.models import EntitySummary
-from server.search import _merge_scores
+from server.search import Candidate, _shape_tsrank
 
-# ---------- _merge_scores ----------
+# ---------- _shape_tsrank ----------
 
 
-class TestMergeScores:
-    """Tests for the score merging logic."""
+class TestShapeTsrank:
+    """Tests for corpus-calibrated ts_rank shaping."""
 
-    def test_exact_only(self):
-        """Exact match only gets the exact weight."""
-        result = _merge_scores({"a"}, {}, {}, limit=10)
-        assert len(result) == 1
-        assert result[0] == ("a", 10.0)
+    def test_zero_raw_returns_zero(self):
+        assert _shape_tsrank(0.0, ceiling=1.0) == 0.0
 
-    def test_keyword_only(self):
-        """Keyword match normalized to 1.0 within result set, then gets keyword weight."""
-        result = _merge_scores(set(), {"a": 0.5}, {}, limit=10)
-        assert len(result) == 1
-        assert result[0][0] == "a"
-        # Single entity normalizes to 1.0: 1.0 * _KEYWORD_WEIGHT = 0.4
-        assert abs(result[0][1] - 1.0 * 0.4) < 1e-9
+    def test_zero_ceiling_returns_zero(self):
+        assert _shape_tsrank(0.5, ceiling=0.0) == 0.0
 
-    def test_semantic_only(self):
-        """Semantic match only gets semantic weight."""
-        result = _merge_scores(set(), {}, {"a": 0.8}, limit=10)
-        assert len(result) == 1
-        assert result[0][0] == "a"
-        assert abs(result[0][1] - 0.8 * 0.6) < 1e-9
+    def test_negative_ceiling_returns_zero(self):
+        assert _shape_tsrank(0.5, ceiling=-1.0) == 0.0
 
-    def test_all_three_combined(self):
-        """Entity matching all three strategies gets combined score with normalized keyword."""
-        result = _merge_scores({"a"}, {"a": 0.5}, {"a": 0.8}, limit=10)
-        # Keyword score 0.5 normalizes to 1.0 (only entity), contributing 1.0 * 0.4
-        expected = 10.0 + 0.8 * 0.6 + 1.0 * 0.4
-        assert len(result) == 1
-        assert abs(result[0][1] - expected) < 1e-9
+    def test_raw_equals_ceiling_returns_one(self):
+        result = _shape_tsrank(2.0, ceiling=2.0)
+        assert abs(result - 1.0) < 1e-9
 
-    def test_sorting_descending(self):
-        """Results are sorted by score descending."""
-        result = _merge_scores(
-            {"a"},
-            {"b": 1.0, "c": 0.5},
-            {},
-            limit=10,
-        )
-        scores = [s for _, s in result]
-        assert scores == sorted(scores, reverse=True)
+    def test_raw_below_ceiling(self):
+        result = _shape_tsrank(0.5, ceiling=2.0)
+        expected = math.log1p(0.5) / math.log1p(2.0)
+        assert abs(result - expected) < 1e-9
 
-    def test_limit_applied(self):
-        """Only top N results are returned."""
-        keyword_scores = {f"e{i}": float(i) / 10 for i in range(20)}
-        result = _merge_scores(set(), keyword_scores, {}, limit=5)
-        assert len(result) == 5
+    def test_raw_above_ceiling_exceeds_one(self):
+        result = _shape_tsrank(5.0, ceiling=2.0)
+        assert result > 1.0
 
-    def test_empty_inputs(self):
-        """No matches returns empty list."""
-        result = _merge_scores(set(), {}, {}, limit=10)
-        assert result == []
 
-    def test_mixed_sources(self):
-        """Different entities from different sources are all included."""
-        result = _merge_scores(
-            {"exact_only"},
-            {"keyword_only": 0.5},
-            {"semantic_only": 0.7},
-            limit=10,
-        )
-        ids = {eid for eid, _ in result}
-        assert ids == {"exact_only", "keyword_only", "semantic_only"}
+# ---------- Candidate ----------
+
+
+class TestCandidate:
+    """Tests for the Candidate dataclass defaults."""
+
+    def test_defaults(self):
+        c = Candidate(entity_id="test")
+        assert c.doc_semantic == 0.0
+        assert c.symbol_semantic == 0.0
+        assert c.doc_keyword == 0.0
+        assert c.symbol_keyword == 0.0
+        assert c.trigram == 0.0
+        assert c.name_exact is False
+        assert c.signature_exact is False
+        assert c.ce_doc == 0.0
+        assert c.ce_symbol == 0.0
+
+    def test_signal_accumulation(self):
+        c = Candidate(entity_id="x", doc_semantic=0.8, trigram=0.5, name_exact=True)
+        assert c.doc_semantic == 0.8
+        assert c.trigram == 0.5
+        assert c.name_exact is True
 
 
 # ---------- EntitySummary validator ----------

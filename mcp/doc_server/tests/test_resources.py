@@ -35,7 +35,7 @@ async def test_capabilities_resource(
     data = await get_capabilities_resource(test_session)
 
     assert "capabilities" in data
-    assert len(data["capabilities"]) == 3
+    assert len(data["capabilities"]) == 4
     names = [c["name"] for c in data["capabilities"]]
     assert "combat" in names
     assert "commands" in names
@@ -167,7 +167,7 @@ async def test_stats_resource(
     assert data["graph_stats"]["total_edges"] > 0
 
     assert "capability_stats" in data
-    assert data["capability_stats"]["total_capabilities"] == 3
+    assert data["capability_stats"]["total_capabilities"] == 4
 
     assert "server_info" in data
     assert data["server_info"]["version"] == "1.0.0"

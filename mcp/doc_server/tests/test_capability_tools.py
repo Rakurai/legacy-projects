@@ -31,7 +31,7 @@ async def test_list_capabilities(mock_ctx, sample_capabilities):
     """Lists all capabilities sorted by name."""
     result = await list_capabilities(mock_ctx)
 
-    assert len(result.capabilities) == 3
+    assert len(result.capabilities) == 4
     names = [c.name for c in result.capabilities]
     assert names == sorted(names)  # alphabetically ordered
 

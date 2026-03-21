@@ -1,7 +1,7 @@
 """
 Integration tests for hybrid search.
 
-Tests semantic + keyword + exact match combination and fallback modes.
+Tests multi-view search pipeline with keyword channels (no embedding provider).
 """
 
 import pytest
@@ -14,25 +14,22 @@ from server.search import hybrid_search
 @pytest.mark.asyncio
 async def test_search_exact_match_boost(test_session: AsyncSession, sample_entities: list[Entity]):
     """Test that exact matches receive highest scores."""
-    results, mode = await hybrid_search(
+    results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=None,  # Keyword-only mode
+        embedding_provider=None,
         limit=20,
     )
 
-    assert mode == "keyword_fallback"
     assert len(results) >= 1
-
     # Exact match should be first
     assert results[0].entity_summary.name == "damage"  # type: ignore
-    assert results[0].score > 0.5  # High score due to exact match
 
 
 @pytest.mark.asyncio
 async def test_search_with_kind_filter(test_session: AsyncSession, sample_entities: list[Entity]):
     """Test search with kind filter."""
-    results, mode = await hybrid_search(
+    results = await hybrid_search(
         session=test_session,
         query="damage",
         embedding_provider=None,
@@ -46,7 +43,7 @@ async def test_search_with_kind_filter(test_session: AsyncSession, sample_entiti
 @pytest.mark.asyncio
 async def test_search_with_capability_filter(test_session: AsyncSession, sample_entities: list[Entity]):
     """Test search with capability filter."""
-    results, mode = await hybrid_search(
+    results = await hybrid_search(
         session=test_session,
         query="damage",
         embedding_provider=None,

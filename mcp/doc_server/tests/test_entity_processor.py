@@ -336,42 +336,52 @@ class TestBuildMinimalEmbedTextEmptySkips:
         assert result is None
 
 
-class TestBuildEntityEmbedTexts:
-    """Test build_entity_embed_texts() function."""
+class TestBuildDocEmbedTexts:
+    """Test build_doc_embed_texts() function."""
 
-    def test_doc_rich_entities_use_to_doxygen(self) -> None:
-        from build_helpers.entity_processor import build_entity_embed_texts
+    def test_doc_rich_entities_use_labeled_prose(self) -> None:
+        from build_helpers.entity_processor import build_doc_embed_texts
 
         mock_doc = MagicMock()
-        mock_doc.to_doxygen.return_value = "/** @fn void fight() */"
+        mock_doc.brief = "Engage in combat"
+        mock_doc.details = "Full combat logic"
+        mock_doc.params = {"ch": "attacker"}
+        mock_doc.returns = "damage dealt"
+        mock_doc.notes = None
+        mock_doc.rationale = None
 
         merged = _make_merged("fight", body_fn="src/fight.cc", body_line=1, body_end_line=10)
         merged.doc = mock_doc
 
-        result = build_entity_embed_texts([merged])
+        result = build_doc_embed_texts([merged])
 
         assert merged.entity_id in result
-        assert result[merged.entity_id] == "/** @fn void fight() */"
-        mock_doc.to_doxygen.assert_called_once()
+        assert "BRIEF: Engage in combat" in result[merged.entity_id]
+        assert "DETAILS: Full combat logic" in result[merged.entity_id]
+        assert "PARAMS:" in result[merged.entity_id]
 
-    def test_doc_less_entities_use_minimal_text(self) -> None:
-        from build_helpers.entity_processor import build_entity_embed_texts
+    def test_doc_less_entities_use_bare_name(self) -> None:
+        from build_helpers.entity_processor import build_doc_embed_texts
 
         merged = _make_merged("damage", body_fn="src/fight.cc", body_line=1, body_end_line=10)
         merged.entity.kind = "function"
         merged.doc = None
 
-        result = build_entity_embed_texts([merged])
+        result = build_doc_embed_texts([merged])
 
         assert merged.entity_id in result
-        assert "@fn" in result[merged.entity_id]
-        assert "damage" in result[merged.entity_id]
+        assert result[merged.entity_id] == "damage"
 
     def test_mixed_entities(self) -> None:
-        from build_helpers.entity_processor import build_entity_embed_texts
+        from build_helpers.entity_processor import build_doc_embed_texts
 
         mock_doc = MagicMock()
-        mock_doc.to_doxygen.return_value = "/** @fn void fight() */"
+        mock_doc.brief = "Engage in combat"
+        mock_doc.details = None
+        mock_doc.params = {}
+        mock_doc.returns = None
+        mock_doc.notes = None
+        mock_doc.rationale = None
 
         with_doc = _make_merged("fight", body_fn="src/fight.cc", body_line=1, body_end_line=10)
         with_doc.doc = mock_doc
@@ -380,14 +390,14 @@ class TestBuildEntityEmbedTexts:
         without_doc.entity.kind = "function"
         without_doc.doc = None
 
-        result = build_entity_embed_texts([with_doc, without_doc])
+        result = build_doc_embed_texts([with_doc, without_doc])
 
         assert len(result) == 2
         assert with_doc.entity_id in result
         assert without_doc.entity_id in result
 
-    def test_empty_entity_skipped(self) -> None:
-        from build_helpers.entity_processor import build_entity_embed_texts
+    def test_empty_name_entity_uses_empty_string(self) -> None:
+        from build_helpers.entity_processor import build_doc_embed_texts
 
         entity = DoxygenEntity(
             id=EntityID(compound="empty_compound"),
@@ -397,6 +407,8 @@ class TestBuildEntityEmbedTexts:
         merged = MergedEntity(entity=entity, doc=None, sig_key=("empty_compound", "empty_compound"))
         merged._deterministic_id = "fn:test_empty"
 
-        result = build_entity_embed_texts([merged])
+        result = build_doc_embed_texts([merged])
 
-        assert merged.entity_id not in result
+        # No doc → falls back to bare name (empty string)
+        assert merged.entity_id in result
+        assert result[merged.entity_id] == ""

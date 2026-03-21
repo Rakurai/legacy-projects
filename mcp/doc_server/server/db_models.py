@@ -86,18 +86,40 @@ class Entity(SQLModel, table=True):
         default=None, ge=0.0, le=1.0, description="Heuristic score: rationale length x domain-term density"
     )
 
-    # Embedding
-    embedding: list[float] | None = Field(
+    # Embedding (dual views)
+    doc_embedding: list[float] | None = Field(
         default=None,
         sa_column=Column(Vector(_EMBEDDING_DIM)),
-        description=f"{_EMBEDDING_DIM}-dim pgvector embedding",
+        description=f"{_EMBEDDING_DIM}-dim embedding of labeled prose fields",
+    )
+    symbol_embedding: list[float] | None = Field(
+        default=None,
+        sa_column=Column(Vector(_EMBEDDING_DIM)),
+        description=f"{_EMBEDDING_DIM}-dim embedding of qualified scoped signature",
     )
 
-    # Full-text search
-    search_vector: str | None = Field(
+    # Full-text search (dual views)
+    doc_search_vector: str | None = Field(
         default=None,
         sa_column=Column(TSVECTOR),
-        description="Weighted tsvector: name=A, brief/details=B, definition=C, source_text=D",
+        description="Weighted tsvector: name=A, brief+details=B, notes+rationale+params+returns=C (english)",
+    )
+    symbol_search_vector: str | None = Field(
+        default=None,
+        sa_column=Column(TSVECTOR),
+        description="Weighted tsvector: name=A, qualified_name+signature=B, definition_text=C (simple)",
+    )
+
+    # Trigram similarity
+    symbol_searchable: str | None = Field(
+        default=None,
+        description="Lowercased punctuation-stripped name+qualified_name+signature for pg_trgm",
+    )
+
+    # Qualified name
+    qualified_name: str | None = Field(
+        default=None,
+        description="Fully-qualified C++ name (e.g., Logging::stc, Character::position)",
     )
 
 
@@ -227,3 +249,16 @@ class EntryPoint(SQLModel, table=True):
         default=None, sa_column=Column(JSONB), description="List of capability names exercised"
     )
     entry_type: str | None = Field(default=None, description="do_, spell_, spec_")
+
+
+class SearchConfig(SQLModel, table=True):
+    """
+    Precomputed search calibration values produced by the build pipeline.
+
+    The server loads these at startup and caches them for its lifetime.
+    """
+
+    __tablename__ = "search_config"
+
+    key: str = Field(primary_key=True, description="Config key (e.g., 'doc_tsrank_ceiling')")
+    value: float = Field(description="Numeric config value")

@@ -96,14 +96,6 @@ class MatchType(StrEnum):
 # ---------------------------------------------------------------------------
 
 
-class SearchMode(StrEnum):
-    """Which search strategy was used."""
-
-    HYBRID = "hybrid"
-    SEMANTIC_ONLY = "semantic_only"
-    KEYWORD_FALLBACK = "keyword_fallback"
-
-
 class SearchSource(StrEnum):
     """Which data source to search over."""
 

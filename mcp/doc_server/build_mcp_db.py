@@ -27,9 +27,12 @@ from build_helpers.entity_processor import (
     MergedEntity,
     assign_capabilities,
     assign_deterministic_ids,
-    build_entity_embed_texts,
+    build_doc_embed_texts,
+    build_symbol_embed_texts,
+    build_symbol_searchable,
     compute_enriched_fields,
     compute_is_entry_point,
+    derive_qualified_names,
     extract_source_code,
     merge_entities,
 )
@@ -48,7 +51,7 @@ from build_helpers.loaders import (
 )
 from server.config import ServerConfig
 from server.db import DatabaseManager
-from server.db_models import Capability, CapabilityEdge, Edge, Entity, EntityUsage, EntryPoint
+from server.db_models import Capability, CapabilityEdge, Edge, Entity, EntityUsage, EntryPoint, SearchConfig
 from server.embedding import EmbeddingProvider, create_provider
 from server.logging_config import configure_logging, log
 
@@ -70,6 +73,7 @@ async def drop_and_create_schema(engine: AsyncEngine) -> None:
     log.info("Dropping existing tables")
 
     async with engine.begin() as conn:
+        await conn.execute(text("DROP TABLE IF EXISTS search_config CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS entry_points CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS capability_edges CASCADE"))
         await conn.execute(text("DROP TABLE IF EXISTS capabilities CASCADE"))
@@ -80,15 +84,17 @@ async def drop_and_create_schema(engine: AsyncEngine) -> None:
 
     log.info("Creating schema")
 
-    # Create pgvector extension + tables
+    # Create extensions + tables
     async with engine.begin() as conn:
         await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         await conn.run_sync(SQLModel.metadata.create_all)
 
     # Create indexes — each in its own transaction so one failure doesn't cascade
     log.info("Creating indexes")
 
     indexes = [
+        # Entity identity/filter indexes
         "CREATE INDEX IF NOT EXISTS idx_entities_signature ON entities(signature)",
         "CREATE INDEX IF NOT EXISTS idx_entities_name ON entities(name)",
         "CREATE INDEX IF NOT EXISTS idx_entities_kind ON entities(kind)",
@@ -96,8 +102,15 @@ async def drop_and_create_schema(engine: AsyncEngine) -> None:
         "CREATE INDEX IF NOT EXISTS idx_entities_capability ON entities(capability)",
         "CREATE INDEX IF NOT EXISTS idx_entities_entry ON entities(is_entry_point) WHERE is_entry_point",
         "CREATE INDEX IF NOT EXISTS idx_entities_bridge ON entities(is_bridge) WHERE is_bridge",
-        "CREATE INDEX IF NOT EXISTS idx_entities_search ON entities USING GIN(search_vector)",
-        "CREATE INDEX IF NOT EXISTS idx_entities_embedding ON entities USING hnsw (embedding vector_cosine_ops)",
+        # Dual embedding indexes (HNSW)
+        "CREATE INDEX IF NOT EXISTS ix_entities_doc_embedding ON entities USING hnsw (doc_embedding vector_cosine_ops) WITH (m=16, ef_construction=64)",
+        "CREATE INDEX IF NOT EXISTS ix_entities_symbol_embedding ON entities USING hnsw (symbol_embedding vector_cosine_ops) WITH (m=16, ef_construction=64)",
+        # Dual tsvector indexes (GIN)
+        "CREATE INDEX IF NOT EXISTS ix_entities_doc_search_vector ON entities USING GIN(doc_search_vector)",
+        "CREATE INDEX IF NOT EXISTS ix_entities_symbol_search_vector ON entities USING GIN(symbol_search_vector)",
+        # Trigram index (GiST)
+        "CREATE INDEX IF NOT EXISTS ix_entities_symbol_searchable ON entities USING GiST(symbol_searchable gist_trgm_ops)",
+        # Edge/capability indexes
         "CREATE INDEX IF NOT EXISTS idx_edges_source ON edges(source_id)",
         "CREATE INDEX IF NOT EXISTS idx_edges_target ON edges(target_id)",
         "CREATE INDEX IF NOT EXISTS idx_edges_rel ON edges(relationship)",
@@ -147,8 +160,12 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
             fan_in=merged.fan_in,
             fan_out=merged.fan_out,
             is_bridge=merged.is_bridge,
-            embedding=merged.embedding,
-            search_vector=None,
+            doc_embedding=merged.doc_embedding,
+            symbol_embedding=merged.symbol_embedding,
+            doc_search_vector=None,
+            symbol_search_vector=None,
+            symbol_searchable=merged.symbol_searchable,
+            qualified_name=merged.qualified_name,
             doc_state=merged.doc_state,
             notes_length=merged.notes_length,
             is_contract_seed=merged.is_contract_seed,
@@ -159,28 +176,68 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
     session.add_all(entities_batch)
     await session.commit()
 
-    # Generate tsvectors via SQL (weighted composition)
-    log.info("Generating tsvector search vectors")
+    # Generate dual tsvectors via SQL (weighted composition)
+    log.info("Generating dual tsvector search vectors")
 
-    tsvector_sql = text("""
+    doc_tsvector_sql = text("""
         UPDATE entities
-        SET search_vector =
+        SET doc_search_vector =
             setweight(to_tsvector('english', COALESCE(name, '')), 'A') ||
             setweight(to_tsvector('english', COALESCE(brief, '') || ' ' || COALESCE(details, '')), 'B') ||
-            setweight(to_tsvector('english', COALESCE(definition_text, '')), 'C') ||
-            setweight(to_tsvector('english', COALESCE(SUBSTRING(source_text, 1, 1000), '')), 'D')
+            setweight(to_tsvector('english', COALESCE(notes, '') || ' ' || COALESCE(rationale, '') || ' ' || COALESCE(returns, '')), 'C')
     """)
 
-    await session.execute(tsvector_sql)
+    symbol_tsvector_sql = text("""
+        UPDATE entities
+        SET symbol_search_vector =
+            setweight(to_tsvector('simple', COALESCE(name, '')), 'A') ||
+            setweight(to_tsvector('simple', COALESCE(qualified_name, '') || ' ' || COALESCE(signature, '')), 'B') ||
+            setweight(to_tsvector('simple', COALESCE(definition_text, '')), 'C')
+    """)
+
+    await session.execute(doc_tsvector_sql)
+    await session.execute(symbol_tsvector_sql)
     await session.commit()
 
     log.info("Entities table populated")
 
 
+async def compute_and_store_tsrank_ceilings(session: AsyncSession) -> None:
+    """Compute p99 ts_rank for each tsvector column and store in search_config table."""
+    log.info("Computing ts_rank ceilings")
+
+    for col_name, config_key in [
+        ("doc_search_vector", "doc_tsrank_ceiling"),
+        ("symbol_search_vector", "symbol_tsrank_ceiling"),
+    ]:
+        # Use a broad query to compute p99 ts_rank across all entities
+        # We use the 'simple' dictionary for a generic probe query that hits all tsvectors
+        p99_sql = text(f"""
+            SELECT COALESCE(
+                percentile_cont(0.99) WITHIN GROUP (
+                    ORDER BY ts_rank({col_name}, to_tsquery('simple', 'a'))
+                ),
+                1.0
+            ) AS ceiling
+            FROM entities
+            WHERE {col_name} IS NOT NULL
+        """)
+        result = await session.execute(p99_sql)
+        ceiling = float(result.scalar_one())
+        # Ensure ceiling is positive (log1p denominator requirement)
+        ceiling = max(ceiling, 0.01)
+
+        session.add(SearchConfig(key=config_key, value=ceiling))
+        log.info("ts_rank ceiling computed", column=col_name, ceiling=ceiling)
+
+    await session.commit()
+    log.info("ts_rank ceilings stored in search_config")
+
+
 async def populate_entity_usages(
     session: AsyncSession,
     merged_entities: list[MergedEntity],
-    provider: EmbeddingProvider | None,
+    provider: EmbeddingProvider,
     config: ServerConfig,
     artifacts_dir: Path,
 ) -> None:
@@ -222,7 +279,7 @@ async def populate_entity_usages(
 
     log.info("Usage rows collected", count=len(rows))
 
-    if provider is not None and rows:
+    if rows:
         texts_by_key = {key: rows[idx].description for idx, key in enumerate(usage_keys)}
         usage_embeddings_raw = sync_embeddings_cache(
             artifacts_path=artifacts_dir,
@@ -236,8 +293,6 @@ async def populate_entity_usages(
         usage_embeddings = cast(dict[tuple[str, str, str], list[float]], usage_embeddings_raw)
         for idx, usage_key in enumerate(usage_keys):
             rows[idx].embedding = usage_embeddings[usage_key]
-    elif provider is None:
-        log.warning("No embedding provider — entity_usages will have null embeddings")
 
     # Insert all rows
     session.add_all(rows)
@@ -414,27 +469,42 @@ async def main() -> None:
     compute_is_entry_point(merged_entities)
     compute_enriched_fields(merged_entities)
 
+    # Derive qualified names from containment graph (must precede embed text assembly)
+    derive_qualified_names(merged_entities, config.artifacts_path)
+    build_symbol_searchable(merged_entities)
+
     provider = create_provider(config)
 
-    if provider is not None:
-        entity_keys = [m.entity_id for m in merged_entities]
-        texts_by_key = build_entity_embed_texts(merged_entities)
-        embeddings_raw = sync_embeddings_cache(
-            artifacts_path=config.artifacts_path,
-            model_slug=config.embedding_model_slug,
-            dimension=config.embedding_dimension,
-            embedding_type="entity",
-            current_keys=cast(list[str | tuple[str, ...]], entity_keys),
-            texts_by_key=cast(dict[str | tuple[str, ...], str], texts_by_key),
-            provider=provider,
-        )
-        embeddings = cast(dict[str, list[float]], embeddings_raw)
-        for merged in merged_entities:
-            merged.embedding = embeddings.get(merged.entity_id)
-    else:
-        log.warning("No embedding provider configured; entities will have null embeddings")
-        for merged in merged_entities:
-            merged.embedding = None
+    # Dual embedding caches: doc + symbol
+    entity_keys = [m.entity_id for m in merged_entities]
+
+    doc_texts = build_doc_embed_texts(merged_entities)
+    doc_embeddings_raw = sync_embeddings_cache(
+        artifacts_path=config.artifacts_path,
+        model_slug=config.embedding_model_slug,
+        dimension=config.embedding_dimension,
+        embedding_type="doc",
+        current_keys=cast(list[str | tuple[str, ...]], entity_keys),
+        texts_by_key=cast(dict[str | tuple[str, ...], str], doc_texts),
+        provider=provider,
+    )
+    doc_embeddings = cast(dict[str, list[float]], doc_embeddings_raw)
+
+    symbol_texts = build_symbol_embed_texts(merged_entities)
+    symbol_embeddings_raw = sync_embeddings_cache(
+        artifacts_path=config.artifacts_path,
+        model_slug=config.embedding_model_slug,
+        dimension=config.embedding_dimension,
+        embedding_type="symbol",
+        current_keys=cast(list[str | tuple[str, ...]], entity_keys),
+        texts_by_key=cast(dict[str | tuple[str, ...], str], symbol_texts),
+        provider=provider,
+    )
+    symbol_embeddings = cast(dict[str, list[float]], symbol_embeddings_raw)
+
+    for merged in merged_entities:
+        merged.doc_embedding = doc_embeddings.get(merged.entity_id)
+        merged.symbol_embedding = symbol_embeddings.get(merged.entity_id)
 
     db_manager = DatabaseManager(config)
 
@@ -443,6 +513,7 @@ async def main() -> None:
 
     async with db_manager.session() as session:
         await populate_entities(session, merged_entities)
+        await compute_and_store_tsrank_ceilings(session)
         await populate_entity_usages(session, merged_entities, provider, config, config.artifacts_path)
         await populate_edges(session, edges)
         await populate_capabilities(session, cap_defs, cap_graph)
@@ -453,6 +524,7 @@ async def main() -> None:
         await session.execute(text("ANALYZE entities"))
         await session.execute(text("ANALYZE edges"))
         await session.execute(text("ANALYZE entity_usages"))
+        await session.execute(text("ANALYZE search_config"))
         await session.commit()
 
     await db_manager.dispose()

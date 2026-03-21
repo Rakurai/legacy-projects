@@ -26,11 +26,6 @@ from server.embedding import (
 class TestCreateProvider:
     """Tests for the create_provider factory function."""
 
-    def test_none_provider_returns_none(self):
-        config = _mock_config(embedding_provider=None)
-        result = create_provider(config)
-        assert result is None
-
     def test_local_provider_creates_local_instance(self):
         with patch("server.embedding.LocalEmbeddingProvider") as MockLocal:
             mock_instance = MagicMock()
@@ -181,7 +176,7 @@ class TestProtocolConformance:
 def _mock_config(**overrides) -> MagicMock:
     """Create a mock ServerConfig with sensible defaults."""
     defaults = {
-        "embedding_provider": None,
+        "embedding_provider": "local",
         "embedding_local_model": "BAAI/bge-base-en-v1.5",
         "embedding_dimension": 768,
         "embedding_base_url": None,

@@ -62,10 +62,10 @@ async def test_resolve_by_name_exact(test_session: AsyncSession, sample_entities
         limit=20,
     )
 
-    assert result.status == "exact"
+    assert result.status == "ambiguous"
     assert result.match_type == "name_exact"
-    assert len(result.candidates) == 1
-    assert result.candidates[0].name == "damage"
+    assert len(result.candidates) == 2  # Combat::damage + Logging::damage
+    assert all(c.name == "damage" for c in result.candidates)
 
 
 @pytest.mark.asyncio
@@ -93,7 +93,7 @@ async def test_resolve_by_name_ambiguous(test_session: AsyncSession, sample_enti
 
     assert result.status == "ambiguous"
     assert result.match_type == "name_exact"
-    assert len(result.candidates) == 2
+    assert len(result.candidates) == 3  # Combat::damage + Logging::damage + duplicate
     # Ranked by fan_in descending
     assert result.candidates[0].fan_in >= result.candidates[1].fan_in
 

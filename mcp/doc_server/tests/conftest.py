@@ -47,8 +47,10 @@ async def test_engine(test_config: ServerConfig):
         echo=False,
     )
 
-    # Create tables
+    # Create extensions and tables
     async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS pg_trgm"))
         await conn.run_sync(SQLModel.metadata.create_all)
 
     yield engine
@@ -85,6 +87,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
         Entity(
             entity_id="fn:a1b2c3d",
             name="damage",
+            qualified_name="Combat::damage",
             signature="void damage(Character *ch, Character *victim, int dam)",
             kind="function",
             entity_type="member",
@@ -174,6 +177,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
         Entity(
             entity_id="fn:e5f6a7b",
             name="armor_absorb",
+            qualified_name="Combat::armor_absorb",
             signature="int armor_absorb(Character *victim, int dam)",
             kind="function",
             entity_type="member",
@@ -229,6 +233,30 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             is_contract_seed=False,
             rationale_specificity=None,
         ),
+        # [7] Same name "damage" but in Logging scope — for qualified name disambiguation tests
+        Entity(
+            entity_id="fn:h8i9j0k",
+            name="damage",
+            qualified_name="Logging::damage",
+            signature="void damage(const char *msg)",
+            kind="function",
+            entity_type="member",
+            file_path="src/logging.cc",
+            body_start_line=30,
+            body_end_line=40,
+            definition_text="void damage(const char *msg)",
+            source_text="void damage(const char *msg) { log_info(msg); }",
+            brief="Log a damage event",
+            capability="logging",
+            is_entry_point=False,
+            fan_in=2,
+            fan_out=1,
+            is_bridge=False,
+            doc_state="generated_summary",
+            notes_length=None,
+            is_contract_seed=False,
+            rationale_specificity=None,
+        ),
     ]
 
     for entity in entities:
@@ -236,13 +264,21 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
 
     await test_session.commit()
 
-    # Populate tsvector for full-text search in tests
+    # Populate dual tsvectors for full-text search in tests
     await test_session.execute(
         text(
-            "UPDATE entities SET search_vector = "
+            "UPDATE entities SET doc_search_vector = "
             "setweight(to_tsvector('english', coalesce(name, '')), 'A') || "
-            "setweight(to_tsvector('english', coalesce(brief, '')), 'B') || "
-            "setweight(to_tsvector('english', coalesce(details, '')), 'B')"
+            "setweight(to_tsvector('english', coalesce(brief, '') || ' ' || coalesce(details, '')), 'B') || "
+            "setweight(to_tsvector('english', coalesce(notes, '') || ' ' || coalesce(rationale, '') || ' ' || coalesce(returns, '')), 'C')"
+        )
+    )
+    await test_session.execute(
+        text(
+            "UPDATE entities SET symbol_search_vector = "
+            "setweight(to_tsvector('simple', coalesce(name, '')), 'A') || "
+            "setweight(to_tsvector('simple', coalesce(qualified_name, '') || ' ' || coalesce(signature, '')), 'B') || "
+            "setweight(to_tsvector('simple', coalesce(definition_text, '')), 'C')"
         )
     )
     await test_session.commit()
@@ -317,6 +353,13 @@ async def sample_capabilities(test_session: AsyncSession, sample_entities: list[
             type="domain",
             description="Character attributes, stats, and state management",
             function_count=40,
+            stability="stable",
+        ),
+        Capability(
+            name="logging",
+            type="infrastructure",
+            description="Logging and diagnostic output",
+            function_count=10,
             stability="stable",
         ),
     ]

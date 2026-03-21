@@ -34,18 +34,6 @@ def test_artifacts_path():
     assert cfg.artifacts_path == Path("/tmp/repo/artifacts")
 
 
-def test_embedding_enabled_true():
-    """embedding_enabled is True when embedding_provider is set."""
-    cfg = _make_config(embedding_provider="local")
-    assert cfg.embedding_enabled is True
-
-
-def test_embedding_enabled_false():
-    """embedding_enabled is False when embedding_provider is None."""
-    cfg = _make_config(embedding_provider=None)
-    assert cfg.embedding_enabled is False
-
-
 def test_embed_cache_filename_local():
     """embed_cache_filename uses local model slug and dimension."""
     cfg = _make_config(

@@ -1,24 +1,23 @@
 """
-Hybrid Search - Semantic + Keyword + Exact Match.
+Multi-View Search Pipeline — 7-stage retrieval with cross-encoder reranking.
 
-Combines three search strategies:
-1. Exact match (signature or name) - highest boost
-2. Semantic search (pgvector cosine similarity)
-3. Keyword search (PostgreSQL full-text via tsvector)
+Stages:
+1. Five parallel channel queries (doc semantic, symbol semantic, doc keyword, symbol keyword, trigram)
+2. Union + deduplicate by entity_id
+3. Compute intermediate signal vector (8 signals)
+4. Per-signal floor filtering with name_exact bypass
+5. Cross-encoder reranking (both views per candidate)
+6. Assign winning_view / winning_score / losing_score
+7. Return top-K
 
-Scores are normalized and combined with weights:
-- Exact: 10x boost
-- Semantic: 0.6 weight
-- Keyword: 0.4 weight
-
-Degrades to keyword-only mode if embedding service unavailable.
-
-All queries use SQLAlchemy ORM — no raw SQL.
+hybrid_search_usages is unchanged (entity_usages out of scope per FR-062).
 """
 
+import math
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from sqlalchemy import Select, func, literal, or_
+from sqlalchemy import Select, func, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
@@ -27,17 +26,58 @@ if TYPE_CHECKING:
 
 from server.converters import entity_to_summary
 from server.db_models import Entity, EntityUsage
-from server.enums import SearchMode
 from server.logging_config import log
 from server.models import MatchingUsage, SearchResult
+from server.retrieval_view import RetrievalView
 
-# Scoring weights (matching spec)
-_EXACT_WEIGHT = 10.0
-_SEMANTIC_WEIGHT = 0.6
-_KEYWORD_WEIGHT = 0.4
+# Per-channel retrieval limit
+_CHANNEL_LIMIT = 100
 
-# Minimum combined score for a result to be returned (FR-008)
-_SCORE_THRESHOLD: float = 0.2
+# Trigram similarity threshold (low bar for short C++ identifiers)
+_TRIGRAM_THRESHOLD = 0.2
+
+# Scoring weights for hybrid_search_usages (V1 compat, unchanged)
+_USAGE_SEMANTIC_WEIGHT = 0.6
+_USAGE_KEYWORD_WEIGHT = 0.4
+_USAGE_SCORE_THRESHOLD: float = 0.2
+
+
+# ---------------------------------------------------------------------------
+# Candidate data structure
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Candidate:
+    """Intermediate candidate accumulating signals from multiple channels."""
+
+    entity_id: str
+    # Raw channel scores (0.0 if channel didn't produce this candidate)
+    doc_semantic: float = 0.0
+    symbol_semantic: float = 0.0
+    doc_keyword: float = 0.0
+    symbol_keyword: float = 0.0
+    trigram: float = 0.0
+    name_exact: bool = False
+    signature_exact: bool = False
+    # Shaped scores (computed after channel merge)
+    doc_keyword_shaped: float = 0.0
+    symbol_keyword_shaped: float = 0.0
+    # Cross-encoder scores (set during reranking)
+    ce_doc: float = 0.0
+    ce_symbol: float = 0.0
+
+
+def _shape_tsrank(raw: float, ceiling: float) -> float:
+    """Corpus-calibrated ts_rank shaping: log(1 + score) / log(1 + ceiling)."""
+    if ceiling <= 0:
+        return 0.0
+    return math.log1p(raw) / math.log1p(ceiling)
+
+
+# ---------------------------------------------------------------------------
+# Channel query helpers
+# ---------------------------------------------------------------------------
 
 
 def _apply_filters(
@@ -58,81 +98,115 @@ async def _exact_match_ids(
     query: str,
     kind: str | None,
     capability: str | None,
-) -> set[str]:
-    """Find entity IDs with exact signature or name match."""
-    stmt = select(Entity.entity_id).where(or_(Entity.signature == query, Entity.name == query))
-    stmt = _apply_filters(stmt, kind, capability)
-    result = await session.execute(stmt)
-    return {row[0] for row in result.all()}
+) -> tuple[set[str], set[str]]:
+    """Find entity IDs with exact name or signature match.
+
+    Returns (name_exact_ids, signature_exact_ids).
+    """
+    name_stmt = select(Entity.entity_id).where(Entity.name == query)
+    name_stmt = _apply_filters(name_stmt, kind, capability)
+    name_result = await session.execute(name_stmt)
+    name_ids = {row[0] for row in name_result.all()}
+
+    sig_stmt = select(Entity.entity_id).where(Entity.signature == query)
+    sig_stmt = _apply_filters(sig_stmt, kind, capability)
+    sig_result = await session.execute(sig_stmt)
+    sig_ids = {row[0] for row in sig_result.all()}
+
+    return name_ids, sig_ids
 
 
-async def _keyword_scores(
+async def _doc_keyword_scores(
     session: AsyncSession,
     query: str,
     kind: str | None,
     capability: str | None,
     limit: int,
 ) -> dict[str, float]:
-    """Get {entity_id: ts_rank score} for keyword matches."""
+    """ts_rank scores against doc_search_vector (english dictionary)."""
     tsq = func.plainto_tsquery("english", query)
-    rank_expr = func.ts_rank(Entity.search_vector, tsq).label("score")
-
-    stmt = select(Entity.entity_id, rank_expr).where(Entity.search_vector.op("@@")(tsq))
+    rank_expr = func.ts_rank(Entity.doc_search_vector, tsq).label("score")
+    stmt = select(Entity.entity_id, rank_expr).where(Entity.doc_search_vector.op("@@")(tsq))
     stmt = _apply_filters(stmt, kind, capability)
     stmt = stmt.order_by(rank_expr.desc()).limit(limit)
-
     result = await session.execute(stmt)
     return {row.entity_id: float(row.score) for row in result.all()}
 
 
-async def _semantic_scores(
+async def _symbol_keyword_scores(
+    session: AsyncSession,
+    query: str,
+    kind: str | None,
+    capability: str | None,
+    limit: int,
+) -> dict[str, float]:
+    """ts_rank scores against symbol_search_vector (simple dictionary, no stemming)."""
+    tsq = func.plainto_tsquery("simple", query)
+    rank_expr = func.ts_rank(Entity.symbol_search_vector, tsq).label("score")
+    stmt = select(Entity.entity_id, rank_expr).where(Entity.symbol_search_vector.op("@@")(tsq))
+    stmt = _apply_filters(stmt, kind, capability)
+    stmt = stmt.order_by(rank_expr.desc()).limit(limit)
+    result = await session.execute(stmt)
+    return {row.entity_id: float(row.score) for row in result.all()}
+
+
+async def _doc_semantic_scores(
     session: AsyncSession,
     query_embedding: list[float],
     kind: str | None,
     capability: str | None,
     limit: int,
 ) -> dict[str, float]:
-    """Get {entity_id: cosine_similarity score} for semantic matches."""
-    cosine_dist = Entity.embedding.cosine_distance(query_embedding)
+    """Cosine similarity scores against doc_embedding."""
+    cosine_dist = Entity.doc_embedding.cosine_distance(query_embedding)
     score_expr = (literal(1) - cosine_dist).label("score")
-
-    stmt = select(Entity.entity_id, score_expr).where(Entity.embedding.isnot(None))
+    stmt = select(Entity.entity_id, score_expr).where(Entity.doc_embedding.isnot(None))
     stmt = _apply_filters(stmt, kind, capability)
     stmt = stmt.order_by(score_expr.desc()).limit(limit)
-
     result = await session.execute(stmt)
     return {row.entity_id: float(row.score) for row in result.all()}
 
 
-def _merge_scores(
-    exact_ids: set[str],
-    keyword_scores: dict[str, float],
-    semantic_scores: dict[str, float],
+async def _symbol_semantic_scores(
+    session: AsyncSession,
+    query_embedding: list[float],
+    kind: str | None,
+    capability: str | None,
     limit: int,
-) -> list[tuple[str, float]]:
-    """Merge scores from all strategies, return sorted (entity_id, combined_score) pairs."""
-    # Normalize keyword scores within this result set before applying weight,
-    # so keyword contribution is bounded to [0, _KEYWORD_WEIGHT] regardless of ts_rank magnitude.
-    if keyword_scores:
-        max_kw = max(keyword_scores.values())
-        if max_kw > 0:
-            keyword_scores = {eid: s / max_kw for eid, s in keyword_scores.items()}
+) -> dict[str, float]:
+    """Cosine similarity scores against symbol_embedding."""
+    cosine_dist = Entity.symbol_embedding.cosine_distance(query_embedding)
+    score_expr = (literal(1) - cosine_dist).label("score")
+    stmt = select(Entity.entity_id, score_expr).where(Entity.symbol_embedding.isnot(None))
+    stmt = _apply_filters(stmt, kind, capability)
+    stmt = stmt.order_by(score_expr.desc()).limit(limit)
+    result = await session.execute(stmt)
+    return {row.entity_id: float(row.score) for row in result.all()}
 
-    all_ids = exact_ids | keyword_scores.keys() | semantic_scores.keys()
-    scored: list[tuple[str, float]] = []
 
-    for eid in all_ids:
-        score = 0.0
-        if eid in exact_ids:
-            score += _EXACT_WEIGHT
-        if eid in semantic_scores:
-            score += semantic_scores[eid] * _SEMANTIC_WEIGHT
-        if eid in keyword_scores:
-            score += keyword_scores[eid] * _KEYWORD_WEIGHT
-        scored.append((eid, score))
+async def _trigram_scores(
+    session: AsyncSession,
+    query: str,
+    kind: str | None,
+    capability: str | None,
+    limit: int,
+) -> dict[str, float]:
+    """pg_trgm similarity scores against symbol_searchable."""
+    sim_expr = func.similarity(Entity.symbol_searchable, query.lower()).label("score")
+    stmt = (
+        select(Entity.entity_id, sim_expr)
+        .where(Entity.symbol_searchable.isnot(None))
+        .where(sim_expr >= _TRIGRAM_THRESHOLD)
+    )
+    stmt = _apply_filters(stmt, kind, capability)
+    stmt = stmt.order_by(sim_expr.desc()).limit(limit)
+    result = await session.execute(stmt)
+    return {row.entity_id: float(row.score) for row in result.all()}
 
-    scored.sort(key=lambda x: x[1], reverse=True)
-    return scored[:limit]
+
+# ---------------------------------------------------------------------------
+# Core multi-view search pipeline
+# ---------------------------------------------------------------------------
 
 
 async def hybrid_search(
@@ -142,56 +216,191 @@ async def hybrid_search(
     kind: str | None = None,
     capability: str | None = None,
     limit: int = 20,
-) -> tuple[list[SearchResult], SearchMode]:
-    """Perform hybrid search combining semantic + keyword + exact matching."""
-    log.info("Hybrid search", query=query, kind=kind, capability=capability)
+    doc_view: RetrievalView | None = None,
+    symbol_view: RetrievalView | None = None,
+) -> list[SearchResult]:
+    """Multi-view search: 5 channels → merge → filter → cross-encoder rerank → top-K."""
+    log.info("Multi-view search", query=query, kind=kind, capability=capability)
+
+    if not query or not query.strip():
+        return []
+
+    # Detect scoped query (e.g. "Logging::stc", "Character::position")
+    scope_prefix: str | None = None
+    bare_name: str | None = None
+    if "::" in query:
+        parts = query.rsplit("::", 1)
+        if len(parts) == 2 and parts[0].strip() and parts[1].strip():  # noqa: PLR2004
+            scope_prefix = parts[0].strip()
+            bare_name = parts[1].strip()
+
+    # For scoped queries, also search the bare name through all channels
+    search_query = bare_name if bare_name else query
+
+    # Stage 1: Five parallel channel queries
+    name_exact_ids, sig_exact_ids = await _exact_match_ids(session, search_query, kind, capability)
+
+    # Also check for qualified_name exact match on the full scoped query
+    if scope_prefix and bare_name:
+        qn_stmt = select(Entity.entity_id).where(Entity.qualified_name.ilike(f"%{scope_prefix}::{bare_name}%"))
+        qn_stmt = _apply_filters(qn_stmt, kind, capability)
+        qn_result = await session.execute(qn_stmt)
+        qn_ids = {row[0] for row in qn_result.all()}
+        name_exact_ids = name_exact_ids | qn_ids
 
     query_embedding: list[float] | None = None
-    search_mode: SearchMode = SearchMode.HYBRID
-
     if embedding_provider:
-        query_embedding = await embedding_provider.aembed(query)
-    else:
-        search_mode = SearchMode.KEYWORD_FALLBACK
+        query_embedding = await embedding_provider.aembed(search_query)
 
-    # Run sub-queries
-    exact_ids = await _exact_match_ids(session, query, kind, capability)
-    keyword_sc = await _keyword_scores(session, query, kind, capability, limit=100)
+    doc_kw = await _doc_keyword_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
+    sym_kw = await _symbol_keyword_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
+    trgm = await _trigram_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
 
-    semantic_sc: dict[str, float] = {}
-    if search_mode == SearchMode.HYBRID and query_embedding:
-        semantic_sc = await _semantic_scores(session, query_embedding, kind, capability, limit=100)
+    doc_sem: dict[str, float] = {}
+    sym_sem: dict[str, float] = {}
+    if query_embedding:
+        doc_sem = await _doc_semantic_scores(session, query_embedding, kind, capability, _CHANNEL_LIMIT)
+        sym_sem = await _symbol_semantic_scores(session, query_embedding, kind, capability, _CHANNEL_LIMIT)
 
-    # Merge scores
-    ranked = _merge_scores(exact_ids, keyword_sc, semantic_sc, limit)
+    # Stage 2: Merge by entity_id
+    all_ids = name_exact_ids | sig_exact_ids | doc_kw.keys() | sym_kw.keys() | doc_sem.keys() | sym_sem.keys() | trgm.keys()
 
-    if not ranked:
-        log.info("Search complete", result_count=0, search_mode=search_mode)
-        return [], search_mode
+    if not all_ids:
+        log.info("Search complete", result_count=0)
+        return []
 
-    # Fetch full entities for top results in one query
-    top_ids = [eid for eid, _ in ranked]
-    result = await session.execute(select(Entity).where(Entity.entity_id.in_(top_ids)))
+    # Get ceiling values from views
+    doc_ceiling = doc_view.ts_rank_ceiling if doc_view else 1.0
+    sym_ceiling = symbol_view.ts_rank_ceiling if symbol_view else 1.0
+
+    candidates: dict[str, Candidate] = {}
+    for eid in all_ids:
+        c = Candidate(entity_id=eid)
+        c.name_exact = eid in name_exact_ids
+        c.signature_exact = eid in sig_exact_ids
+        c.doc_semantic = doc_sem.get(eid, 0.0)
+        c.symbol_semantic = sym_sem.get(eid, 0.0)
+        c.doc_keyword = doc_kw.get(eid, 0.0)
+        c.symbol_keyword = sym_kw.get(eid, 0.0)
+        c.trigram = trgm.get(eid, 0.0)
+        # Stage 3: Shaped keyword scores
+        c.doc_keyword_shaped = _shape_tsrank(c.doc_keyword, doc_ceiling)
+        c.symbol_keyword_shaped = _shape_tsrank(c.symbol_keyword, sym_ceiling)
+        candidates[eid] = c
+
+    # Stage 4: Per-signal floor filtering with name_exact bypass
+    # Candidates pass if: any signal exceeds its floor threshold, OR name/sig exact match
+    floor_thresholds = {
+        "doc_semantic": 0.3,
+        "symbol_semantic": 0.3,
+        "doc_keyword_shaped": 0.05,
+        "symbol_keyword_shaped": 0.05,
+        "trigram": _TRIGRAM_THRESHOLD,
+    }
+
+    filtered: dict[str, Candidate] = {}
+    for eid, c in candidates.items():
+        if c.name_exact or c.signature_exact:
+            filtered[eid] = c
+            continue
+        # Check if any signal exceeds its floor
+        if (
+            c.doc_semantic >= floor_thresholds["doc_semantic"]
+            or c.symbol_semantic >= floor_thresholds["symbol_semantic"]
+            or c.doc_keyword_shaped >= floor_thresholds["doc_keyword_shaped"]
+            or c.symbol_keyword_shaped >= floor_thresholds["symbol_keyword_shaped"]
+            or c.trigram >= floor_thresholds["trigram"]
+        ):
+            filtered[eid] = c
+
+    if not filtered:
+        log.info("Search complete (all filtered)", result_count=0, pre_filter=len(candidates))
+        return []
+
+    log.info("Floor filtering", pre_filter=len(candidates), post_filter=len(filtered))
+
+    # Fetch full entities for surviving candidates
+    result = await session.execute(select(Entity).where(Entity.entity_id.in_(list(filtered.keys()))))
     entity_map = {e.entity_id: e for e in result.scalars().all()}
 
+    # Scope-aware boost: if query contained "::", boost candidates whose qualified_name matches the scope
+    scope_matched_ids: set[str] = set()
+    if scope_prefix:
+        full_scope = f"{scope_prefix}::{bare_name}".lower()
+        for eid, entity in entity_map.items():
+            if entity.qualified_name and full_scope in entity.qualified_name.lower():
+                scope_matched_ids.add(eid)
+
+    # Stage 5: Cross-encoder reranking (both views per candidate)
+    if doc_view and symbol_view:
+        # Build document texts for cross-encoder
+        doc_texts: list[str] = []
+        sym_texts: list[str] = []
+        candidate_list: list[Candidate] = []
+
+        for eid, c in filtered.items():
+            entity = entity_map.get(eid)
+            if not entity:
+                continue
+            candidate_list.append(c)
+            doc_texts.append(doc_view.assemble_embed_text(entity))
+            sym_texts.append(symbol_view.assemble_embed_text(entity))
+
+        if candidate_list:
+            doc_scores = await doc_view.cross_encoder.arerank(query, doc_texts)
+            sym_scores = await symbol_view.cross_encoder.arerank(query, sym_texts)
+
+            for i, c in enumerate(candidate_list):
+                c.ce_doc = doc_scores[i]
+                c.ce_symbol = sym_scores[i]
+
+    # Stage 6: Assign winning view and build results
     results: list[SearchResult] = []
-    for eid, score in ranked:
-        if score < _SCORE_THRESHOLD:
-            continue
+    for eid, c in filtered.items():
         entity = entity_map.get(eid)
         if not entity:
             continue
+
+        # Determine winning view
+        if c.ce_doc >= c.ce_symbol:
+            winning_view = "doc"
+            winning_score = c.ce_doc
+            losing_score = c.ce_symbol
+        else:
+            winning_view = "symbol"
+            winning_score = c.ce_symbol
+            losing_score = c.ce_doc
+
+        # Boost exact matches and scope matches to ensure they rank at top
+        final_score = winning_score
+        if c.name_exact or c.signature_exact:
+            final_score = max(final_score, 10.0)
+        if eid in scope_matched_ids:
+            # Scope match ranks above plain name match
+            final_score = max(final_score, 20.0)
+
         results.append(
             SearchResult(
                 result_type="entity",
-                score=score,
-                search_mode=search_mode,
+                score=final_score,
                 entity_summary=entity_to_summary(entity),
+                winning_view=winning_view,
+                winning_score=winning_score,
+                losing_score=losing_score,
             )
         )
 
-    log.info("Search complete", result_count=len(results), search_mode=search_mode)
-    return results, search_mode
+    # Stage 7: Sort by score desc, return top-K
+    results.sort(key=lambda r: r.score, reverse=True)
+    results = results[:limit]
+
+    log.info("Search complete", result_count=len(results))
+    return results
+
+
+# ---------------------------------------------------------------------------
+# Usage search (V1 compat — unchanged per FR-062)
+# ---------------------------------------------------------------------------
 
 
 async def hybrid_search_usages(
@@ -201,28 +410,22 @@ async def hybrid_search_usages(
     kind: str | None = None,
     capability: str | None = None,
     limit: int = 20,
-) -> tuple[list[SearchResult], SearchMode]:
+) -> list[SearchResult]:
     """
-    Hybrid search over entity_usages descriptions (FR-008).
+    Hybrid search over entity_usages descriptions.
 
-    Combines semantic search over usage embeddings (0.6 weight) with keyword
-    search over usage tsvectors (0.4 weight). No exact-match boost (usage
-    descriptions have no name/signature to boost).
-
-    Results are grouped by callee entity — one SearchResult per callee, with
-    top-matching usage descriptions inlined as supporting evidence.
-
-    kind and capability filters apply to the callee entity.
+    Unchanged from V1 (FR-062) — entity_usages pipeline is out of scope.
+    Results are grouped by callee entity with top-matching usage descriptions inlined.
     """
     log.info("Hybrid usage search", query=query, kind=kind, capability=capability)
 
     query_embedding: list[float] | None = None
-    search_mode: SearchMode = SearchMode.HYBRID
+    has_embeddings = True
 
     if embedding_provider:
         query_embedding = await embedding_provider.aembed(query)
     else:
-        search_mode = SearchMode.KEYWORD_FALLBACK
+        has_embeddings = False
 
     # Keyword scores over usage descriptions: {(callee_id, caller_compound, caller_sig): score}
     usage_scores: dict[tuple[str, str, str], float] = {}
@@ -253,10 +456,10 @@ async def hybrid_search_usages(
         if max_kw > 0:
             raw_kw_scores = {k: s / max_kw for k, s in raw_kw_scores.items()}
     for key, s in raw_kw_scores.items():
-        usage_scores[key] = s * _KEYWORD_WEIGHT
+        usage_scores[key] = s * _USAGE_KEYWORD_WEIGHT
 
     # Semantic scores over usage embeddings
-    if search_mode == SearchMode.HYBRID and query_embedding is not None:
+    if has_embeddings and query_embedding is not None:
         cosine_dist = EntityUsage.embedding.cosine_distance(query_embedding)  # type: ignore[union-attr]
         sem_score_expr = (literal(1) - cosine_dist).label("score")
         sem_stmt = (
@@ -274,12 +477,12 @@ async def hybrid_search_usages(
         sem_result = await session.execute(sem_stmt)
         for row in sem_result.all():
             key = (row.callee_id, row.caller_compound, row.caller_sig)
-            sem_contribution = float(row.score) * _SEMANTIC_WEIGHT
+            sem_contribution = float(row.score) * _USAGE_SEMANTIC_WEIGHT
             usage_scores[key] = usage_scores.get(key, 0.0) + sem_contribution
 
     if not usage_scores:
-        log.info("Usage search complete", result_count=0, search_mode=search_mode)
-        return [], search_mode
+        log.info("Usage search complete", result_count=0)
+        return []
 
     # Fetch all descriptions for scored rows (needed for MatchingUsage)
     desc_map: dict[tuple[str, str, str], str] = {}
@@ -329,7 +532,7 @@ async def hybrid_search_usages(
     # Apply callee-level filters and threshold
     results: list[SearchResult] = []
     for callee_id, score in ranked_callees:
-        if score < _SCORE_THRESHOLD:
+        if score < _USAGE_SCORE_THRESHOLD:
             continue
         entity = entity_map.get(callee_id)
         if not entity:
@@ -342,11 +545,13 @@ async def hybrid_search_usages(
             SearchResult(
                 result_type="entity",
                 score=score,
-                search_mode=search_mode,
                 entity_summary=entity_to_summary(entity),
                 matching_usages=callee_usages.get(callee_id),
+                winning_view="doc",
+                winning_score=score,
+                losing_score=0.0,
             )
         )
 
-    log.info("Usage search complete", result_count=len(results), search_mode=search_mode)
-    return results, search_mode
+    log.info("Usage search complete", result_count=len(results))
+    return results

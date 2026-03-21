@@ -233,7 +233,7 @@ async def get_stats_resource(
 
     # Entities with embeddings
     entities_with_embeddings = (
-        await session.scalar(select(func.count(Entity.entity_id)).where(Entity.embedding.isnot(None))) or 0
+        await session.scalar(select(func.count(Entity.entity_id)).where(Entity.doc_embedding.isnot(None))) or 0
     )
 
     # Graph stats

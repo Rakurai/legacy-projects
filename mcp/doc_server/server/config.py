@@ -66,6 +66,15 @@ class ServerConfig(BaseSettings):
         description="fastembed cross-encoder model name for reranking",
     )
 
+    # Per-signal floor thresholds (FR-043)
+    floor_doc_semantic: float = Field(default=0.3, ge=0, description="Floor threshold for doc semantic signal")
+    floor_symbol_semantic: float = Field(default=0.3, ge=0, description="Floor threshold for symbol semantic signal")
+    floor_doc_keyword_shaped: float = Field(default=0.05, ge=0, description="Floor threshold for shaped doc keyword")
+    floor_symbol_keyword_shaped: float = Field(
+        default=0.05, ge=0, description="Floor threshold for shaped symbol keyword"
+    )
+    floor_trigram: float = Field(default=0.2, ge=0, description="Floor threshold for trigram similarity")
+
     @property
     def db_url(self) -> str:
         """PostgreSQL async connection URL (asyncpg driver)."""

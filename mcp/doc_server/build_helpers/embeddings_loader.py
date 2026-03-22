@@ -10,6 +10,8 @@ import re
 import tempfile
 from pathlib import Path
 
+from tqdm import tqdm
+
 from server.embedding import EmbeddingProvider
 from server.logging_config import log
 
@@ -166,10 +168,16 @@ def sync_embeddings_cache(
 
     if missing_keys:
         log.info("Generating embeddings for missing keys", type=embedding_type, count=len(missing_keys))
-        missing_texts = [texts_by_key[key] for key in missing_keys]
-        new_vectors = list(provider.embed_batch(missing_texts))
+        missing_keys_list = list(missing_keys)
+        missing_texts = [texts_by_key[key] for key in missing_keys_list]
+        batch_size = provider.max_batch_size
 
-        for key, vector in zip(missing_keys, new_vectors, strict=True):
+        all_vectors: list[list[float]] = []
+        for i in tqdm(range(0, len(missing_texts), batch_size), desc=f"Embedding ({embedding_type})", unit="batch"):
+            batch = missing_texts[i : i + batch_size]
+            all_vectors.extend(provider.embed_batch(batch))
+
+        for key, vector in zip(missing_keys_list, all_vectors, strict=True):
             embeddings[key] = vector
 
     if stale_keys:

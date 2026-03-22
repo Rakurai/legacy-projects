@@ -69,8 +69,8 @@ async def search(
                 kind=kind,
                 capability=capability,
                 limit=top_k,
-                doc_view=lc.get("doc_view"),
-                symbol_view=lc.get("symbol_view"),
+                doc_view=lc["doc_view"],
+                symbol_view=lc["symbol_view"],
             )
 
     return SearchResponse(

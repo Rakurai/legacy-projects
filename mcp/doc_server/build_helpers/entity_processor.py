@@ -679,8 +679,8 @@ def build_symbol_searchable(merged_entities: list[MergedEntity]) -> None:
             parts.append(merged.qualified_name)
         parts.append(merged.signature)
         raw = " ".join(p for p in parts if p)
-        # Lowercase and strip non-alphanumeric (keep spaces for trigram matching)
-        merged.symbol_searchable = re.sub(r"[^a-z0-9_ ]", "", raw.lower())
+        # Lowercase and strip spec-defined punctuation *&(),; (FR-014)
+        merged.symbol_searchable = re.sub(r"[*&(),;]", "", raw.lower())
 
     log.info("symbol_searchable built", count=len(merged_entities))
 

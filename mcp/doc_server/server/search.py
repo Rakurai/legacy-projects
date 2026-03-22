@@ -14,18 +14,16 @@ hybrid_search_usages is unchanged (entity_usages out of scope per FR-062).
 """
 
 import math
+import time
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
 
 from sqlalchemy import Select, func, literal
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
 
-if TYPE_CHECKING:
-    from server.embedding import EmbeddingProvider
-
 from server.converters import entity_to_summary
 from server.db_models import Entity, EntityUsage
+from server.embedding import EmbeddingProvider
 from server.logging_config import log
 from server.models import MatchingUsage, SearchResult
 from server.retrieval_view import RetrievalView
@@ -63,16 +61,107 @@ class Candidate:
     # Shaped scores (computed after channel merge)
     doc_keyword_shaped: float = 0.0
     symbol_keyword_shaped: float = 0.0
+    # Token overlap signals (FR-032, FR-034, FR-035)
+    token_jaccard: float = 0.0
+    query_coverage: float = 0.0
     # Cross-encoder scores (set during reranking)
     ce_doc: float = 0.0
     ce_symbol: float = 0.0
 
 
+# Stop words excluded from token overlap computations
+_STOP_WORDS: frozenset[str] = frozenset(
+    {
+        "a",
+        "an",
+        "the",
+        "and",
+        "or",
+        "but",
+        "in",
+        "on",
+        "at",
+        "to",
+        "for",
+        "of",
+        "with",
+        "by",
+        "from",
+        "is",
+        "are",
+        "was",
+        "were",
+        "be",
+        "been",
+        "that",
+        "this",
+        "it",
+        "as",
+        "if",
+        "not",
+        "no",
+        "do",
+        "does",
+        "did",
+        "has",
+        "have",
+        "had",
+        "can",
+        "could",
+        "will",
+        "would",
+        "shall",
+        "should",
+        "may",
+        "might",
+        "must",
+        "so",
+        "than",
+        "then",
+        "all",
+        "each",
+        "every",
+        "any",
+        "some",
+        "such",
+        "what",
+        "which",
+        "who",
+        "how",
+        "when",
+        "where",
+    }
+)
+
+
+def _tokenize(text: str) -> set[str]:
+    """Lowercase alpha-numeric tokenization, stripping stop words."""
+    import re as _re
+
+    return {t for t in _re.findall(r"[a-z0-9_]+", text.lower()) if t not in _STOP_WORDS}
+
+
+def _compute_token_jaccard(query_tokens: set[str], entity_tokens: set[str]) -> float:
+    """Jaccard similarity between query tokens and entity name/signature tokens."""
+    if not query_tokens or not entity_tokens:
+        return 0.0
+    intersection = query_tokens & entity_tokens
+    union = query_tokens | entity_tokens
+    return len(intersection) / len(union)
+
+
+def _compute_query_coverage(query_tokens: set[str], entity_tokens: set[str]) -> float:
+    """Fraction of query tokens found in entity tokens."""
+    if not query_tokens:
+        return 0.0
+    return len(query_tokens & entity_tokens) / len(query_tokens)
+
+
 def _shape_tsrank(raw: float, ceiling: float) -> float:
-    """Corpus-calibrated ts_rank shaping: log(1 + score) / log(1 + ceiling)."""
+    """Corpus-calibrated ts_rank shaping: log(1 + score) / log(1 + ceiling), clamped to [0, 1]."""
     if ceiling <= 0:
         return 0.0
-    return math.log1p(raw) / math.log1p(ceiling)
+    return min(math.log1p(raw) / math.log1p(ceiling), 1.0)
 
 
 # ---------------------------------------------------------------------------
@@ -212,12 +301,12 @@ async def _trigram_scores(
 async def hybrid_search(
     session: AsyncSession,
     query: str,
-    embedding_provider: EmbeddingProvider | None = None,
+    embedding_provider: EmbeddingProvider,
+    doc_view: RetrievalView,
+    symbol_view: RetrievalView,
     kind: str | None = None,
     capability: str | None = None,
     limit: int = 20,
-    doc_view: RetrievalView | None = None,
-    symbol_view: RetrievalView | None = None,
 ) -> list[SearchResult]:
     """Multi-view search: 5 channels → merge → filter → cross-encoder rerank → top-K."""
     log.info("Multi-view search", query=query, kind=kind, capability=capability)
@@ -248,30 +337,39 @@ async def hybrid_search(
         qn_ids = {row[0] for row in qn_result.all()}
         name_exact_ids = name_exact_ids | qn_ids
 
-    query_embedding: list[float] | None = None
-    if embedding_provider:
-        query_embedding = await embedding_provider.aembed(search_query)
+    query_embedding = await embedding_provider.aembed(search_query)
 
     doc_kw = await _doc_keyword_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
     sym_kw = await _symbol_keyword_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
     trgm = await _trigram_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
 
-    doc_sem: dict[str, float] = {}
-    sym_sem: dict[str, float] = {}
-    if query_embedding:
-        doc_sem = await _doc_semantic_scores(session, query_embedding, kind, capability, _CHANNEL_LIMIT)
-        sym_sem = await _symbol_semantic_scores(session, query_embedding, kind, capability, _CHANNEL_LIMIT)
+    doc_sem = await _doc_semantic_scores(session, query_embedding, kind, capability, _CHANNEL_LIMIT)
+    sym_sem = await _symbol_semantic_scores(session, query_embedding, kind, capability, _CHANNEL_LIMIT)
 
     # Stage 2: Merge by entity_id
-    all_ids = name_exact_ids | sig_exact_ids | doc_kw.keys() | sym_kw.keys() | doc_sem.keys() | sym_sem.keys() | trgm.keys()
+    all_ids = (
+        name_exact_ids | sig_exact_ids | doc_kw.keys() | sym_kw.keys() | doc_sem.keys() | sym_sem.keys() | trgm.keys()
+    )
+
+    log.debug(
+        "Channel counts",
+        name_exact=len(name_exact_ids),
+        sig_exact=len(sig_exact_ids),
+        doc_kw=len(doc_kw),
+        sym_kw=len(sym_kw),
+        doc_sem=len(doc_sem),
+        sym_sem=len(sym_sem),
+        trigram=len(trgm),
+        merged=len(all_ids),
+    )
 
     if not all_ids:
         log.info("Search complete", result_count=0)
         return []
 
     # Get ceiling values from views
-    doc_ceiling = doc_view.ts_rank_ceiling if doc_view else 1.0
-    sym_ceiling = symbol_view.ts_rank_ceiling if symbol_view else 1.0
+    doc_ceiling = doc_view.ts_rank_ceiling
+    sym_ceiling = symbol_view.ts_rank_ceiling
 
     candidates: dict[str, Candidate] = {}
     for eid in all_ids:
@@ -288,14 +386,30 @@ async def hybrid_search(
         c.symbol_keyword_shaped = _shape_tsrank(c.symbol_keyword, sym_ceiling)
         candidates[eid] = c
 
+    # Token overlap signals (FR-032, FR-034, FR-035)
+    query_tokens = _tokenize(search_query)
+    if query_tokens:
+        name_result = await session.execute(
+            select(Entity.entity_id, Entity.name, Entity.signature).where(Entity.entity_id.in_(list(all_ids)))
+        )
+        for row in name_result.all():
+            c = candidates.get(row.entity_id)
+            if c is None:
+                continue
+            entity_tokens = _tokenize(f"{row.name or ''} {row.signature or ''}")
+            c.token_jaccard = _compute_token_jaccard(query_tokens, entity_tokens)
+            c.query_coverage = _compute_query_coverage(query_tokens, entity_tokens)
+
     # Stage 4: Per-signal floor filtering with name_exact bypass
     # Candidates pass if: any signal exceeds its floor threshold, OR name/sig exact match
+    doc_floors = doc_view.floor_thresholds
+    sym_floors = symbol_view.floor_thresholds
     floor_thresholds = {
-        "doc_semantic": 0.3,
-        "symbol_semantic": 0.3,
-        "doc_keyword_shaped": 0.05,
-        "symbol_keyword_shaped": 0.05,
-        "trigram": _TRIGRAM_THRESHOLD,
+        "doc_semantic": doc_floors.get("semantic", 0.3),
+        "symbol_semantic": sym_floors.get("semantic", 0.3),
+        "doc_keyword_shaped": doc_floors.get("keyword_shaped", 0.05),
+        "symbol_keyword_shaped": sym_floors.get("keyword_shaped", 0.05),
+        "trigram": sym_floors.get("trigram", _TRIGRAM_THRESHOLD),
     }
 
     filtered: dict[str, Candidate] = {}
@@ -332,27 +446,28 @@ async def hybrid_search(
                 scope_matched_ids.add(eid)
 
     # Stage 5: Cross-encoder reranking (both views per candidate)
-    if doc_view and symbol_view:
-        # Build document texts for cross-encoder
-        doc_texts: list[str] = []
-        sym_texts: list[str] = []
-        candidate_list: list[Candidate] = []
+    # Build document texts for cross-encoder
+    doc_texts: list[str] = []
+    sym_texts: list[str] = []
+    candidate_list: list[Candidate] = []
 
-        for eid, c in filtered.items():
-            entity = entity_map.get(eid)
-            if not entity:
-                continue
-            candidate_list.append(c)
-            doc_texts.append(doc_view.assemble_embed_text(entity))
-            sym_texts.append(symbol_view.assemble_embed_text(entity))
+    for eid, c in filtered.items():
+        entity = entity_map.get(eid)
+        if not entity:
+            continue
+        candidate_list.append(c)
+        doc_texts.append(doc_view.assemble_embed_text(entity))
+        sym_texts.append(symbol_view.assemble_embed_text(entity))
 
-        if candidate_list:
-            doc_scores = await doc_view.cross_encoder.arerank(query, doc_texts)
-            sym_scores = await symbol_view.cross_encoder.arerank(query, sym_texts)
+    rerank_start = time.monotonic()
+    if candidate_list:
+        doc_scores = await doc_view.cross_encoder.arerank(query, doc_texts)
+        sym_scores = await symbol_view.cross_encoder.arerank(query, sym_texts)
 
-            for i, c in enumerate(candidate_list):
-                c.ce_doc = doc_scores[i]
-                c.ce_symbol = sym_scores[i]
+        for i, c in enumerate(candidate_list):
+            c.ce_doc = doc_scores[i]
+            c.ce_symbol = sym_scores[i]
+    rerank_elapsed_ms = (time.monotonic() - rerank_start) * 1000
 
     # Stage 6: Assign winning view and build results
     results: list[SearchResult] = []
@@ -371,30 +486,37 @@ async def hybrid_search(
             winning_score = c.ce_symbol
             losing_score = c.ce_doc
 
-        # Boost exact matches and scope matches to ensure they rank at top
-        final_score = winning_score
-        if c.name_exact or c.signature_exact:
-            final_score = max(final_score, 10.0)
+        # Tier-based sort: scope match > exact match > cross-encoder score
         if eid in scope_matched_ids:
-            # Scope match ranks above plain name match
-            final_score = max(final_score, 20.0)
+            tier = 2
+        elif c.name_exact or c.signature_exact:
+            tier = 1
+        else:
+            tier = 0
 
         results.append(
             SearchResult(
                 result_type="entity",
-                score=final_score,
+                score=winning_score,
                 entity_summary=entity_to_summary(entity),
                 winning_view=winning_view,
                 winning_score=winning_score,
                 losing_score=losing_score,
+                sort_tier=tier,
             )
         )
 
-    # Stage 7: Sort by score desc, return top-K
-    results.sort(key=lambda r: r.score, reverse=True)
+    # Stage 7: Sort by tier desc then score desc, return top-K
+    results.sort(key=lambda r: (r.sort_tier, r.score), reverse=True)
     results = results[:limit]
 
-    log.info("Search complete", result_count=len(results))
+    log.info(
+        "Search complete",
+        result_count=len(results),
+        pre_filter=len(candidates),
+        post_filter=len(filtered),
+        rerank_ms=round(rerank_elapsed_ms, 1),
+    )
     return results
 
 
@@ -406,7 +528,7 @@ async def hybrid_search(
 async def hybrid_search_usages(
     session: AsyncSession,
     query: str,
-    embedding_provider: EmbeddingProvider | None = None,
+    embedding_provider: EmbeddingProvider,
     kind: str | None = None,
     capability: str | None = None,
     limit: int = 20,
@@ -419,13 +541,7 @@ async def hybrid_search_usages(
     """
     log.info("Hybrid usage search", query=query, kind=kind, capability=capability)
 
-    query_embedding: list[float] | None = None
-    has_embeddings = True
-
-    if embedding_provider:
-        query_embedding = await embedding_provider.aembed(query)
-    else:
-        has_embeddings = False
+    query_embedding = await embedding_provider.aembed(query)
 
     # Keyword scores over usage descriptions: {(callee_id, caller_compound, caller_sig): score}
     usage_scores: dict[tuple[str, str, str], float] = {}
@@ -459,26 +575,25 @@ async def hybrid_search_usages(
         usage_scores[key] = s * _USAGE_KEYWORD_WEIGHT
 
     # Semantic scores over usage embeddings
-    if has_embeddings and query_embedding is not None:
-        cosine_dist = EntityUsage.embedding.cosine_distance(query_embedding)  # type: ignore[union-attr]
-        sem_score_expr = (literal(1) - cosine_dist).label("score")
-        sem_stmt = (
-            select(  # type: ignore[call-overload]
-                EntityUsage.callee_id,
-                EntityUsage.caller_compound,
-                EntityUsage.caller_sig,
-                EntityUsage.description,
-                sem_score_expr,
-            )
-            .where(EntityUsage.embedding.isnot(None))  # type: ignore[union-attr]
-            .order_by(sem_score_expr.desc())
-            .limit(limit * 5)
+    cosine_dist = EntityUsage.embedding.cosine_distance(query_embedding)  # type: ignore[union-attr]
+    sem_score_expr = (literal(1) - cosine_dist).label("score")
+    sem_stmt = (
+        select(  # type: ignore[call-overload]
+            EntityUsage.callee_id,
+            EntityUsage.caller_compound,
+            EntityUsage.caller_sig,
+            EntityUsage.description,
+            sem_score_expr,
         )
-        sem_result = await session.execute(sem_stmt)
-        for row in sem_result.all():
-            key = (row.callee_id, row.caller_compound, row.caller_sig)
-            sem_contribution = float(row.score) * _USAGE_SEMANTIC_WEIGHT
-            usage_scores[key] = usage_scores.get(key, 0.0) + sem_contribution
+        .where(EntityUsage.embedding.isnot(None))  # type: ignore[union-attr]
+        .order_by(sem_score_expr.desc())
+        .limit(limit * 5)
+    )
+    sem_result = await session.execute(sem_stmt)
+    for row in sem_result.all():
+        key = (row.callee_id, row.caller_compound, row.caller_sig)
+        sem_contribution = float(row.score) * _USAGE_SEMANTIC_WEIGHT
+        usage_scores[key] = usage_scores.get(key, 0.0) + sem_contribution
 
     if not usage_scores:
         log.info("Usage search complete", result_count=0)

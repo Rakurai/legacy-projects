@@ -156,7 +156,6 @@ async def test_stats_resource(
     data = await get_stats_resource(
         test_session,
         graph=sample_graph,
-        embedding_available=False,
     )
 
     assert "entity_stats" in data
@@ -171,7 +170,7 @@ async def test_stats_resource(
 
     assert "server_info" in data
     assert data["server_info"]["version"] == "1.0.0"
-    assert data["server_info"]["embedding_endpoint_available"] is False
+    assert data["server_info"]["embedding_endpoint_available"] is True
 
 
 @pytest.mark.asyncio
@@ -183,7 +182,7 @@ async def test_stats_resource_no_graph(
     sample_edges: list[Edge],
 ):
     """Stats work without graph (graceful degradation)."""
-    data = await get_stats_resource(test_session, graph=None, embedding_available=True)
+    data = await get_stats_resource(test_session, graph=None)
 
     assert data["graph_stats"]["total_nodes"] == 0
     assert data["graph_stats"]["total_edges"] == 0

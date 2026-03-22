@@ -14,7 +14,7 @@ from server.models import EntitySummary
 
 
 @pytest.mark.asyncio
-async def test_resolve_by_entity_id(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_by_entity_id(test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider):
     """Test exact entity_id match (stage 1)."""
     entity_id = sample_entities[0].entity_id
 
@@ -22,7 +22,7 @@ async def test_resolve_by_entity_id(test_session: AsyncSession, sample_entities:
         session=test_session,
         query=entity_id,
         kind=None,
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 
@@ -33,15 +33,14 @@ async def test_resolve_by_entity_id(test_session: AsyncSession, sample_entities:
 
 
 @pytest.mark.asyncio
-async def test_resolve_by_signature(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Test exact signature match (stage 2)."""
+async def test_resolve_by_signature(test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider):
     signature = "void damage(Character *ch, Character *victim, int dam)"
 
     result = await resolve_entity(
         session=test_session,
         query=signature,
         kind=None,
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 
@@ -52,13 +51,15 @@ async def test_resolve_by_signature(test_session: AsyncSession, sample_entities:
 
 
 @pytest.mark.asyncio
-async def test_resolve_by_name_exact(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_by_name_exact(
+    test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider
+):
     """Test exact name match (stage 3)."""
     result = await resolve_entity(
         session=test_session,
         query="damage",
         kind=None,
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 
@@ -69,7 +70,9 @@ async def test_resolve_by_name_exact(test_session: AsyncSession, sample_entities
 
 
 @pytest.mark.asyncio
-async def test_resolve_by_name_ambiguous(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_by_name_ambiguous(
+    test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider
+):
     """Test ambiguous name match when multiple entities share a name."""
     duplicate = Entity(
         entity_id="fn:dup0001",
@@ -87,7 +90,7 @@ async def test_resolve_by_name_ambiguous(test_session: AsyncSession, sample_enti
         session=test_session,
         query="damage",
         kind=None,
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 
@@ -99,13 +102,12 @@ async def test_resolve_by_name_ambiguous(test_session: AsyncSession, sample_enti
 
 
 @pytest.mark.asyncio
-async def test_resolve_by_prefix(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Test prefix match (stage 4)."""
+async def test_resolve_by_prefix(test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider):
     result = await resolve_entity(
         session=test_session,
         query="do_",
         kind=None,
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 
@@ -116,13 +118,12 @@ async def test_resolve_by_prefix(test_session: AsyncSession, sample_entities: li
 
 
 @pytest.mark.asyncio
-async def test_resolve_not_found(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Test entity not found."""
+async def test_resolve_not_found(test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider):
     result = await resolve_entity(
         session=test_session,
         query="nonexistent_function_xyz",
         kind=None,
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 
@@ -131,13 +132,14 @@ async def test_resolve_not_found(test_session: AsyncSession, sample_entities: li
 
 
 @pytest.mark.asyncio
-async def test_resolve_with_kind_filter(test_session: AsyncSession, sample_entities: list[Entity]):
-    """Test resolution with kind filter."""
+async def test_resolve_with_kind_filter(
+    test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider
+):
     result = await resolve_entity(
         session=test_session,
         query="Character",
         kind="class",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 

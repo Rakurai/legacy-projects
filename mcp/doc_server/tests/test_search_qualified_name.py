@@ -12,12 +12,16 @@ from server.search import hybrid_search
 
 
 @pytest.mark.asyncio
-async def test_scoped_query_boosts_matching_scope(test_session, sample_entities):
+async def test_scoped_query_boosts_matching_scope(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Scoped query 'Combat::damage' ranks Combat-scoped entity above Logging-scoped."""
     results = await hybrid_search(
         session=test_session,
         query="Combat::damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) >= 1
@@ -27,12 +31,16 @@ async def test_scoped_query_boosts_matching_scope(test_session, sample_entities)
 
 
 @pytest.mark.asyncio
-async def test_different_scope_query(test_session, sample_entities):
+async def test_different_scope_query(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Scoped query 'Logging::damage' ranks Logging-scoped entity at top."""
     results = await hybrid_search(
         session=test_session,
         query="Logging::damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) >= 1
@@ -42,12 +50,16 @@ async def test_different_scope_query(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_unscoped_query_returns_both(test_session, sample_entities):
+async def test_unscoped_query_returns_both(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Unscoped 'damage' query returns both Combat::damage and Logging::damage."""
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     entity_ids = {r.entity_summary.entity_id for r in results if r.entity_summary}
@@ -56,17 +68,21 @@ async def test_unscoped_query_returns_both(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_scoped_match_gets_boost(test_session, sample_entities):
-    """Scope-matched entity gets score >= 10.0 (same as exact match boost)."""
+async def test_scoped_match_gets_boost(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
+    """Scope-matched entity gets sort_tier=2 (highest tier)."""
     results = await hybrid_search(
         session=test_session,
         query="Combat::damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) >= 1
     combat_result = next(r for r in results if r.entity_summary and r.entity_summary.entity_id == "fn:a1b2c3d")
-    assert combat_result.score >= 10.0
+    assert combat_result.sort_tier == 2
 
 
 @pytest.mark.asyncio
@@ -82,12 +98,16 @@ async def test_qualified_name_populated(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_nonexistent_scope_returns_bare_name_results(test_session, sample_entities):
+async def test_nonexistent_scope_returns_bare_name_results(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Scoped query with no matching scope falls back to bare name search."""
     results = await hybrid_search(
         session=test_session,
         query="Nonexistent::damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     # Should still find "damage" entities via bare name channels

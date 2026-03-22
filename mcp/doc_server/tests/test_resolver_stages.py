@@ -14,7 +14,9 @@ from server.db_models import Entity
 
 
 @pytest.mark.asyncio
-async def test_resolve_by_keyword_stage(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_by_keyword_stage(
+    test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider
+):
     """Stage 5 keyword search triggers when stages 1-4 miss.
 
     The query "Apply damage character" doesn't match any entity_id, signature,
@@ -25,7 +27,7 @@ async def test_resolve_by_keyword_stage(test_session: AsyncSession, sample_entit
         session=test_session,
         query="Apply damage character",  # Matches tsvector content, not name/sig
         kind=None,
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 
@@ -35,13 +37,15 @@ async def test_resolve_by_keyword_stage(test_session: AsyncSession, sample_entit
 
 
 @pytest.mark.asyncio
-async def test_resolve_by_keyword_with_kind_filter(test_session: AsyncSession, sample_entities: list[Entity]):
+async def test_resolve_by_keyword_with_kind_filter(
+    test_session: AsyncSession, sample_entities: list[Entity], mock_embedding_provider
+):
     """Stage 5 keyword search respects kind filter — no variable matches 'Apply damage'."""
     result = await resolve_entity(
         session=test_session,
         query="Apply damage character",
         kind="variable",  # No variable has "Apply damage" in its tsvector
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
         limit=20,
     )
 

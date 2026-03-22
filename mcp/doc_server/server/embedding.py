@@ -9,8 +9,6 @@ Two implementations:
 Factory function `create_provider(config)` selects the implementation based on config.
 """
 
-from __future__ import annotations
-
 import asyncio
 from collections.abc import Generator
 from typing import Protocol, runtime_checkable

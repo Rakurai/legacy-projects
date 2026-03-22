@@ -132,7 +132,10 @@ async def lifespan(app: FastMCP) -> AsyncIterator[LifespanContext]:
         tsvector_dictionary="english",
         cross_encoder=cross_encoder,
         ts_rank_ceiling=doc_ceiling,
-        floor_thresholds={},
+        floor_thresholds={
+            "semantic": config.floor_doc_semantic,
+            "keyword_shaped": config.floor_doc_keyword_shaped,
+        },
         assemble_embed_text=_assemble_doc_embed_text,
     )
 
@@ -143,7 +146,11 @@ async def lifespan(app: FastMCP) -> AsyncIterator[LifespanContext]:
         tsvector_dictionary="simple",
         cross_encoder=cross_encoder,
         ts_rank_ceiling=symbol_ceiling,
-        floor_thresholds={},
+        floor_thresholds={
+            "semantic": config.floor_symbol_semantic,
+            "keyword_shaped": config.floor_symbol_keyword_shaped,
+            "trigram": config.floor_trigram,
+        },
         assemble_embed_text=_assemble_symbol_embed_text,
     )
 

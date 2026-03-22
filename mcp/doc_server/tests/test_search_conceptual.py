@@ -12,13 +12,17 @@ from server.search import hybrid_search
 
 
 @pytest.mark.asyncio
-async def test_prose_query_finds_documented_entity(test_session, sample_entities):
+async def test_prose_query_finds_documented_entity(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Natural-language query matching doc prose surfaces the entity."""
     # "armor resistances" appears in damage entity's details field
     results = await hybrid_search(
         session=test_session,
         query="armor resistances",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0
@@ -27,14 +31,18 @@ async def test_prose_query_finds_documented_entity(test_session, sample_entities
 
 
 @pytest.mark.asyncio
-async def test_behavioral_query_matches_notes(test_session, sample_entities):
+async def test_behavioral_query_matches_notes(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Query matching notes/rationale fields surfaces entity via doc keyword channel."""
     # "poison" does not appear in any entity name but is in notes for damage ("Damage is capped...")
     # "immortal" appears in damage notes
     results = await hybrid_search(
         session=test_session,
         query="immortal characters immune",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0
@@ -43,24 +51,32 @@ async def test_behavioral_query_matches_notes(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_doc_query_does_not_match_symbol_only(test_session, sample_entities):
+async def test_doc_query_does_not_match_symbol_only(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Query with no doc-prose match returns empty or low results."""
     results = await hybrid_search(
         session=test_session,
         query="zzz_completely_unrelated_concept_999",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) == 0
 
 
 @pytest.mark.asyncio
-async def test_doc_results_carry_winning_view(test_session, sample_entities):
+async def test_doc_results_carry_winning_view(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Doc-channel results carry winning_view metadata."""
     results = await hybrid_search(
         session=test_session,
         query="combat damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0
@@ -71,12 +87,16 @@ async def test_doc_results_carry_winning_view(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_kind_filter_with_prose_query(test_session, sample_entities):
+async def test_kind_filter_with_prose_query(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Kind filter works with prose-based queries."""
     results = await hybrid_search(
         session=test_session,
         query="combat damage armor",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
         kind="function",
     )
 
@@ -86,12 +106,16 @@ async def test_kind_filter_with_prose_query(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_capability_filter_with_prose_query(test_session, sample_entities):
+async def test_capability_filter_with_prose_query(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Capability filter works with prose-based queries."""
     results = await hybrid_search(
         session=test_session,
         query="damage character",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
         capability="combat",
     )
 
@@ -101,13 +125,17 @@ async def test_capability_filter_with_prose_query(test_session, sample_entities)
 
 
 @pytest.mark.asyncio
-async def test_rationale_field_searchable(test_session, sample_entities):
+async def test_rationale_field_searchable(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Rationale text is indexed and searchable via doc keyword channel."""
     # "balance" appears in damage entity's rationale
     results = await hybrid_search(
         session=test_session,
         query="balance consistently",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0

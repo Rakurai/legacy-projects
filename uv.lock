@@ -1516,6 +1516,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "sqlmodel" },
+    { name = "tqdm" },
 ]
 
 [package.optional-dependencies]
@@ -1552,6 +1553,7 @@ requires-dist = [
     { name = "ruff", marker = "extra == 'dev'", specifier = ">=0.2.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.0" },
     { name = "sqlmodel", specifier = ">=0.0.16" },
+    { name = "tqdm", specifier = ">=4.60.0" },
 ]
 provides-extras = ["dev"]
 

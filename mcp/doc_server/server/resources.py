@@ -206,7 +206,6 @@ async def get_file_entities_resource(
 async def get_stats_resource(
     session: AsyncSession,
     graph: nx.MultiDiGraph | None = None,
-    embedding_available: bool = False,
 ) -> dict:
     """
     Get aggregate server statistics.
@@ -214,7 +213,6 @@ async def get_stats_resource(
     Args:
         session: Database session
         graph: NetworkX graph (optional)
-        embedding_available: Whether embedding endpoint is available
 
     Returns:
         Dict with server stats (for legacy://stats)
@@ -272,7 +270,7 @@ async def get_stats_resource(
         },
         "server_info": {
             "version": _get_version(),
-            "embedding_endpoint_available": embedding_available,
+            "embedding_endpoint_available": True,
             "database_connection_status": "connected",
         },
     }

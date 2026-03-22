@@ -135,7 +135,7 @@ async def test_search_entity_default_unchanged(mock_ctx, sample_entities):
 
 @pytest.mark.asyncio
 async def test_exact_match_score_dominates(mock_ctx, sample_entities):
-    """Exact name match returns score > 1.0 — distinguishable from weak matches (SC-004 / FR-009)."""
+    """Exact name match sorts first via tier-based ranking (SC-004 / FR-009)."""
     response = await search(
         ctx=mock_ctx,
         query="damage",
@@ -143,10 +143,13 @@ async def test_exact_match_score_dominates(mock_ctx, sample_entities):
     )
 
     assert response.result_count > 0
-    # Exact match entity (name="damage") must be first and score > 1.0
-    assert response.results[0].entity_summary is not None  # type: ignore
-    assert response.results[0].entity_summary.name == "damage"  # type: ignore
-    assert response.results[0].score > 1.0
+    # Exact match entity (name="damage") must be first with sort_tier=1
+    first = response.results[0]
+    assert first.entity_summary is not None  # type: ignore
+    assert first.entity_summary.name == "damage"  # type: ignore
+    assert first.sort_tier == 1
+    # score equals winning_score (no artificial boost)
+    assert first.score == first.winning_score
 
 
 @pytest.mark.asyncio

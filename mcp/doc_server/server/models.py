@@ -212,6 +212,7 @@ class SearchResult(BaseModel):
     winning_view: str = Field(description="'symbol' or 'doc' — which view scored highest")
     winning_score: float = Field(ge=0, description="Cross-encoder score from the winning view")
     losing_score: float = Field(ge=0, description="Cross-encoder score from the losing view")
+    sort_tier: int = Field(default=0, exclude=True)
 
 
 class CapabilityTouch(BaseModel):

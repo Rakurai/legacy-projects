@@ -12,28 +12,36 @@ from server.search import hybrid_search
 
 
 @pytest.mark.asyncio
-async def test_exact_name_match_ranks_first(test_session, sample_entities):
-    """Exact bare name match appears in results with score >= 10.0."""
+async def test_exact_name_match_ranks_first(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
+    """Exact bare name match ranks first via tier-based sort."""
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0
     top = results[0]
     assert top.entity_summary is not None
     assert top.entity_summary.name == "damage"
-    assert top.score >= 10.0
+    assert top.sort_tier >= 1
 
 
 @pytest.mark.asyncio
-async def test_exact_signature_match(test_session, sample_entities):
+async def test_exact_signature_match(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Exact signature match appears in results."""
     results = await hybrid_search(
         session=test_session,
         query="void damage(Character *ch, Character *victim, int dam)",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0
@@ -42,7 +50,9 @@ async def test_exact_signature_match(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_symbol_keyword_no_stemming(test_session, sample_entities):
+async def test_symbol_keyword_no_stemming(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Symbol keyword search uses simple dictionary (no stemming).
 
     'Character' should match as an identifier, not be stemmed to 'charact'.
@@ -50,7 +60,9 @@ async def test_symbol_keyword_no_stemming(test_session, sample_entities):
     results = await hybrid_search(
         session=test_session,
         query="Character",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0
@@ -59,23 +71,31 @@ async def test_symbol_keyword_no_stemming(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_empty_query_returns_empty(test_session, sample_entities):
+async def test_empty_query_returns_empty(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Empty query returns zero results."""
     results = await hybrid_search(
         session=test_session,
         query="",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
     assert results == []
 
 
 @pytest.mark.asyncio
-async def test_results_have_winning_view_metadata(test_session, sample_entities):
+async def test_results_have_winning_view_metadata(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """All results carry winning_view, winning_score, losing_score."""
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0
@@ -86,12 +106,16 @@ async def test_results_have_winning_view_metadata(test_session, sample_entities)
 
 
 @pytest.mark.asyncio
-async def test_kind_filter_applied(test_session, sample_entities):
+async def test_kind_filter_applied(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Kind filter restricts results to matching entity kind."""
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
         kind="function",
     )
 
@@ -101,12 +125,16 @@ async def test_kind_filter_applied(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_capability_filter_applied(test_session, sample_entities):
+async def test_capability_filter_applied(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """Capability filter restricts results to matching capability."""
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
         capability="combat",
     )
 
@@ -116,12 +144,16 @@ async def test_capability_filter_applied(test_session, sample_entities):
 
 
 @pytest.mark.asyncio
-async def test_no_search_mode_in_results(test_session, sample_entities):
+async def test_no_search_mode_in_results(
+    test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
+):
     """SearchResult no longer has a search_mode field (FR-070)."""
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=None,
+        embedding_provider=mock_embedding_provider,
+        doc_view=mock_doc_view,
+        symbol_view=mock_symbol_view,
     )
 
     assert len(results) > 0

@@ -184,7 +184,7 @@ async def populate_entities(session: AsyncSession, merged_entities: list[MergedE
         SET doc_search_vector =
             setweight(to_tsvector('english', COALESCE(name, '')), 'A') ||
             setweight(to_tsvector('english', COALESCE(brief, '') || ' ' || COALESCE(details, '')), 'B') ||
-            setweight(to_tsvector('english', COALESCE(notes, '') || ' ' || COALESCE(rationale, '') || ' ' || COALESCE(returns, '')), 'C')
+            setweight(to_tsvector('english', COALESCE(notes, '') || ' ' || COALESCE(rationale, '') || ' ' || COALESCE(returns, '') || ' ' || COALESCE((SELECT string_agg(value, ' ') FROM jsonb_each_text(params)), '')), 'C')
     """)
 
     symbol_tsvector_sql = text("""

@@ -36,9 +36,9 @@ class TestShapeTsrank:
         expected = math.log1p(0.5) / math.log1p(2.0)
         assert abs(result - expected) < 1e-9
 
-    def test_raw_above_ceiling_exceeds_one(self):
+    def test_raw_above_ceiling_clamped(self):
         result = _shape_tsrank(5.0, ceiling=2.0)
-        assert result > 1.0
+        assert result == 1.0
 
 
 # ---------- Candidate ----------

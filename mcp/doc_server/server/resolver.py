@@ -14,8 +14,6 @@ Pipeline stages (fail-through):
 Returns ResolutionResult with match metadata and candidates.
 """
 
-from typing import TYPE_CHECKING
-
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, literal
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,12 +21,10 @@ from sqlmodel import select
 
 from server.converters import entity_to_summary
 from server.db_models import Entity
+from server.embedding import EmbeddingProvider
 from server.enums import MatchType, ResolutionStatus
 from server.logging_config import log
 from server.models import EntitySummary
-
-if TYPE_CHECKING:
-    from server.embedding import EmbeddingProvider
 
 # Maximum length of a deterministic entity ID (e.g. "file:a1b2c3d" = 12 chars)
 _MAX_ENTITY_ID_LENGTH = 15
@@ -52,8 +48,8 @@ class ResolutionResult(BaseModel):
 async def resolve_entity(
     session: AsyncSession,
     query: str,
+    embedding_provider: EmbeddingProvider,
     kind: str | None = None,
-    embedding_provider: EmbeddingProvider | None = None,
     limit: int = 20,
 ) -> ResolutionResult:
     """Resolve entity name through multi-stage pipeline (fail-through stages 1-6)."""
@@ -91,11 +87,10 @@ async def resolve_entity(
         return result
 
     # Stage 6: Semantic search
-    if embedding_provider:
-        result = await _resolve_by_semantic(session, query, kind, embedding_provider, limit)
-        if result:
-            log.info("Resolved by semantic search", query=query, candidates=len(result.candidates))
-            return result
+    result = await _resolve_by_semantic(session, query, kind, embedding_provider, limit)
+    if result:
+        log.info("Resolved by semantic search", query=query, candidates=len(result.candidates))
+        return result
 
     # No matches found
     log.info("Entity not found", query=query)

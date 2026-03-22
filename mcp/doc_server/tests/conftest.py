@@ -7,7 +7,7 @@ Provides test database, mock artifacts, and async support for integration tests.
 import pytest
 from contextlib import asynccontextmanager
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from sqlalchemy import text
@@ -17,6 +17,7 @@ import networkx as nx
 
 from server.config import ServerConfig
 from server.db_models import Capability, CapabilityEdge, Edge, Entity, EntityUsage, EntryPoint
+from server.retrieval_view import RetrievalView
 
 
 @pytest.fixture(scope="session")
@@ -111,6 +112,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             notes_length=150,
             is_contract_seed=True,
             rationale_specificity=0.85,
+            symbol_searchable="damage combat::damage void damage character ch character victim int dam",
         ),
         # [1] Entry point (command) — calls damage
         Entity(
@@ -134,6 +136,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             notes_length=None,
             is_contract_seed=False,
             rationale_specificity=None,
+            symbol_searchable="do_kill void do_kill character ch string argument",
         ),
         # [2] Class entity
         Entity(
@@ -152,6 +155,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             notes_length=None,
             is_contract_seed=False,
             rationale_specificity=None,
+            symbol_searchable="character class character",
         ),
         # [3] Global variable (used by damage)
         Entity(
@@ -172,6 +176,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             notes_length=None,
             is_contract_seed=False,
             rationale_specificity=None,
+            symbol_searchable="max_damage int max_damage",
         ),
         # [4] Another function in combat capability (called by damage transitively)
         Entity(
@@ -196,6 +201,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             notes_length=None,
             is_contract_seed=False,
             rationale_specificity=0.30,
+            symbol_searchable="armor_absorb combat::armor_absorb int armor_absorb character victim int dam",
         ),
         # [5] File entity for src/fight.cc (used by related_files)
         Entity(
@@ -214,6 +220,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             notes_length=None,
             is_contract_seed=False,
             rationale_specificity=None,
+            symbol_searchable="fight.cc src/fight.cc",
         ),
         # [6] File entity for src/include/Character.hh (include target)
         Entity(
@@ -232,6 +239,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             notes_length=None,
             is_contract_seed=False,
             rationale_specificity=None,
+            symbol_searchable="character.hh src/include/character.hh",
         ),
         # [7] Same name "damage" but in Logging scope — for qualified name disambiguation tests
         Entity(
@@ -256,6 +264,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             notes_length=None,
             is_contract_seed=False,
             rationale_specificity=None,
+            symbol_searchable="damage logging::damage void damage const char msg",
         ),
     ]
 
@@ -270,7 +279,7 @@ async def sample_entities(test_session: AsyncSession) -> list[Entity]:
             "UPDATE entities SET doc_search_vector = "
             "setweight(to_tsvector('english', coalesce(name, '')), 'A') || "
             "setweight(to_tsvector('english', coalesce(brief, '') || ' ' || coalesce(details, '')), 'B') || "
-            "setweight(to_tsvector('english', coalesce(notes, '') || ' ' || coalesce(rationale, '') || ' ' || coalesce(returns, '')), 'C')"
+            "setweight(to_tsvector('english', coalesce(notes, '') || ' ' || coalesce(rationale, '') || ' ' || coalesce(returns, '') || ' ' || coalesce((SELECT string_agg(value, ' ') FROM jsonb_each_text(params)), '')), 'C')"
         )
     )
     await test_session.execute(
@@ -451,6 +460,53 @@ def sample_graph(sample_entities: list[Entity], sample_edges: list[Edge]) -> nx.
 
 
 @pytest.fixture
+def mock_embedding_provider():
+    """Mock embedding provider for tests that call hybrid_search directly."""
+    mock = MagicMock()
+    mock.dimension = 768
+    mock.aembed = AsyncMock(return_value=[0.0] * 768)
+    return mock
+
+
+@pytest.fixture
+def mock_cross_encoder():
+    """Mock cross-encoder for tests that call hybrid_search directly."""
+    mock = MagicMock()
+    mock.arerank = AsyncMock(side_effect=lambda q, docs: [0.5] * len(docs))
+    return mock
+
+
+@pytest.fixture
+def mock_doc_view(mock_cross_encoder):
+    """Mock doc RetrievalView for tests."""
+    return RetrievalView(
+        name="doc",
+        embedding_column="doc_embedding",
+        tsvector_column="doc_search_vector",
+        tsvector_dictionary="english",
+        cross_encoder=mock_cross_encoder,
+        ts_rank_ceiling=1.0,
+        floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05},
+        assemble_embed_text=lambda e: e.brief or e.name,
+    )
+
+
+@pytest.fixture
+def mock_symbol_view(mock_cross_encoder):
+    """Mock symbol RetrievalView for tests."""
+    return RetrievalView(
+        name="symbol",
+        embedding_column="symbol_embedding",
+        tsvector_column="symbol_search_vector",
+        tsvector_dictionary="simple",
+        cross_encoder=mock_cross_encoder,
+        ts_rank_ceiling=1.0,
+        floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05, "trigram": 0.2},
+        assemble_embed_text=lambda e: f"{e.name} {e.signature or ''}",
+    )
+
+
+@pytest.fixture
 def mock_ctx(test_session: AsyncSession, sample_graph: nx.MultiDiGraph, test_config: ServerConfig):
     """
     Create a mock FastMCP Context for direct tool invocation in tests.
@@ -467,11 +523,44 @@ def mock_ctx(test_session: AsyncSession, sample_graph: nx.MultiDiGraph, test_con
 
     mock_db_manager.session = _yield_session
 
+    # Mock embedding provider (returns zero vector)
+    mock_embedding = MagicMock()
+    mock_embedding.dimension = 768
+    mock_embedding.aembed = AsyncMock(return_value=[0.0] * 768)
+
+    # Mock cross-encoder (returns uniform scores)
+    mock_cross_encoder = MagicMock()
+    mock_cross_encoder.arerank = AsyncMock(side_effect=lambda q, docs: [0.5] * len(docs))
+
+    doc_view = RetrievalView(
+        name="doc",
+        embedding_column="doc_embedding",
+        tsvector_column="doc_search_vector",
+        tsvector_dictionary="english",
+        cross_encoder=mock_cross_encoder,
+        ts_rank_ceiling=1.0,
+        floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05},
+        assemble_embed_text=lambda e: e.brief or e.name,
+    )
+
+    symbol_view = RetrievalView(
+        name="symbol",
+        embedding_column="symbol_embedding",
+        tsvector_column="symbol_search_vector",
+        tsvector_dictionary="simple",
+        cross_encoder=mock_cross_encoder,
+        ts_rank_ceiling=1.0,
+        floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05, "trigram": 0.2},
+        assemble_embed_text=lambda e: f"{e.name} {e.signature or ''}",
+    )
+
     lifespan_context = {
         "config": test_config,
         "db_manager": mock_db_manager,
         "graph": sample_graph,
-        "embedding_provider": None,
+        "embedding_provider": mock_embedding,
+        "doc_view": doc_view,
+        "symbol_view": symbol_view,
     }
 
     ctx = MagicMock()
@@ -560,11 +649,42 @@ def mock_ctx_no_graph(test_session: AsyncSession, test_config: ServerConfig):
 
     mock_db_manager.session = _yield_session
 
+    mock_embedding = MagicMock()
+    mock_embedding.dimension = 768
+    mock_embedding.aembed = AsyncMock(return_value=[0.0] * 768)
+
+    mock_cross_encoder = MagicMock()
+    mock_cross_encoder.arerank = AsyncMock(side_effect=lambda q, docs: [0.5] * len(docs))
+
+    doc_view = RetrievalView(
+        name="doc",
+        embedding_column="doc_embedding",
+        tsvector_column="doc_search_vector",
+        tsvector_dictionary="english",
+        cross_encoder=mock_cross_encoder,
+        ts_rank_ceiling=1.0,
+        floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05},
+        assemble_embed_text=lambda e: e.brief or e.name,
+    )
+
+    symbol_view = RetrievalView(
+        name="symbol",
+        embedding_column="symbol_embedding",
+        tsvector_column="symbol_search_vector",
+        tsvector_dictionary="simple",
+        cross_encoder=mock_cross_encoder,
+        ts_rank_ceiling=1.0,
+        floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05, "trigram": 0.2},
+        assemble_embed_text=lambda e: f"{e.name} {e.signature or ''}",
+    )
+
     lifespan_context = {
         "config": test_config,
         "db_manager": mock_db_manager,
         "graph": nx.MultiDiGraph(),
-        "embedding_provider": None,
+        "embedding_provider": mock_embedding,
+        "doc_view": doc_view,
+        "symbol_view": symbol_view,
     }
 
     ctx = MagicMock()

@@ -176,15 +176,21 @@ class HostedEmbeddingProvider:
 # ---------------------------------------------------------------------------
 
 
-def create_provider(config: ServerConfig) -> EmbeddingProvider:
+def create_provider(config: ServerConfig, *, model_name_override: str | None = None) -> EmbeddingProvider:
     """Create an embedding provider based on configuration.
+
+    Args:
+        config: Server configuration.
+        model_name_override: Override the local model name (e.g. for symbol view).
+            Only applies when embedding_provider='local'.
 
     Raises:
         ValueError: If provider dimension doesn't match config.embedding_dimension.
     """
     provider: EmbeddingProvider
     if config.embedding_provider == "local":
-        provider = LocalEmbeddingProvider(model_name=config.embedding_local_model)
+        model_name = model_name_override or config.embedding_local_model
+        provider = LocalEmbeddingProvider(model_name=model_name)
 
     elif config.embedding_provider == "hosted":
         if not config.embedding_base_url:

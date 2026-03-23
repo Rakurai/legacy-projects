@@ -61,7 +61,8 @@ class LifespanContext(TypedDict):
     config: ServerConfig
     db_manager: DatabaseManager
     graph: nx.MultiDiGraph
-    embedding_provider: EmbeddingProvider
+    doc_embedding_provider: EmbeddingProvider
+    symbol_embedding_provider: EmbeddingProvider
     cross_encoder: CrossEncoderProvider
     doc_view: RetrievalView
     symbol_view: RetrievalView
@@ -104,12 +105,17 @@ async def lifespan(app: FastMCP) -> AsyncIterator[LifespanContext]:
         edges=graph.number_of_edges(),
     )
 
-    # Initialize embedding provider (required — fail fast)
-    embedding_provider = create_provider(config)
+    # Initialize embedding providers (doc + symbol, may use different models)
+    doc_embedding_provider = create_provider(config)
+    symbol_embedding_provider = create_provider(
+        config, model_name_override=config.embedding_local_symbol_model,
+    )
     log.info(
-        "Embedding provider initialized",
+        "Embedding providers initialized",
         provider=config.embedding_provider,
-        dimension=embedding_provider.dimension,
+        doc_model=config.embedding_local_model,
+        symbol_model=config.embedding_local_symbol_model,
+        dimension=doc_embedding_provider.dimension,
     )
 
     # Initialize cross-encoder (required — fail fast)
@@ -160,7 +166,8 @@ async def lifespan(app: FastMCP) -> AsyncIterator[LifespanContext]:
         config=config,
         db_manager=db_manager,
         graph=graph,
-        embedding_provider=embedding_provider,
+        doc_embedding_provider=doc_embedding_provider,
+        symbol_embedding_provider=symbol_embedding_provider,
         cross_encoder=cross_encoder,
         doc_view=doc_view,
         symbol_view=symbol_view,

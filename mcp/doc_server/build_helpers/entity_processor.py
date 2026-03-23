@@ -593,11 +593,23 @@ def build_minimal_embed_text(merged: MergedEntity) -> str | None:
     return "\n".join(lines)
 
 
+_SCOPE_QUALIFYING_KINDS: frozenset[str] = frozenset({"namespace", "class", "struct", "group"})
+"""Entity kinds that represent real C++ or logical scoping containers.
+
+File and dir nodes are excluded — they leak Doxygen filesystem structure
+into qualified names, producing things like ``src::fight.cc::damage``
+instead of the semantically correct ``damage``.
+"""
+
+
 def derive_qualified_names(merged_entities: list[MergedEntity], artifacts_path: Path) -> None:
     """Derive qualified_name for each entity by walking contained_by edges in the GML graph.
 
+    Only namespace / class / struct / group parents contribute scope qualifiers.
+    File and directory parents are skipped to avoid leaking filesystem structure.
+
     Strategy:
-    1. Walk contained_by edges from child → parent to build scope chain
+    1. Walk contained_by edges from child → parent, keeping only scoping-container parents
     2. Fall back to parsing definition_text for :: separators
     3. Fall back to bare name
     """
@@ -622,12 +634,14 @@ def derive_qualified_names(merged_entities: list[MergedEntity], artifacts_path: 
         if data.get("type", "").lower() == "contained_by":
             child_to_parent[source] = target
 
-    # Node → name map for scope chain assembly
+    # Node → name and node → kind maps for scope chain filtering
     node_name: dict[str, str] = {}
+    node_kind: dict[str, str] = {}
     for merged in merged_entities:
         member = merged.entity.id.member
         node_id = member if member else merged.entity.id.compound
         node_name[node_id] = merged.entity.name
+        node_kind[node_id] = merged.entity.kind
 
     derived_count = 0
     fallback_count = 0
@@ -636,14 +650,18 @@ def derive_qualified_names(merged_entities: list[MergedEntity], artifacts_path: 
         member = merged.entity.id.member
         node_id = member if member else merged.entity.id.compound
 
-        # Walk contained_by chain to build scope
+        # Walk contained_by chain, collecting only scoping-container parents
         max_scope_depth = 10
         scope_parts: list[str] = []
         current = child_to_parent.get(node_id)
-        while current and len(scope_parts) < max_scope_depth:
-            parent_name = node_name.get(current, "")
-            if parent_name and parent_name not in ("", "/"):
-                scope_parts.append(parent_name)
+        depth = 0
+        while current and depth < max_scope_depth:
+            depth += 1
+            parent_kind = node_kind.get(current, "")
+            if parent_kind in _SCOPE_QUALIFYING_KINDS:
+                parent_name = node_name.get(current, "")
+                if parent_name:
+                    scope_parts.append(parent_name)
             current = child_to_parent.get(current)
 
         if scope_parts:

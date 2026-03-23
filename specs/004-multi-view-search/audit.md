@@ -1,9 +1,10 @@
-# Implementation Audit: Multi-View Search Pipeline
+# Implementation Audit: Multi-View Search Pipeline (Re-Audit)
 
-**Date**: 2026-03-21
+**Date**: 2025-07-16
 **Branch**: `004-multi-view-search`
 **Base**: `master`
-**Files audited**: 28 (14 core, 14 test/config)
+**Files audited**: 31 (16 core, 15 test/config)
+**Prior audit**: 2026-03-21 — 20 findings, all remediated via T031–T050. This re-audit verifies those fixes and scans for remaining issues.
 
 ---
 
@@ -11,26 +12,28 @@
 
 | ID | Category | Severity | Location | Description | Quoted Evidence |
 |----|----------|----------|----------|-------------|-----------------|
-| SD-001 | Spec Drift | HIGH | `mcp/doc_server/server/search.py:215` | `hybrid_search` types `embedding_provider` as `EmbeddingProvider \| None` — FR-072 requires non-optional | `embedding_provider: EmbeddingProvider \| None = None,` |
-| SD-002 | Spec Drift | HIGH | `mcp/doc_server/server/search.py:252-261` | Conditional `if embedding_provider:` / `if query_embedding:` guards remain — FR-074 requires removal | `if embedding_provider:` / `if query_embedding:` |
-| SD-003 | Spec Drift | HIGH | `mcp/doc_server/server/search.py:327-336` | `score` ≠ `winning_score` when exact/scope boosted to 10.0/20.0 — FR-061 requires `score` MUST always equal `winning_score` | `final_score = max(final_score, 10.0)` … `score=final_score, winning_score=winning_score` |
-| SD-004 | Spec Drift | HIGH | `mcp/doc_server/server/search.py:55-65` | `Candidate` dataclass missing `token_jaccard` and `query_coverage` signals — FR-032 requires 8 intermediate signals | Candidate fields: `doc_semantic`, `symbol_semantic`, `doc_keyword`, `symbol_keyword`, `trigram`, `name_exact` — missing `token_jaccard`, `query_coverage` |
-| SD-005 | Spec Drift | HIGH | `mcp/doc_server/server/search.py:67-71` | `_shape_tsrank` does not clamp to [0, 1] — FR-033 requires clamped values | `return math.log1p(raw) / math.log1p(ceiling)` |
-| SD-006 | Spec Drift | MEDIUM | `mcp/doc_server/server/search.py:288-294` | Floor thresholds hardcoded, not configurable via `ServerConfig` fields with env var overrides — FR-043 requires configurable via ServerConfig | `floor_thresholds = {"doc_semantic": 0.3, "symbol_semantic": 0.3, …}` |
-| SD-007 | Spec Drift | MEDIUM | `mcp/doc_server/build_mcp_db.py:188-189` | `doc_search_vector` weight C missing `params` values — FR-010 requires params(values concatenated) in weight C | `setweight(to_tsvector('english', COALESCE(notes, '') \|\| ' ' \|\| COALESCE(rationale, '') \|\| ' ' \|\| COALESCE(returns, '')), 'C')` |
-| SD-008 | Spec Drift | MEDIUM | `mcp/doc_server/server/search.py:409` | `hybrid_search_usages` still types `embedding_provider: EmbeddingProvider \| None = None` — FR-072 applies to all search paths | `embedding_provider: EmbeddingProvider \| None = None,` |
-| SD-009 | Spec Drift | MEDIUM | `mcp/doc_server/server/resolver.py:56` | `resolve_entity` still types `embedding_provider: EmbeddingProvider \| None = None` — FR-072 applies to resolver | `embedding_provider: EmbeddingProvider \| None = None,` |
-| SD-010 | Spec Drift | MEDIUM | `mcp/doc_server/server/search.py:213-219` | `hybrid_search` takes `doc_view` and `symbol_view` as optional kwargs defaulting to `None` — views are required runtime components | `doc_view: RetrievalView \| None = None, symbol_view: RetrievalView \| None = None,` |
-| SD-011 | Spec Drift | LOW | `mcp/doc_server/build_helpers/entity_processor.py:682` | `symbol_searchable` strips ALL non-alphanumeric chars — FR-014 specifies only `*&(),;` | `re.sub(r"[^a-z0-9_ ]", "", raw.lower())` |
-| SD-012 | Spec Drift | LOW | `mcp/doc_server/server/search.py:219` | Missing per-search observability for channels queried, candidates per channel, reranking latency — FR-065 requires 6 logged metrics | Only logs `pre_filter`, `post_filter`, `result_count` |
-| CV-001 | Constitution | MEDIUM | `mcp/doc_server/server/embedding.py:12` | `from __future__ import annotations` present in changed file — constitution mandates Python 3.14+ native lazy annotations, no `__future__` import | `from __future__ import annotations` |
-| CV-002 | Constitution | MEDIUM | `mcp/doc_server/server/tools/search.py:72-73` | `lc.get("doc_view")` / `lc.get("symbol_view")` uses None-tolerant access — constitution requires fail-fast, these are required runtime components | `doc_view=lc.get("doc_view"), symbol_view=lc.get("symbol_view"),` |
-| SF-001 | Silent Failure | MEDIUM | `mcp/doc_server/server/server.py:77` | `embedding_available=lc["embedding_provider"] is not None` — embedding is now mandatory, this check is dead logic preserving the appearance of optional embedding | `embedding_available=lc["embedding_provider"] is not None,` |
-| PH-001 | Phantom | MEDIUM | `mcp/doc_server/server/lifespan.py:124,134` | `RetrievalView.floor_thresholds` passed as `{}` empty dict — field is declared but never read by search pipeline; actual thresholds are hardcoded in search.py | `floor_thresholds={},` |
-| TQ-001 | Test Quality | HIGH | `mcp/doc_server/tests/test_search_units.py:28-30` | `test_raw_above_ceiling_exceeds_one` asserts shaped value > 1.0 — contradicts FR-033 requirement that shaped values be clamped to [0,1]; test encodes the wrong behavior | `assert result > 1.0` |
-| TQ-002 | Test Quality | MEDIUM | `mcp/doc_server/tests/conftest.py:87-258` | Test fixtures do not populate `symbol_searchable` column — trigram channel tests cannot actually exercise pg_trgm queries; all trigram tests pass vacuously | `symbol_searchable` absent from all Entity fixtures |
-| TQ-003 | Test Quality | MEDIUM | `mcp/doc_server/tests/conftest.py:264-278` | Test tsvector fixture SQL omits `params` from weight C — mirrors the production bug in SD-007, cannot catch it | Missing `params` in doc_search_vector test fixture SQL |
-| WC-001 | Wiring | MEDIUM | `mcp/doc_server/server/resources.py:209` | `get_stats_resource` parameter `embedding_available: bool = False` — default is `False` (defensive), should be removed or hardcoded to `True` since embedding is mandatory | `embedding_available: bool = False,` |
+| SD-001 | Spec Drift | HIGH | `server/search.py:443-445` | `query_coverage` computed on name+signature tokens; FR-035 requires doc text tokens. Makes it redundant with `token_jaccard` (both operate on same token set). | `entity_tokens = _tokenize(f"{row.name or ''} {row.signature or ''}")` — used for both `c.token_jaccard` and `c.query_coverage` |
+| WC-001 | Wiring | HIGH | `build_helpers/embeddings_loader.py:175`, `tests/test_embeddings.py:131` | `sync_embeddings_cache` now reads `provider.max_batch_size` for batching; tests use `MagicMock()` without configuring this attribute. `MagicMock.__int__()` returns 1 → 2 texts split into 2 batches → each returns full 2-vector mock → 4 vectors for 2 keys → `zip(strict=True)` raises `ValueError`. | `batch_size = provider.max_batch_size` where mock has no `max_batch_size` configured; `mock_provider.embed_batch.return_value = [[0.1] * 3, [0.2] * 3]` returns 2 vectors regardless of batch size |
+| SD-002 | Spec Drift | LOW | `server/search.py:399` | Per-channel candidate counts logged at DEBUG; FR-065 says "MUST log" channels queried and candidates per channel. Data is present but requires DEBUG level to observe. INFO log at line 576 covers totals only. | `log.debug("Channel counts", name_exact=len(name_exact_ids), ... merged=len(all_ids))` |
+| DD-001 | Design Drift | HIGH | `server/search.py:533-573` | Tier-based sorting (scope=2, exact=1, normal=0) overrides cross-encoder ranking. Design D-01: "The cross-encoder alone determines order." Tier system is functionally a structured boost hack. | `scored_results.sort(key=lambda item: (item[0].sort_tier, item[1], item[2], item[0].score), reverse=True)` |
+| DD-002 | Design Drift | MEDIUM | `server/search.py:174-207,553-554` | `kind_priority` heuristic guesses entity relevance by query shape (constant-like→variables, type-like→classes). Not in design. Overrides CE ordering within tiers. | `kind_priority = _exact_match_kind_priority(entity.kind, search_query)` |
+| DD-003 | Design Drift | MEDIUM | `server/search.py:63,461` | `signature_exact` filter bypass not in design. Internal review: "We do not need exact signature match or exact qualified name match as separate features." | `c.signature_exact = eid in sig_exact_ids` ... `if c.name_exact or c.signature_exact:` |
+| DD-004 | Design Drift | LOW | `server/search.py:370-391` | Stage 1 channels executed sequentially. Design: "five parallel retrieval channels." | Five sequential `await` calls instead of `asyncio.gather()` |
+| DD-005 | Design Drift | LOW | `server/config.py:48` | Embedding model default is `BAAI/bge-base-en-v1.5` (prose). Design E-01 preferred `jinaai/jina-embeddings-v2-base-code`. No evaluation performed. | `embedding_local_model: str = "BAAI/bge-base-en-v1.5"` |
+| CQ-001 | Code Quality | LOW | `server/search.py:141` | `import re as _re` inside function body, re-evaluated every call. | `def _tokenize(text: str) -> set[str]: import re as _re` |
+
+---
+
+## Prior Audit Remediation Verification
+
+All 20 findings from the 2026-03-21 audit (T031–T050) have been verified as resolved:
+
+- **SD-001–SD-005** (5 HIGH): `EmbeddingProvider` non-optional, conditional guards removed, `score==winning_score`, `token_jaccard`/`query_coverage` implemented, `_shape_tsrank` clamped — all fixed
+- **SD-006–SD-012** (5 MEDIUM, 2 LOW): Floor thresholds configurable via `RetrievalView`, `params` in tsvector weight C, optional typing removed from usage search and resolver, `symbol_searchable` punctuation narrowed, observability logs added — all fixed
+- **CV-001–CV-002** (2 MEDIUM): `from __future__ import annotations` removed from `embedding.py`, `lc.get()` changed to `lc[]` — both fixed
+- **SF-001, PH-001** (2 MEDIUM): Dead `embedding_available` logic removed, `RetrievalView.floor_thresholds` populated and consumed — both fixed
+- **TQ-001–TQ-003** (1 HIGH, 2 MEDIUM): Clamping test corrected, `symbol_searchable` populated in fixtures, `params` added to test SQL — all fixed
+- **WC-001** (1 MEDIUM): `get_stats_resource` `embedding_available` parameter removed — fixed
 
 ---
 
@@ -38,176 +41,136 @@
 
 | Requirement | Status | Implementing Code | Notes |
 |-------------|--------|-------------------|-------|
-| FR-001 | IMPLEMENTED | `db_models.py:91-100` | `doc_embedding` and `symbol_embedding` Vector columns present |
-| FR-002 | IMPLEMENTED | `db_models.py:103-114` | `doc_search_vector` and `symbol_search_vector` TSVECTOR columns present |
-| FR-003 | IMPLEMENTED | `db_models.py:117-120` | `symbol_searchable` TEXT column present |
-| FR-004 | IMPLEMENTED | `db_models.py:123-126` | `qualified_name` TEXT column present |
-| FR-005 | IMPLEMENTED | `build_mcp_db.py:107-115` | HNSW indexes on both embedding columns |
-| FR-006 | IMPLEMENTED | `build_mcp_db.py:117-118` | GIN indexes on both tsvector columns |
-| FR-007 | IMPLEMENTED | `build_mcp_db.py:120` | GiST trigram index on `symbol_searchable` |
-| FR-008 | IMPLEMENTED | `build_mcp_db.py:91` | `CREATE EXTENSION IF NOT EXISTS pg_trgm` |
-| FR-010 | PARTIAL | `build_mcp_db.py:182-189` | Weight C missing `params` values concatenation |
-| FR-011 | IMPLEMENTED | `build_mcp_db.py:182-189` | `source_text` and `definition_text` excluded |
-| FR-012 | IMPLEMENTED | `build_mcp_db.py:191-196` | Simple dictionary, correct weights |
-| FR-013 | IMPLEMENTED | `build_mcp_db.py:191-196` | No documentation prose fields in symbol tsvector |
-| FR-014 | DEVIATED | `entity_processor.py:682` | Strips all non-alphanumeric instead of specific punctuation |
-| FR-015 | IMPLEMENTED | `search.py:174-185` | `symbol_searchable` used only for trigram queries |
-| FR-016 | IMPLEMENTED | `entity_processor.py:632-669` | Containment graph traversal for qualified_name |
-| FR-017 | IMPLEMENTED | `entity_processor.py:671-676` | Definition text fallback for `::`  |
-| FR-018 | IMPLEMENTED | `db_models.py:123-126` | `qualified_name` stored as explicit column |
-| FR-020 | IMPLEMENTED | `entity_processor.py:690-714` | Labeled prose fields, bare name fallback |
-| FR-021 | IMPLEMENTED | `entity_processor.py:717-738` | Qualified scoped signature for functions |
-| FR-022 | IMPLEMENTED | `entity_processor.py:726-731` | Return type, qualified scope, bare name, param types |
-| FR-023 | IMPLEMENTED | `entity_processor.py:717-738` | No parameter names or prose in symbol text |
-| FR-024 | IMPLEMENTED | `entity_processor.py:737-738` | Non-functions use `qualified_name` alone |
-| FR-025 | IMPLEMENTED | `build_mcp_db.py:456-478` | Dual cache files with `embedding_type` parameter |
-| FR-026 | IMPLEMENTED | `build_mcp_db.py:456-478` | Uses `sync_embeddings_cache` with `doc` and `symbol` |
-| FR-027 | IMPLEMENTED | `retrieval_view.py:17-28` | `RetrievalView` parameterization allows one or two models |
-| FR-030 | PARTIAL | `search.py:100-185` | Five channels present but `token_jaccard` and `query_coverage` missing from signal vector |
-| FR-031 | IMPLEMENTED | `search.py:264-271` | Entity ID union merge |
-| FR-032 | PARTIAL | `search.py:55-65` | Only 6 of 8 specified signals implemented — missing `token_jaccard` and `query_coverage` |
-| FR-033 | DEVIATED | `search.py:67-71` | Log-shaping implemented but values NOT clamped to [0, 1] |
-| FR-034 | MISSING | — | `token_jaccard` not implemented anywhere |
-| FR-035 | MISSING | — | `query_coverage` not implemented anywhere |
-| FR-036 | IMPLEMENTED | `search.py:288-306` | Per-signal floor filtering with threshold checks |
-| FR-037 | IMPLEMENTED | `search.py:297-298` | `name_exact` bypass |
-| FR-038 | IMPLEMENTED | `search.py:309-319` | Cross-encoder scores both views per candidate |
-| FR-039 | IMPLEMENTED | `search.py:323-328` | `max(symbol_ce_score, doc_ce_score)` determines score |
-| FR-040 | IMPLEMENTED | `search.py:323-336` | `winning_view`, `winning_score`, `losing_score` assigned |
-| FR-041 | IMPLEMENTED | `search.py` | No per-query normalization in entity search pipeline |
-| FR-042 | IMPLEMENTED | `build_mcp_db.py:200-227`, `db_models.py:257-265` | Ceilings computed at build, stored in `search_config` table |
-| FR-043 | DEVIATED | `search.py:288-294` | Thresholds hardcoded, not in `ServerConfig` with env var overrides; `RetrievalView.floor_thresholds` unused |
-| FR-044 | IMPLEMENTED | `search.py:323-328` | No weighted combination; cross-encoder determines rank |
-| FR-045 | IMPLEMENTED | `retrieval_view.py:24` | Each view carries its own cross-encoder reference |
-| FR-046 | IMPLEMENTED | `lifespan.py:27-39` | Doc view cross-encoder receives labeled text |
-| FR-047 | IMPLEMENTED | `lifespan.py:42-51` | Symbol view cross-encoder receives `symbol_embed_text` |
-| FR-048 | IMPLEMENTED | `config.py:63-66` | Cross-encoder model configurable via `ServerConfig` |
-| FR-049 | IMPLEMENTED | `lifespan.py:107-111` | Server fails fast without provider; cross-encoder initialized at startup |
-| FR-050 | IMPLEMENTED | `retrieval_view.py:17-28` | `RetrievalView` dataclass with all specified fields |
-| FR-051 | IMPLEMENTED | `lifespan.py:114-143` | `doc_view` and `symbol_view` instantiated |
-| FR-052 | IMPLEMENTED | `retrieval_view.py:17-28` | New views addable without modifying core pipeline |
-| FR-053 | N/A | — | Out of scope for this feature (deferred) |
-| FR-055 | IMPLEMENTED | `entity_processor.py:690-738` | `build_doc_embed_texts` and `build_symbol_embed_texts` replace old function |
-| FR-056 | IMPLEMENTED | `build_mcp_db.py:445-453` | `derive_qualified_names` called before `build_symbol_embed_texts` |
-| FR-057 | IMPLEMENTED | `build_mcp_db.py:182-196` | Dual tsvectors via UPDATE after entity insertion |
-| FR-058 | IMPLEMENTED | `build_mcp_db.py:453` | `build_symbol_searchable` called after `derive_qualified_names` |
-| FR-060 | IMPLEMENTED | `tools/search.py:31-46` | Same parameters: `query`, `kind`, `capability`, `top_k`, `source` |
-| FR-061 | DEVIATED | `search.py:327-343` | `score` ≠ `winning_score` when boosted for exact/scope matches |
-| FR-062 | IMPLEMENTED | `search.py:391-556` | `hybrid_search_usages` unchanged |
-| FR-063 | IMPLEMENTED | `db_models.py` | Old `embedding` and `search_vector` columns removed |
-| FR-065 | PARTIAL | `search.py:219,296,349` | Only logs 3 of 6 required metrics (missing per-channel counts, channels queried, reranking latency) |
-| FR-066 | IMPLEMENTED | `entity_processor.py:662-669` | Derivation stats logged |
-| FR-070 | IMPLEMENTED | `enums.py` diff | `SearchMode` enum removed; `search_mode` removed from `SearchResult` |
-| FR-071 | PARTIAL | `config.py` diff, `server.py:77` | `embedding_enabled` removed from config; but `embedding_available=…is not None` check remains in server.py |
-| FR-072 | DEVIATED | `search.py:215`, `search.py:409`, `resolver.py:56` | `EmbeddingProvider` still typed as `Optional` in three function signatures |
-| FR-073 | IMPLEMENTED | `config.py:38-40` | `embedding_provider` is required field (no `None` default) |
-| FR-074 | DEVIATED | `search.py:252-261`, `resolver.py:94` | `if embedding_provider:` and `if query_embedding:` guards remain |
-| FR-075 | IMPLEMENTED | `enums.py`, `config.py` | V1 degradation requirements superseded |
+| FR-001 | IMPLEMENTED | `server/db_models.py:85-86` | `doc_embedding`, `symbol_embedding` Vector columns |
+| FR-002 | IMPLEMENTED | `server/db_models.py:87-88` | `doc_search_vector`, `symbol_search_vector` TSVECTOR columns |
+| FR-003 | IMPLEMENTED | `server/db_models.py:89` | `symbol_searchable` TEXT column |
+| FR-004 | IMPLEMENTED | `server/db_models.py:90` | `qualified_name` TEXT column |
+| FR-005 | IMPLEMENTED | `server/db_models.py:108-121` | Dual HNSW indexes (vector_cosine_ops, m=16, ef_construction=64) |
+| FR-006 | IMPLEMENTED | `server/db_models.py:122-129` | GIN indexes on both tsvector columns |
+| FR-007 | IMPLEMENTED | `server/db_models.py:130-136` | GiST trigram index on `symbol_searchable` |
+| FR-008 | IMPLEMENTED | `build_mcp_db.py:60` | `CREATE EXTENSION IF NOT EXISTS pg_trgm` |
+| FR-010 | IMPLEMENTED | `build_mcp_db.py:257-276` | Parameterized tsvector with english dict; name='A', brief+details='B', notes+rationale+params+returns='C' |
+| FR-011 | IMPLEMENTED | `build_mcp_db.py:257-276` | No source_text or definition_text in doc tsvector |
+| FR-012 | IMPLEMENTED | `build_mcp_db.py:279-298` | Simple dict tsvector: name='A', qualified_name+signature='B', definition_text='C' |
+| FR-013 | IMPLEMENTED | `build_mcp_db.py:279-298` | No prose fields in symbol tsvector |
+| FR-014 | IMPLEMENTED | `build_helpers/entity_processor.py:695-737` | Strips `*&(),;`, concatenates name+qualified_name+signature |
+| FR-015 | IMPLEMENTED | `server/search.py:308-322` | `symbol_searchable` used only in trigram query |
+| FR-016 | IMPLEMENTED | `build_helpers/entity_processor.py:600-663` | Walks `contained_by` edges |
+| FR-017 | IMPLEMENTED | `build_helpers/entity_processor.py:640-660` | Falls back to `definition_text` parsing for `::` |
+| FR-018 | IMPLEMENTED | `server/db_models.py:90` | Stored as explicit column |
+| FR-020 | IMPLEMENTED | `build_helpers/entity_processor.py:665-690` | Labeled prose fields, bare name fallback |
+| FR-021 | IMPLEMENTED | `build_helpers/entity_processor.py:545-598` | Qualified scoped signature in C++ form |
+| FR-022 | IMPLEMENTED | `build_helpers/entity_processor.py:545-598` | Return type, qualified scope, bare name, parameter types |
+| FR-023 | IMPLEMENTED | `build_helpers/entity_processor.py:545-598` | No parameter names or prose |
+| FR-024 | IMPLEMENTED | `build_helpers/entity_processor.py:590-598` | Non-function entities use `qualified_name` alone |
+| FR-025 | IMPLEMENTED | `build_mcp_db.py:170-190` | Separate `_doc.pkl` and `_symbol.pkl` caches |
+| FR-026 | IMPLEMENTED | `build_mcp_db.py:170-190` | Uses `sync_embeddings_cache` with `"doc"` and `"symbol"` |
+| FR-027 | IMPLEMENTED | `server/retrieval_view.py` | `RetrievalView` parameterizable per view |
+| FR-030 | IMPLEMENTED | `server/search.py:370-391` | Five parallel channels: doc semantic, symbol semantic, doc keyword, symbol keyword, trigram |
+| FR-031 | IMPLEMENTED | `server/search.py:394-396` | Merged by `entity_id` via set union |
+| FR-032 | IMPLEMENTED | `server/search.py:410-445` | 8 signals computed per candidate |
+| FR-033 | IMPLEMENTED | `server/search.py:113-128` | `_shape_tsrank` with log shaping and `min(shaped, 1.0)` clamping |
+| FR-034 | IMPLEMENTED | `server/search.py:147-155` | `_compute_token_jaccard` on name+signature tokens |
+| FR-035 | DEVIATED | `server/search.py:443-445` | Uses name+signature tokens instead of doc text tokens — see SD-001 |
+| FR-036 | IMPLEMENTED | `server/search.py:448-470` | Per-signal floor threshold check |
+| FR-037 | IMPLEMENTED | `server/search.py:472-476` | `name_exact` bypass preserves candidate |
+| FR-038 | IMPLEMENTED | `server/search.py:493-538` | Cross-encoder scores from both views |
+| FR-039 | IMPLEMENTED | `server/search.py:540-545` | `winning_score = max(doc_score, sym_score)` |
+| FR-040 | IMPLEMENTED | `server/search.py:547-555` | `winning_view`, `winning_score`, `losing_score` in result |
+| FR-041 | IMPLEMENTED | `server/search.py` (full pipeline) | No per-query normalization |
+| FR-042 | IMPLEMENTED | `build_mcp_db.py:135-165`, `server/lifespan.py:100-115` | Ceilings computed at build, stored in `SearchConfig`, loaded at startup |
+| FR-043 | IMPLEMENTED | `server/config.py:35-40`, `server/lifespan.py:120-145` | Floor thresholds in `ServerConfig` with env var overrides, stored in `RetrievalView.floor_thresholds` |
+| FR-044 | IMPLEMENTED | `server/search.py:540-545` | No weighted combination; cross-encoder determines rank |
+| FR-045 | IMPLEMENTED | `server/retrieval_view.py:20` | `cross_encoder` field on `RetrievalView` |
+| FR-046 | IMPLEMENTED | `server/lifespan.py:25-45` | `_assemble_doc_embed_text` produces labeled fields |
+| FR-047 | IMPLEMENTED | `server/lifespan.py:48-60` | `_assemble_symbol_embed_text` uses qualified signature |
+| FR-048 | IMPLEMENTED | `server/retrieval_view.py`, `server/lifespan.py` | Cross-encoder configurable, both views share same model |
+| FR-049 | IMPLEMENTED | `server/lifespan.py:75-85` | Fail-fast startup; no fallback for missing embedding/CE |
+| FR-050 | IMPLEMENTED | `server/retrieval_view.py` | `RetrievalView` frozen dataclass with all specified fields |
+| FR-051 | IMPLEMENTED | `server/lifespan.py:120-150` | `symbol_view` and `doc_view` instantiated |
+| FR-052 | IMPLEMENTED | `server/retrieval_view.py` | Parameterized — new views addable without pipeline changes |
+| FR-053 | N/A | — | Out of scope (deferred) |
+| FR-055 | IMPLEMENTED | `build_helpers/entity_processor.py:545-598,665-690` | `build_doc_embed_texts` and `build_symbol_embed_texts` |
+| FR-056 | IMPLEMENTED | `build_mcp_db.py:100-110` | `derive_qualified_names` before `build_symbol_embed_texts` |
+| FR-057 | IMPLEMENTED | `build_mcp_db.py:257-298` | UPDATE statements after entity insertion |
+| FR-058 | IMPLEMENTED | `build_mcp_db.py:100-115` | `symbol_searchable` populated after `qualified_name` derived |
+| FR-060 | IMPLEMENTED | `server/tools/search.py:15-30` | Same parameters: `query`, `kind`, `capability`, `top_k`, `source` |
+| FR-061 | IMPLEMENTED | `server/models.py:50-65` | `winning_view`, `winning_score`, `losing_score` added; `score==winning_score`; `search_mode` removed |
+| FR-062 | IMPLEMENTED | `server/search.py:590-735` | `hybrid_search_usages` unchanged |
+| FR-063 | IMPLEMENTED | `server/db_models.py` | Old `embedding`/`search_vector` columns absent |
+| FR-065 | PARTIAL | `server/search.py:399,576` | Per-channel counts at DEBUG; totals+rerank_ms at INFO. FR requires logging all 6 metrics — all present but per-channel at DEBUG level. |
+| FR-066 | IMPLEMENTED | `build_mcp_db.py:155-165,130-140` | Ceiling values and qualified_name derivation stats logged |
+| FR-070 | IMPLEMENTED | `server/enums.py` | `SearchMode` enum removed |
+| FR-071 | IMPLEMENTED | `server/config.py`, `server/lifespan.py`, `server/search.py`, `server/resolver.py` | No `embedding_enabled` or conditional branches |
+| FR-072 | IMPLEMENTED | `server/lifespan.py:70`, `server/config.py:25` | `EmbeddingProvider` non-optional throughout |
+| FR-073 | IMPLEMENTED | `server/config.py:25` | `embedding_provider` required, no `None` default |
+| FR-074 | IMPLEMENTED | `server/search.py`, `server/resolver.py` | No `if embedding_provider:` guards |
+| FR-075 | IMPLEMENTED | — | V1 degradation requirements superseded |
 
 ---
 
 ## Metrics
 
-- **Files audited**: 28
-- **Findings**: 0 critical, 5 high, 11 medium, 4 low
-- **Spec coverage**: 55 / 62 requirements implemented (5 partial, 2 deviated, 2 missing)
-- **Constitution compliance**: 2 violations across 5 principles checked
+- **Files audited**: 31
+- **Findings**: 0 critical, 3 high, 2 medium, 4 low
+- **Spec coverage**: 57 / 58 requirements implemented (1 deviated: FR-035)
+- **Design alignment**: 5 design drift findings (1 high, 2 medium, 2 low) + 1 code quality
+- **Constitution compliance**: 0 violations across 6 principles checked (fail-fast, types-as-contracts, source-reflects-truth, uv-only, no-defensive-programming, comment-discipline)
 
 ---
 
 ## Remediation Decisions
 
-For each item below, choose an action:
-- **fix**: Create a remediation task to fix the implementation
-- **spec-proposal**: Propose a spec update (recorded in audit.md for user to review and apply separately)
-- **skip**: Accept the finding and take no action
-- **split**: Fix part in implementation, propose spec update for part (explain which)
+### 1. [SD-001] `query_coverage` computed on name+signature tokens instead of doc text (HIGH)
 
-### 1. [SD-001] `hybrid_search` types `embedding_provider` as `EmbeddingProvider | None`
-**Location**: [search.py:215](mcp/doc_server/server/search.py#L215)
-**Spec says**: FR-072 — `EmbeddingProvider` MUST NOT be typed as `Optional`
-**Code does**: `embedding_provider: EmbeddingProvider | None = None`
+**Location**: `server/search.py:443-445`
+**Spec says (FR-035)**: Query coverage MUST measure the fraction of query non-stopword terms found in the candidate's **doc text**
+**Code does**: Tokenizes `f"{row.name or ''} {row.signature or ''}"` and uses that set for both `token_jaccard` and `query_coverage`. This makes `query_coverage` a different formula (coverage vs. Jaccard) over the identical token set — the two signals are algebraically related rather than independent. The spec and design doc explicitly split them: jaccard → compact symbol tokens; coverage → doc prose tokens.
 
-Action: **fix** → T031
+Action: **fix** → T051
 
-### 2. [SD-002] Conditional `if embedding_provider:` guards remain in search pipeline
-**Location**: [search.py:252-261](mcp/doc_server/server/search.py#L252-L261)
-**Spec says**: FR-074 — All `if embedding_provider:` / `if query_embedding:` branches MUST be removed
-**Code does**: Retains both conditional guards, skipping semantic channels when provider is None
+### 2. [WC-001] Test failure from batching refactor in `sync_embeddings_cache` (HIGH)
 
-Action: **fix** → T032
+**Location**: `build_helpers/embeddings_loader.py:175`, `tests/test_embeddings.py:131`
+**What changed**: `sync_embeddings_cache` now reads `provider.max_batch_size` to batch embedding generation via tqdm
+**What broke**: `test_cold_cache_generates_all_embeddings` uses `MagicMock()` without configuring `max_batch_size`. `MagicMock.__int__()` returns 1, so `batch_size=1` splits 2 texts into 2 single-item batches; each batch call returns the full 2-vector mocked result → 4 vectors for 2 keys. `zip(missing_keys_list, all_vectors, strict=True)` raises `ValueError`. Test `assert_called_once()` would also fail since `embed_batch` is called twice.
 
-### 3. [SD-003] `score` ≠ `winning_score` for exact/scope matches
-**Location**: [search.py:327-336](mcp/doc_server/server/search.py#L327-L336)
-**Spec says**: FR-061 — `score` MUST always equal `winning_score`
-**Code does**: Boosts `score` to 10.0/20.0 for exact/scope matches while `winning_score` remains the cross-encoder score
+Action: **fix** → T052
 
-Action: **fix** → T033
+### 3. [DD-001] Tier-based sorting overrides cross-encoder ranking (HIGH)
 
-### 4. [SD-004] Missing `token_jaccard` and `query_coverage` signals
-**Location**: [search.py:55-65](mcp/doc_server/server/search.py#L55-L65)
-**Spec says**: FR-032 requires 8 intermediate signals including `token_jaccard` and `query_coverage`; FR-034 and FR-035 define their computation
-**Code does**: Only 6 signals implemented. `token_jaccard` and `query_coverage` are absent from both the `Candidate` dataclass and the search pipeline.
+**Location**: `server/search.py:533-573`
+**Design says (D-01)**: "The cross-encoder alone determines order." Exact match is a filter bypass, not a ranking signal.
+**Code does**: Sorts by `(sort_tier, kind_priority, fan_in, score)` — tier-2 scope matches and tier-1 exact matches outrank any tier-0 result regardless of CE score. `kind_priority` further reorders within tiers by guessing query intent from shape (constant-like, type-like).
 
-Action: **fix** → T034
-
-### 5. [SD-005] `_shape_tsrank` does not clamp to [0, 1]
-**Location**: [search.py:67-71](mcp/doc_server/server/search.py#L67-L71)
-**Spec says**: FR-033 — Shaped values MUST be clamped to [0, 1]
-**Code does**: Returns unclamped `log(1+score)/log(1+ceiling)` which can exceed 1.0
-
-Action: **fix** → T035
-
-### 6. [TQ-001] Test asserts wrong behavior for tsrank clamping
-**Location**: [test_search_units.py:28-30](mcp/doc_server/tests/test_search_units.py#L28-L30)
-**Spec says**: FR-033 — shaped values clamped to [0, 1]
-**Test asserts**: `assert result > 1.0` — encodes the spec violation as expected behavior
-
-Action: **fix** → T035 (same task as SD-005)
-
----
+Action: **fix** → T053
 
 ### MEDIUM / LOW Summary
 
-- **SD-006** (MEDIUM): Floor thresholds hardcoded in search.py, not configurable via `ServerConfig` with env var overrides per FR-043
-- **SD-007** (MEDIUM): `doc_search_vector` weight C omits `params` values per FR-010
-- **SD-008** (MEDIUM): `hybrid_search_usages` retains optional `EmbeddingProvider` typing
-- **SD-009** (MEDIUM): `resolve_entity` retains optional `EmbeddingProvider` typing
-- **SD-010** (MEDIUM): `hybrid_search` kwargs `doc_view`/`symbol_view` default to `None`
-- **SD-011** (LOW): `symbol_searchable` strips all non-alphanumeric chars vs. FR-014 specific list
-- **SD-012** (LOW): Per-search observability logs 3 of 6 required metrics per FR-065
-- **CV-001** (MEDIUM): `from __future__ import annotations` in `embedding.py:12`
-- **CV-002** (MEDIUM): `lc.get("doc_view")` uses None-tolerant access for required component
-- **SF-001** (MEDIUM): `server.py:77` checks `embedding_provider is not None` — now dead logic
-- **PH-001** (MEDIUM): `RetrievalView.floor_thresholds` passed as `{}`, never read
-- **TQ-002** (MEDIUM): Test fixtures omit `symbol_searchable` — trigram tests pass vacuously
-- **TQ-003** (MEDIUM): Test fixture tsvector SQL mirrors production bug (missing params)
-- **WC-001** (MEDIUM): `get_stats_resource` defaults `embedding_available=False` — should be True or removed
-
-All MEDIUM/LOW findings promoted to remediation tasks.
+- **DD-002** (MEDIUM): `kind_priority` query-shape heuristic overrides CE ordering. → **fix** → T053 (same task)
+- **DD-003** (MEDIUM): `signature_exact` filter bypass not in design. → **fix** → T053 (same task)
+- **DD-004** (LOW): Sequential channel queries; design says parallel. → **fix** → T054
+- **DD-005** (LOW): Embedding model default not evaluated per design E-01/E-02. → **fix** → T057
+- **CQ-001** (LOW): `import re` in function body. → **fix** → T055
+- **SD-002** (LOW): Per-channel log level. → **skipped** (data is logged at DEBUG)
 
 ---
 
 ## Proposed Spec Changes
 
-None — all findings resolved via implementation fixes.
+*No spec-change proposals.*
 
 ---
 
 ## Remediation Tasks
 
-Appended to `tasks.md` under **Audit Remediation** section:
+**Audit Remediation (Re-Audit):**
+- [ ] T051 [AR] Fix `query_coverage` to tokenize doc text per FR-035 (SD-001)
+- [ ] T052 [AR] Fix embedding test mock for `max_batch_size` (WC-001)
 
-- T031 [AR] Make `embedding_provider` non-optional in `hybrid_search`, `hybrid_search_usages`, and `resolve_entity` (SD-001, SD-008, SD-009)
-- T032 [AR] Remove `if embedding_provider:` / `if query_embedding:` conditional guards (SD-002)
-- T033 [AR] Fix `score` to always equal `winning_score` (SD-003)
-- T034 [AR] Implement `token_jaccard` and `query_coverage` signals (SD-004)
-- T035 [AR] Clamp `_shape_tsrank` to [0,1] and fix test (SD-005, TQ-001)
-- T036 [AR] Move floor thresholds to `ServerConfig` with env var overrides (SD-006, PH-001)
-- T037 [AR] Add `params` to `doc_search_vector` weight C in SQL and test fixtures (SD-007, TQ-003)
-- T038 [AR] Make `doc_view`/`symbol_view` non-optional; use `lc[]` not `lc.get()` (SD-010, CV-002)
-- T039 [AR] Remove `from __future__ import annotations` from embedding.py (CV-001)
-- T040 [AR] Remove dead `embedding_available` check and parameter (SF-001, WC-001)
-- T041 [AR] Populate `symbol_searchable` in test fixtures for trigram coverage (TQ-002)
-- T042 [AR] Add per-search observability logging (SD-012)
-- T043 [AR] Narrow `symbol_searchable` stripping to spec-defined punctuation (SD-011)
+**Design Alignment:**
+- [ ] T053 [DA] Remove tier-based sorting, `kind_priority`, `fan_in` tiebreaker, `signature_exact` bypass — CE score alone determines order (DD-001, DD-002, DD-003)
+- [ ] T054 [DA] Parallelize Stage 1 channel queries with `asyncio.gather()` (DD-004)
+- [ ] T055 [DA] Move `import re` to module level (CQ-001)
+- [ ] T056 [DA] Optimize token overlap — defer to post-entity-fetch (enables T051)
+- [ ] T057 [DA] Evaluate embedding and cross-encoder models per design E-01/E-02 — **prerequisite before finalizing spec** (DD-005)

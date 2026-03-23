@@ -28,18 +28,18 @@ An AI assistant needs to understand what a specific function, class, or variable
 
 ### User Story 2 - Documentation Search (Priority: P2)
 
-An AI assistant working on poison damage mechanics needs to find all entities related to "poison spreading between characters". The assistant performs a hybrid search combining semantic similarity (using embeddings) with keyword matching, receiving ranked results that include both exact name matches and conceptually related entities. When the embedding service is unavailable, search gracefully degrades to keyword-only mode and explicitly reports the degraded state.
+An AI assistant working on poison damage mechanics needs to find all entities related to "poison spreading between characters". The assistant performs a multi-view hybrid search combining dual semantic similarity (doc + symbol embeddings), dual keyword matching (english + simple tsvectors), trigram fuzzy matching, and cross-encoder reranking. Results are ranked by cross-encoder relevance score with no per-query normalization.
 
 **Why this priority**: Search enables discovery of relevant code without knowing exact names. This is essential for exploratory tasks like "find all inventory management code" or "locate authentication logic". Search builds on Phase 1 entity infrastructure and adds discovery capabilities.
 
-**Independent Test**: Can be tested by issuing natural language queries (e.g., "poison damage over time", "player authentication", "room descriptions") and verifying that results include relevant entities with high scores. Test fallback mode by omitting the embedding provider configuration (or setting `EMBEDDING_PROVIDER` to none) and confirming keyword-only results are returned with explicit fallback status.
+**Independent Test**: Can be tested by issuing natural language queries (e.g., "poison damage over time", "player authentication", "room descriptions") and verifying that results include relevant entities with high cross-encoder scores. Test symbol queries by searching for C++ identifiers and verifying the correct entity ranks in top-3 via the symbol view.
 
 **Acceptance Scenarios**:
 
-1. **Given** a semantic query like "poison spreading between characters", **When** assistant performs hybrid search, **Then** receive ranked results combining embedding similarity and keyword matches with normalized scores
-2. **Given** an exact entity name in search query, **When** assistant searches, **Then** that entity receives a score boost and appears at top of results
+1. **Given** a semantic query like "poison spreading between characters", **When** assistant performs hybrid search, **Then** receive ranked results scored by cross-encoder reranking across doc and symbol views
+2. **Given** an exact entity name in search query, **When** assistant searches, **Then** that entity bypasses filtering and appears in results via exact-name priority tier
 3. **Given** search filters for kind=function and capability=combat, **When** assistant searches, **Then** receive only functions from combat capability group
-4. **Given** embedding service is unavailable, **When** assistant searches, **Then** receive keyword-only results with search_mode="keyword_fallback" explicitly indicated
+4. **Given** a C++ identifier query like `stc`, **When** assistant searches, **Then** the symbol view (simple tsvector, code-aware embedding) surfaces the matching entity above documentation-only matches
 
 
 ---
@@ -101,16 +101,17 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 ### Edge Cases
 
-- **Unknown entity name**: System returns empty search results with `search_mode` indicator (not an MCP error)
-- **Ambiguous entity name with 50+ candidates**: Results are truncated to top 20 candidates ranked by score, with truncation metadata indicating total available; no pagination mechanism exists, users must refine query to see different results
+- **Unknown entity name**: System returns empty search results (not an MCP error)
+- **Ambiguous entity name with 50+ candidates**: Results are truncated to top K candidates ranked by cross-encoder score; no pagination
 - **Circular dependencies in call graph**: BFS traversal with visited set prevents infinite loops; each entity appears once at shortest path distance
-- **Embedding service down during search**: System returns successful MCP response with keyword-only results and sets `search_mode: "keyword_fallback"` to indicate degraded state (not an MCP error)
-- **No embedding provider configured**: System operates in keyword-only mode permanently until provider is configured. All searches return `search_mode: "keyword_fallback"`.
-- **Embedding provider error at query time**: System logs error, degrades to keyword-only for that request, returns `search_mode: "keyword_fallback"`
+- **Embedding provider or cross-encoder unavailable at startup**: Server fails fast with clear error. There is no keyword-only degraded mode.
 - **Stale embedding artifact**: Source documentation has changed but artifact file still exists. System loads stale artifact without warning. Developer must delete artifact to trigger regeneration.
 - **Corrupt embedding artifact**: Artifact file exists but is corrupted (partial write, invalid pickle). Build fails with clear error rather than loading garbage vectors.
 - **First-run model download**: Local ONNX model files not yet cached on machine. System logs that download is occurring; handles download failures with clear error.
 - **Embedding dimension mismatch at startup**: Configured dimension does not match provider's actual output. Server fails fast with clear error.
+- **Entity with no documentation and no meaningful name**: May not survive filtering — acceptable; these entities are not useful search targets
+- **Query contains both identifier tokens and prose**: Both symbol and doc channels contribute candidates; the cross-encoder ranks based on the best-matching view
+- **Containment graph has incomplete paths**: Parse `definition_text` for `::` scoping as secondary source; if neither yields a scope, `qualified_name` = bare name
 - **Very large behavior slice (>1000 functions)**: Computation stops at configurable `max_cone_size` (default 200), returns partial results with truncation warning
 - **Entity exists in database but source file deleted from disk**: Source code retrieval returns stored source_text from database (extracted at build time)
 - **Source code on disk has changed since database build**: Stored source_text becomes stale; documentation remains valid. Users must rebuild database after code changes.
@@ -136,11 +137,11 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Search
 
-- **FR-007**: System MUST perform hybrid search combining pgvector cosine similarity and Postgres full-text search with exact name/signature boost
-- **FR-008**: System MUST degrade gracefully to keyword-only search when no embedding provider is configured or when a configured provider encounters an error, and report degradation via search_mode field
+- **FR-007**: System MUST perform multi-view hybrid search using five parallel candidate retrieval channels: doc semantic (pgvector cosine on `doc_embedding`), symbol semantic (pgvector cosine on `symbol_embedding`), doc keyword (`ts_rank` on `doc_search_vector`), symbol keyword (`ts_rank` on `symbol_search_vector`), and trigram (`pg_trgm` similarity on `symbol_searchable`). Results are ranked by cross-encoder reranking with no per-query score normalization.
+- **FR-008**: Entity table MUST use dual embedding columns (`doc_embedding`, `symbol_embedding`) and dual tsvector columns (`doc_search_vector` with english dictionary, `symbol_search_vector` with simple dictionary). Entity table MUST include `symbol_searchable` TEXT column for trigram indexing and `qualified_name` TEXT column for C++ scoping.
 - **FR-009**: System MUST support search filtering by entity kind and capability group
-- **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, and search_mode
-- **FR-011**: System MUST normalize keyword scores within each query result set before combining with semantic scores, apply a relevance threshold (0.2 combined score) to filter noise results, and return raw combined scores (not normalized to [0,1] per-query)
+- **FR-010**: System MUST return search results using SearchResult envelope with result_type, score, winning_view, winning_score, and losing_score
+- **FR-011**: Cross-encoder reranking MUST produce the final ranking. Per-candidate score = max(doc_ce_score, symbol_ce_score) for sentence-like queries, with query-shape-aware view selection for symbol-like queries. No per-query normalization.
 - **FR-012**: Search tool MUST accept a `source` parameter (defaulting to `entity`) that is V2-reserved for unified search across entity docs and subsystem docs; in V1 only `entity` is functional
 
 #### Graph Exploration
@@ -179,7 +180,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **FR-036**: Build script MUST compute fan_in and fan_out metrics by counting CALLS edges in dependency graph
 - **FR-037**: Build script MUST compute is_bridge flag by checking whether function's incoming vs. outgoing CALLS neighbors span different capability groups
 - **FR-039**: Build script MUST set is_entry_point flag for functions matching patterns: do_*, spell_*, spec_*
-- **FR-040**: Build script MUST generate weighted tsvector for full-text search with weights: name=A, brief/details=B, definition_text=C, source_text=D
+- **FR-040**: Build script MUST generate dual weighted tsvectors: `doc_search_vector` (english dictionary: name=A, brief+details=B, notes+rationale+params+returns=C) and `symbol_search_vector` (simple dictionary: name=A, qualified_name+signature=B, definition_text=C)
 - **FR-041**: Build script MUST be idempotent, producing identical database state on repeated runs from same input artifacts
 - **FR-042**: Build script MUST complete processing of all artifacts and database population in under 5 minutes for ~5,300 entities
 
@@ -192,7 +193,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 #### Error Handling
 
 - **FR-047**: Server MUST return MCP errors for hard failures including database connectivity errors, invalid tool parameters, malformed requests, or internal server errors
-- **FR-048**: Server MUST return successful MCP responses with explicit status indicators for degraded or partial results including embedding service unavailable (search_mode: keyword_fallback), result truncation (truncated: true), or empty search results
+- **FR-048**: Server MUST return successful MCP responses with explicit status indicators for partial results including result truncation (truncated: true) or empty search results
 
 #### Observability
 
@@ -219,20 +220,20 @@ An AI assistant needs to understand the architectural organization of the codeba
 
 #### Embedding Provider
 
-- **FR-062**: System MUST support a configurable embedding provider with at least two modes: "local" (bundled, no external service) and "hosted" (OpenAI-compatible endpoint), selectable via `EMBEDDING_PROVIDER` environment variable
-- **FR-063**: System MUST support a "no provider" mode where embedding is entirely disabled and all search degrades to keyword-only. This MUST be the default when no provider is configured.
-- **FR-064**: When configured for local mode, the system MUST default to the bundled ONNX-based embedding model BAAI/bge-base-en-v1.5 (768-dim). The model name MUST be configurable via `EMBEDDING_LOCAL_MODEL`.
-- **FR-065**: The embedding cache MUST use type-specific artifact files named `embed_cache_{model_slug}_{dim}_{type}.pkl` (pickle format), where `{type}` is a string identifier for the embedding package (e.g., "entity", "usages"). Each type has its own independent file so invalidating one type does not affect others. The type identifier must be alphanumeric with underscores and hyphens only.
+- **FR-062**: System MUST support a configurable embedding provider with at least two modes: "local" (bundled, no external service) and "hosted" (OpenAI-compatible endpoint), selectable via `EMBEDDING_PROVIDER` environment variable. Embedding is required — there is no keyword-only mode.
+- **FR-063**: `EMBEDDING_PROVIDER` MUST be set to `"local"` or `"hosted"`. Server MUST fail fast at startup if it is not configured. There is no "no provider" mode.
+- **FR-064**: When configured for local mode, the system MUST use dual embedding models: BAAI/bge-base-en-v1.5 for doc embeddings and jinaai/jina-embeddings-v2-base-code for symbol embeddings (both 768-dim). A cross-encoder model (Xenova/ms-marco-MiniLM-L-12-v2) MUST be loaded for reranking. All model names are configurable via environment variables.
+- **FR-065**: The embedding cache MUST use type-specific artifact files named `embed_cache_{model_slug}_{dim}_{type}.pkl` (pickle format), where `{type}` is a string identifier for the embedding package (e.g., "doc", "symbol", "usages"). Each type has its own independent file so invalidating one type does not affect others.
 - **FR-066**: The database build process MUST synchronize each embedding cache incrementally: load the existing cache file for that type if it exists; generate embeddings only for keys missing from the cache; prune keys present in the cache but absent from the current data set; save the updated cache file. Generation is skipped entirely when no keys are missing.
-- **FR-066a**: The embedding cache synchronization mechanism MUST be schema-agnostic, operating on generic key-text-embedding mappings without knowledge of the specific data type (entities, usages, etc.). Entity-specific text construction (via `Document.to_doxygen()` and minimal Doxygen text for doc-less entities) belongs in the domain layer (`build_helpers/entity_processor.py`), not in the cache layer (`build_helpers/embeddings_loader.py`).
-- **FR-066b**: When loading entity embeddings, if a legacy cache file without type suffix (`embed_cache_{model_slug}_{dim}.pkl`) exists but no `_entity` suffix file exists, the build MUST log a warning indicating the legacy file must be renamed or deleted. The build MUST NOT automatically migrate or fall back to legacy naming.
+- **FR-066a**: The embedding cache synchronization mechanism MUST be schema-agnostic, operating on generic key-text-embedding mappings without knowledge of the specific data type.
+- **FR-066b**: When loading entity embeddings, if a legacy cache file without type suffix exists but no typed suffix file exists, the build MUST log a warning. The build MUST NOT automatically migrate or fall back to legacy naming.
 - **FR-067**: The database schema MUST use a vector column dimension that matches the configured embedding provider's output dimension (via `EMBEDDING_DIMENSION` env var, default 768), not a hardcoded value.
-- **FR-068**: The text used for embedding each entity with documentation MUST be a structured Doxygen-formatted docstring reconstructed from entity documentation fields via `Document.to_doxygen()` (name, kind, brief, details, params, returns, notes, rationale).
-- **FR-069**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency.
+- **FR-068**: Doc embedding text MUST be assembled using labeled prose fields: `BRIEF: ...`, `DETAILS: ...`, `PARAMS: ...`, `RETURNS: ...`, `NOTES: ...`, `RATIONALE: ...` (omitting null/empty fields, falling back to bare name when all are empty). Symbol embedding text MUST be the qualified scoped signature in natural C++ form.
+- **FR-069**: The runtime query embedding pathway MUST use the same provider and model that generated the stored vectors, ensuring dimensional and semantic consistency. Doc queries use the doc embedding model; symbol queries use the symbol embedding model.
 - **FR-070**: The old hardcoded `embeddings_cache.pkl` artifact MUST NOT be required by build validation.
 - **FR-071**: The system MUST validate at startup that the configured vector dimension matches the embedding provider's actual output dimension and fail fast with a clear error if they disagree.
-- **FR-072**: Query-time embedding MUST NOT block the server's event loop. Server call sites (search.py, resolver.py) MUST use `await provider.aembed(query)`. The provider owns the async surface — `LocalEmbeddingProvider` offloads to `asyncio.to_thread()`, `HostedEmbeddingProvider` uses native `AsyncOpenAI` HTTP. The build pipeline uses sync `provider.embed_batch()` exclusively.
-- **FR-073**: Entities without a `Document` but with a name, signature, or kind MUST receive a minimal embedding generated from a Doxygen-formatted text combining `kind`, `name`, `signature`, and `file_path`. This includes structural compounds (file, dir, namespace). Only entities where all three of name, signature, and kind are empty/null may be skipped.
+- **FR-072**: Query-time embedding MUST NOT block the server's event loop. Server call sites MUST use `await provider.aembed(query)`. The provider owns the async surface.
+- **FR-073**: Entities without documentation MUST receive a doc embedding from a minimal text (bare name). All entities MUST receive a symbol embedding from their qualified name or signature.
 
 
 #### Deterministic Entity IDs
@@ -268,7 +269,7 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-003**: Graph traversal at depth 3 completes and returns results in under 200 milliseconds for typical entities (fan-in/fan-out < 50)
 - **SC-004**: Behavior slice computation for entry points completes in under 1 second when call cone contains fewer than 200 functions
 - **SC-005**: Server starts and loads dependency graph (25,000 edges) into memory in under 5 seconds
-- **SC-006**: When no embedding provider is configured or the provider encounters an error, search automatically falls back to keyword mode with explicit degradation reporting and no failures
+- **SC-006**: Embedding provider and cross-encoder model are required. Server refuses to start when `EMBEDDING_PROVIDER` is not configured.
 - **SC-007**: Ambiguous search queries return ranked results with sufficient context for human or AI to select correct match without additional queries
 - **SC-009**: Build script processes all artifacts (5,293 entities, 25,000 edges, 30 capabilities) and populates database in under 5 minutes
 - **SC-010**: Build script produces identical database state on repeated runs from same input artifacts (idempotent operation)
@@ -284,32 +285,40 @@ An AI assistant needs to understand the architectural organization of the codeba
 - **SC-021**: Embedding artifact generation for the full entity set completes within 5 minutes on a standard development machine
 - **SC-022**: Query-time embedding adds less than 100ms of latency to search requests when using the local provider
 
-
 - **SC-023**: Two consecutive builds from the same artifacts produce identical entity ID sets (100% determinism)
 - **SC-024**: Zero ID collisions across ~5,305 entities (enforced by build-time collision detection)
 - **SC-025**: After a full build, at least 95% of doc_db.json entries with non-empty brief have non-null brief in the database
 - **SC-026**: An agent can complete search → get_entity → get_callers → get_behavior_slice using only entity_ids, with zero signature-based lookups
 - **SC-027**: No tool in the MCP catalog accepts a `signature` parameter for entity lookup (15 tools total)
 
-
-- **SC-028**: After a successful build, ≥95% of all entities have non-null `embedding` in the database (doc-less entities receive minimal embeddings)
+- **SC-028**: After a successful build, ≥95% of all entities have non-null `doc_embedding` and `symbol_embedding` in the database
 - **SC-029**: After a successful build, `params IS NOT NULL` count matches meaningful parameter content (~1,800–2,100, not ~5,055)
 - **SC-030**: Build with invalid `PROJECT_ROOT` exits with `BuildError` within the source extraction stage
 - **SC-031**: Build with valid `PROJECT_ROOT` logs a structured extraction summary (body_located, extracted, failed, skipped, success_rate)
-- **SC-032**: Build logs an embedding generation summary (doc_embeds, minimal_embeds, no_embed, coverage%)
-- **SC-033**: After each build, embedding cache log shows per-type sync status (added, pruned, or "up to date") for entity and usages types
+- **SC-032**: Build logs an embedding generation summary per type (doc, symbol, usages)
+- **SC-033**: After each build, embedding cache log shows per-type sync status (added, pruned, or "up to date") for doc, symbol, and usages types
+
+#### Multi-View Search Quality
+
+- **SC-034**: Searching for a known bare name (`damage`, `stc`, `do_look`) returns that entity in the top-5 results
+- **SC-035**: Searching for a C++ identifier (`Character`, `PLR_COLOR2`) returns the correct entity via symbol view, not entities whose documentation merely contains the word
+- **SC-036**: A natural language query ("send formatted text to character output buffer") returns relevant entities ranked by cross-encoder score
+- **SC-037**: A nonsense query ("xyzzy foobar baz") returns zero or near-zero results (CE model limitation may allow 1 marginal result)
+- **SC-038**: No returned result has a score produced by per-query normalization — all scores come from cross-encoder reranking
+- **SC-039**: After a full build, ≥90% of function entities have a non-empty `qualified_name` derived from the containment graph, using only namespace/class/struct/group as scoping containers (no file/directory paths)
+- **SC-040**: Qualified names use C++ scoping containers only: `conn::GetSexState`, not `src/include/conn::State.hh::conn::GetSexState`
 
 ### Assumptions
 
 - **A-001**: Pre-computed artifacts in `artifacts/` are complete, up-to-date, and internally consistent at time of database build; build script is run offline before server startup and not during server operation
 - **A-002**: PostgreSQL database with pgvector extension is available and accessible via connection string in `.env` file
-- **A-003**: Embedding is available via a configurable provider: local (bundled ONNX model, default), hosted (OpenAI-compatible endpoint), or none (keyword-only). System must function correctly without any embedding provider configured.
+- **A-003**: Embedding is required via a configurable provider: local (bundled ONNX models) or hosted (OpenAI-compatible endpoint). There is no keyword-only mode. Doc embedding uses BAAI/bge-base-en-v1.5; symbol embedding uses jinaai/jina-embeddings-v2-base-code; cross-encoder reranking uses Xenova/ms-marco-MiniLM-L-12-v2. All models locked after empirical evaluation.
 - **A-004**: NetworkX in-memory graph constructed from ~25,000 edges fits in available memory (estimated ~100-200 MB) and is read-only after initial load (no thread safety concerns for concurrent reads)
 - **A-005**: MCP client (VS Code, Claude Desktop) supports stdio transport and can invoke MCP tools/resources/prompts
 - **A-006**: Source code files on disk match artifacts at database build time; users rebuild database after code changes
 - **A-007**: The signature map is now computed on-the-fly at build time from the loaded `EntityDatabase` and `DocumentDB`. `signature_map.json` is no longer a required artifact.
 - **A-008**: Capability definitions, dependency edges, and function membership lists in `capability_defs.json` and `capability_graph.json` are authoritative
-- **A-009**: Full-text search weighted tsvector composition (name=A, brief/details=B, definition=C, source_text=D) provides reasonable ranking for prose queries
+- **A-009**: Dual full-text search tsvectors provide complementary ranking: `doc_search_vector` (english dictionary, prose-oriented) and `symbol_search_vector` (simple dictionary, identifier-oriented). Combined with cross-encoder reranking, this produces high-quality results for both natural language and symbol queries.
 - **A-010**: BFS traversal with visited set and configurable depth limits prevents performance degradation from circular dependencies or deep call chains
 - **A-011**: The `capability_graph.json` member names match entity names in the entity database exactly. The `doc.system` field remains unused for capability assignment.
 - **A-012**: The BAAI/bge-base-en-v1.5 model produces 768-dimensional vectors. This is verified at runtime; if a future model version changes dimensions, the config must be updated accordingly.

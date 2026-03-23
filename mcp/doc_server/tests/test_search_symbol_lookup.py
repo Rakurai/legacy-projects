@@ -19,7 +19,8 @@ async def test_exact_name_match_ranks_first(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -28,7 +29,6 @@ async def test_exact_name_match_ranks_first(
     top = results[0]
     assert top.entity_summary is not None
     assert top.entity_summary.name == "damage"
-    assert top.sort_tier >= 1
 
 
 @pytest.mark.asyncio
@@ -39,7 +39,8 @@ async def test_exact_signature_match(
     results = await hybrid_search(
         session=test_session,
         query="void damage(Character *ch, Character *victim, int dam)",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -60,7 +61,8 @@ async def test_symbol_keyword_no_stemming(
     results = await hybrid_search(
         session=test_session,
         query="Character",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -78,7 +80,8 @@ async def test_empty_query_returns_empty(
     results = await hybrid_search(
         session=test_session,
         query="",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -93,7 +96,8 @@ async def test_results_have_winning_view_metadata(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -101,8 +105,9 @@ async def test_results_have_winning_view_metadata(
     assert len(results) > 0
     for r in results:
         assert r.winning_view in ("doc", "symbol")
-        assert r.winning_score >= 0.0
-        assert r.losing_score >= 0.0
+        assert r.score == r.winning_score
+        assert isinstance(r.winning_score, float)
+        assert isinstance(r.losing_score, float)
 
 
 @pytest.mark.asyncio
@@ -113,7 +118,8 @@ async def test_kind_filter_applied(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
         kind="function",
@@ -132,7 +138,8 @@ async def test_capability_filter_applied(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
         capability="combat",
@@ -151,7 +158,8 @@ async def test_no_search_mode_in_results(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )

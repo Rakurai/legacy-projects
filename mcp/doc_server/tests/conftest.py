@@ -7,6 +7,7 @@ Provides test database, mock artifacts, and async support for integration tests.
 import pytest
 from contextlib import asynccontextmanager
 from pathlib import Path
+import re
 from unittest.mock import AsyncMock, MagicMock
 
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
@@ -18,6 +19,34 @@ import networkx as nx
 from server.config import ServerConfig
 from server.db_models import Capability, CapabilityEdge, Edge, Entity, EntityUsage, EntryPoint
 from server.retrieval_view import RetrievalView
+
+
+def _score_documents(query: str, docs: list[str]) -> list[float]:
+    """Deterministic mixed-sign logit fixture for search tests."""
+    query_lower = query.lower().strip()
+    query_tokens = {token for token in re.findall(r"[a-z0-9_]+", query_lower) if token}
+    if not query_lower:
+        return []
+
+    scores: list[float] = []
+    for doc in docs:
+        doc_lower = doc.lower()
+        doc_tokens = {token for token in re.findall(r"[a-z0-9_]+", doc_lower) if token}
+        overlap = len(query_tokens & doc_tokens)
+        score = -1.25 + (0.65 * overlap)
+
+        if query_lower in doc_lower:
+            score += 1.4
+
+        if "::" in query_lower and query_lower in doc_lower:
+            score += 0.4
+
+        if overlap == 0:
+            score -= 0.35
+
+        scores.append(score)
+
+    return scores
 
 
 @pytest.fixture(scope="session")
@@ -472,7 +501,7 @@ def mock_embedding_provider():
 def mock_cross_encoder():
     """Mock cross-encoder for tests that call hybrid_search directly."""
     mock = MagicMock()
-    mock.arerank = AsyncMock(side_effect=lambda q, docs: [0.5] * len(docs))
+    mock.arerank = AsyncMock(side_effect=_score_documents)
     return mock
 
 
@@ -502,7 +531,7 @@ def mock_symbol_view(mock_cross_encoder):
         cross_encoder=mock_cross_encoder,
         ts_rank_ceiling=1.0,
         floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05, "trigram": 0.2},
-        assemble_embed_text=lambda e: f"{e.name} {e.signature or ''}",
+        assemble_embed_text=lambda e: f"{e.qualified_name or e.name} {e.signature or ''}",
     )
 
 
@@ -528,9 +557,9 @@ def mock_ctx(test_session: AsyncSession, sample_graph: nx.MultiDiGraph, test_con
     mock_embedding.dimension = 768
     mock_embedding.aembed = AsyncMock(return_value=[0.0] * 768)
 
-    # Mock cross-encoder (returns uniform scores)
+    # Mock cross-encoder (returns representative mixed-sign logits)
     mock_cross_encoder = MagicMock()
-    mock_cross_encoder.arerank = AsyncMock(side_effect=lambda q, docs: [0.5] * len(docs))
+    mock_cross_encoder.arerank = AsyncMock(side_effect=_score_documents)
 
     doc_view = RetrievalView(
         name="doc",
@@ -551,14 +580,15 @@ def mock_ctx(test_session: AsyncSession, sample_graph: nx.MultiDiGraph, test_con
         cross_encoder=mock_cross_encoder,
         ts_rank_ceiling=1.0,
         floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05, "trigram": 0.2},
-        assemble_embed_text=lambda e: f"{e.name} {e.signature or ''}",
+        assemble_embed_text=lambda e: f"{e.qualified_name or e.name} {e.signature or ''}",
     )
 
     lifespan_context = {
         "config": test_config,
         "db_manager": mock_db_manager,
         "graph": sample_graph,
-        "embedding_provider": mock_embedding,
+        "doc_embedding_provider": mock_embedding,
+        "symbol_embedding_provider": mock_embedding,
         "doc_view": doc_view,
         "symbol_view": symbol_view,
     }
@@ -654,7 +684,7 @@ def mock_ctx_no_graph(test_session: AsyncSession, test_config: ServerConfig):
     mock_embedding.aembed = AsyncMock(return_value=[0.0] * 768)
 
     mock_cross_encoder = MagicMock()
-    mock_cross_encoder.arerank = AsyncMock(side_effect=lambda q, docs: [0.5] * len(docs))
+    mock_cross_encoder.arerank = AsyncMock(side_effect=_score_documents)
 
     doc_view = RetrievalView(
         name="doc",
@@ -675,7 +705,7 @@ def mock_ctx_no_graph(test_session: AsyncSession, test_config: ServerConfig):
         cross_encoder=mock_cross_encoder,
         ts_rank_ceiling=1.0,
         floor_thresholds={"semantic": 0.3, "keyword_shaped": 0.05, "trigram": 0.2},
-        assemble_embed_text=lambda e: f"{e.name} {e.signature or ''}",
+        assemble_embed_text=lambda e: f"{e.qualified_name or e.name} {e.signature or ''}",
     )
 
     lifespan_context = {

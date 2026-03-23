@@ -206,13 +206,12 @@ class SearchResult(BaseModel):
     """
 
     result_type: str  # "entity" in V1; V2 adds "subsystem_doc"
-    score: float = Field(ge=0, description="Cross-encoder score (winning view)")
+    score: float = Field(description="Cross-encoder score (winning view); raw logit may be negative")
     entity_summary: EntitySummary | None = None  # Present when result_type="entity"
     matching_usages: list[MatchingUsage] | None = None  # Present when source="usages"
     winning_view: str = Field(description="'symbol' or 'doc' — which view scored highest")
-    winning_score: float = Field(ge=0, description="Cross-encoder score from the winning view")
-    losing_score: float = Field(ge=0, description="Cross-encoder score from the losing view")
-    sort_tier: int = Field(default=0, exclude=True)
+    winning_score: float = Field(description="Cross-encoder score from the winning view; raw logit may be negative")
+    losing_score: float = Field(description="Cross-encoder score from the losing view; raw logit may be negative")
 
 
 class CapabilityTouch(BaseModel):

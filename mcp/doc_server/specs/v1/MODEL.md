@@ -19,6 +19,7 @@ Primary storage for entity metadata, documentation, metrics, embeddings, and ful
 
 ```sql
 CREATE EXTENSION IF NOT EXISTS vector;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
 CREATE TABLE entities (
     -- Identity (internal)
@@ -62,12 +63,22 @@ CREATE TABLE entities (
     fan_out         INTEGER DEFAULT 0,         -- Outgoing CALLS edges
     is_bridge       BOOLEAN DEFAULT FALSE,     -- Callers/callees span different capabilities
 
-    -- Embedding
-    embedding       vector(N),                 -- pgvector column; N = EMBEDDING_DIMENSION env var (default 768 for BAAI/bge-base-en-v1.5)
+    -- Qualified name
+    qualified_name  TEXT,                      -- Fully-qualified C++ name from containment graph (e.g., "Logging::stc", "conn::GetSexState")
+                                               -- Scoping containers: namespace, class, struct, group only (no file/dir paths)
 
+    -- Embedding (dual views)
+    doc_embedding       vector(N),             -- pgvector; N = EMBEDDING_DIMENSION env var (default 768)
+                                               -- Labeled prose fields (brief, details, params, returns, notes, rationale)
+    symbol_embedding    vector(N),             -- pgvector; same dimension
+                                               -- Qualified scoped signature in natural C++ form
 
-    -- Full-text search
-    search_vector   tsvector                   -- Weighted: name=A, brief/details=B, definition_text=C, source_text=D
+    -- Full-text search (dual views)
+    doc_search_vector    tsvector,             -- Weighted: name=A, brief+details=B, notes+rationale+params+returns=C. English dictionary (stemming).
+    symbol_search_vector tsvector,             -- Weighted: name=A, qualified_name+signature=B, definition_text=C. Simple dictionary (no stemming).
+
+    -- Trigram similarity
+    symbol_searchable    TEXT                  -- Lowercased, punctuation-stripped name+qualified_name+signature. For pg_trgm similarity.
 );
 
 -- Indexes
@@ -77,9 +88,11 @@ CREATE INDEX idx_entities_file ON entities(file_path);
 CREATE INDEX idx_entities_capability ON entities(capability);
 CREATE INDEX idx_entities_entry ON entities(is_entry_point) WHERE is_entry_point;
 CREATE INDEX idx_entities_bridge ON entities(is_bridge) WHERE is_bridge;
-CREATE INDEX idx_entities_search ON entities USING GIN(search_vector);
-CREATE INDEX idx_entities_embedding ON entities USING ivfflat (embedding vector_cosine_ops) WITH (lists = 50);
--- Note: HNSW index may be used instead of ivfflat depending on data size
+CREATE INDEX ix_entities_doc_embedding ON entities USING hnsw (doc_embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+CREATE INDEX ix_entities_symbol_embedding ON entities USING hnsw (symbol_embedding vector_cosine_ops) WITH (m = 16, ef_construction = 64);
+CREATE INDEX ix_entities_doc_search_vector ON entities USING GIN(doc_search_vector);
+CREATE INDEX ix_entities_symbol_search_vector ON entities USING GIN(symbol_search_vector);
+CREATE INDEX ix_entities_symbol_searchable ON entities USING GiST(symbol_searchable gist_trgm_ops);
 ```
 
 **Derived Fields Computation (Build Script):**
@@ -89,6 +102,7 @@ CREATE INDEX idx_entities_embedding ON entities USING ivfflat (embedding vector_
 - `fan_out`: COUNT(edges WHERE source_id = entity_id AND edge_type = 'CALLS')
 - `is_bridge`: EXISTS(edge e1 JOIN edge e2 WHERE e1.source_cap != e2.target_cap AND e1.entity = e2.entity). Requires capability assignment to be completed first (pipeline ordering).
 - `is_entry_point`: name LIKE 'do_%' OR name LIKE 'spell_%' OR name LIKE 'spec_%'
+- `qualified_name`: Derived from containment graph. Walks `CONTAINED_BY` edges upward, collecting only C++ scoping containers (namespace, class, struct, group). File and directory parents are excluded. Result: `conn::GetSexState`, not `src/include/conn::State.hh::conn::GetSexState`.
 - **Entity Deduplication**: Build pipeline groups entities by `entity.id.member` (Doxygen member hash) to deduplicate declaration/definition splits. For each group, the definition fragment (where `entity.body is not None`) is selected as the survivor, and documentation from declaration fragments is merged onto it. Entities without a member hash (pure compounds) pass through unchanged. This ensures one database record per logical entity.
 
 ### 1.2 Edges Table
@@ -119,8 +133,6 @@ CREATE INDEX idx_edges_rel ON edges(relationship);
 
 Capability group definitions (30 groups).
 
-
-
 ```sql
 CREATE TABLE capabilities (
     name TEXT PRIMARY KEY,                     -- e.g., "combat", "magic", "persistence"
@@ -128,7 +140,6 @@ CREATE TABLE capabilities (
     description TEXT NOT NULL,                 -- sourced from capability_defs.json "desc" key
     function_count INTEGER NOT NULL,           -- sourced from capability_graph.json capabilities[name].function_count
     stability TEXT                             -- stable, evolving, experimental (if defined)
-
 );
 ```
 
@@ -167,7 +178,25 @@ CREATE TABLE entry_points (
 );
 ```
 
-### 1.6 SQLModel Table Definitions
+### 1.6 Search Config Table
+
+Stores precomputed search calibration values produced by the build pipeline. The server loads these at startup and caches them for its lifetime.
+
+```sql
+CREATE TABLE search_config (
+    key   TEXT PRIMARY KEY,                    -- Config key (e.g., 'doc_tsrank_ceiling')
+    value DOUBLE PRECISION NOT NULL            -- Numeric config value
+);
+```
+
+**Known keys** (populated by build pipeline, consumed by server):
+
+| Key | Description |
+|-----|-------------|
+| `doc_tsrank_ceiling` | 99th percentile ts_rank for `doc_search_vector` |
+| `symbol_tsrank_ceiling` | 99th percentile ts_rank for `symbol_search_vector` |
+
+### 1.7 SQLModel Table Definitions
 
 All tables above are defined as SQLModel `table=True` classes in `server/db_models.py`. These are the authoritative Python representation; the SQL above documents the generated schema for reference.
 
@@ -209,7 +238,6 @@ class Entity(SQLModel, table=True):
     rationale: str | None = None
     usages: dict | None = Field(default=None, sa_column=Column(JSONB))
 
-
     # Classification
     capability: str | None = None
     is_entry_point: bool = False
@@ -219,11 +247,41 @@ class Entity(SQLModel, table=True):
     fan_out: int = 0
     is_bridge: bool = False
 
+    # Qualified name
+    qualified_name: str | None = Field(
+        default=None,
+        description="Fully-qualified C++ name (e.g., Logging::stc, conn::GetSexState)",
+    )
 
-    # Embedding + search
+    # Embedding (dual views)
+    doc_embedding: list[float] | None = Field(
+        default=None,
+        sa_column=Column(Vector(_EMBEDDING_DIM)),
+        description=f"{_EMBEDDING_DIM}-dim embedding of labeled prose fields",
+    )
+    symbol_embedding: list[float] | None = Field(
+        default=None,
+        sa_column=Column(Vector(_EMBEDDING_DIM)),
+        description=f"{_EMBEDDING_DIM}-dim embedding of qualified scoped signature",
+    )
 
-    embedding: list[float] | None = Field(default=None, sa_column=Column(Vector(_EMBEDDING_DIM)))
-    search_vector: str | None = Field(default=None, sa_column=Column(TSVECTOR))
+    # Full-text search (dual views)
+    doc_search_vector: str | None = Field(
+        default=None,
+        sa_column=Column(TSVECTOR),
+        description="Weighted tsvector: name=A, brief+details=B, notes+rationale+params+returns=C (english)",
+    )
+    symbol_search_vector: str | None = Field(
+        default=None,
+        sa_column=Column(TSVECTOR),
+        description="Weighted tsvector: name=A, qualified_name+signature=B, definition_text=C (simple)",
+    )
+
+    # Trigram similarity
+    symbol_searchable: str | None = Field(
+        default=None,
+        description="Lowercased punctuation-stripped name+qualified_name+signature for pg_trgm",
+    )
 
 
 class Edge(SQLModel, table=True):
@@ -244,7 +302,6 @@ class Capability(SQLModel, table=True):
     stability: str | None = None
 
 
-
 class CapabilityEdge(SQLModel, table=True):
     __tablename__ = "capability_edges"
 
@@ -262,9 +319,16 @@ class EntryPoint(SQLModel, table=True):
     entity_id: str | None = Field(default=None, foreign_key="entities.entity_id")
     capabilities: list | None = Field(default=None, sa_column=Column(JSONB))
     entry_type: str | None = None
+
+
+class SearchConfig(SQLModel, table=True):
+    __tablename__ = "search_config"
+
+    key: str = Field(primary_key=True, description="Config key (e.g., 'doc_tsrank_ceiling')")
+    value: float = Field(description="Numeric config value")
 ```
 
-> **Note**: JSONB columns use `sa_column=Column(JSONB)` for proper PostgreSQL dialect. `Vector(_EMBEDDING_DIM)` comes from `pgvector.sqlalchemy`, where `_EMBEDDING_DIM = int(os.environ.get("EMBEDDING_DIMENSION", "768"))` is read at module import time. `TSVECTOR` from `sqlalchemy.dialects.postgresql`. Indexes are created via `CREATE INDEX IF NOT EXISTS` statements during schema initialization (see build script), not in the ORM model, because some indexes require PostgreSQL-specific syntax (GIN, HNSW/ivfflat).
+> **Note**: JSONB columns use `sa_column=Column(JSONB)` for proper PostgreSQL dialect. `Vector(_EMBEDDING_DIM)` comes from `pgvector.sqlalchemy`, where `_EMBEDDING_DIM = int(os.environ.get("EMBEDDING_DIMENSION", "768"))` is read at module import time. `TSVECTOR` from `sqlalchemy.dialects.postgresql`. Indexes are created via `CREATE INDEX IF NOT EXISTS` statements during schema initialization (see build script), not in the ORM model, because some indexes require PostgreSQL-specific syntax (GIN, HNSW, GiST). The `pg_trgm` extension is created alongside `vector` during schema setup.
 
 ---
 
@@ -378,8 +442,6 @@ class EntityDetail(BaseModel):
     usages: dict[str, str] | None
     notes: str | None
 
-
-
     # Optional neighbors (include_neighbors=true)
     neighbors: list[EntityNeighbor] | None = None
 
@@ -397,17 +459,20 @@ class EntityNeighbor(BaseModel):
 
 ### 3.4 SearchResult
 
-Discriminated union for search results (V1: entity only; V2: entity + subsystem docs).
+Result from multi-view search pipeline. Each result carries metadata about which view won.
 
 ```python
 class SearchResult(BaseModel):
-    """Search result with discriminated type."""
+    """Search result with multi-view ranking metadata."""
     result_type: Literal["entity", "subsystem_doc"]  # V2: subsystem_doc not used in V1
-    score: float = Field(ge=0, description="Raw combined score; exact-name matches score ≥ 10.0")
-    search_mode: Literal["hybrid", "semantic_only", "keyword_fallback"] = Field(description="Which search mode was used")
+    score: float = Field(description="Cross-encoder score from winning view; raw logit, may be negative")
 
     entity_summary: EntitySummary | SubsystemDocSummary | dict  # EntitySummary in V1; V2 adds SubsystemDocSummary
 
+    # Multi-view ranking metadata
+    winning_view: str = Field(description='"symbol" or "doc" — the view that produced the higher cross-encoder score')
+    winning_score: float = Field(description="Cross-encoder score from winning view")
+    losing_score: float = Field(description="Cross-encoder score from losing view")
 ```
 
 ### 3.5 BehaviorSlice
@@ -432,7 +497,6 @@ class BehaviorSlice(BaseModel):
     globals_used: list[GlobalTouch]
 
 
-
 class CapabilityTouch(BaseModel):
     capability: str
     direct_count: int  # Functions in this cap called directly
@@ -445,9 +509,6 @@ class GlobalTouch(BaseModel):
     name: str
     kind: Literal["variable"]
     access_type: Literal["direct", "transitive"]
-
-
-
 ```
 
 ### 3.6 Truncation Metadata
@@ -512,7 +573,6 @@ class ContextBundle(BaseModel):
 
 ### Build Time (Offline ETL)
 
-
 ```
 1.  Parse code_graph.json → DoxygenEntity objects (imported from legacy_common.doxygen_parse)
 2.  Load documents from generated_docs/*.json → Document objects via legacy_common.doc_db.DocumentDB
@@ -524,34 +584,46 @@ class ContextBundle(BaseModel):
 8.  Assign capabilities to merged entities (~848 assignments)
 9.  Load graph edges (translate to deterministic IDs), compute fan_in/fan_out, bridge flags (requires capabilities)
 10. Compute is_entry_point
-11. Generate search_vector = setweight(to_tsvector(name), 'A') || setweight(...brief/details..., 'B') || setweight(...definition_text..., 'C') || setweight(...source_text..., 'D')
-12. Load or generate embeddings (when provider is configured):
-    - Entity text construction (domain layer, build_helpers/entity_processor.py):
-      - Doc-rich entities: Document.to_doxygen() from legacy_common.doc_db
-      - Doc-less entities: build_minimal_embed_text() using kind + name + signature + file_path (Doxygen-formatted)
-      - Entities with no name, signature, or kind: skipped (no text, no embedding)
-    - Cache synchronization (cache layer, build_helpers/embeddings_loader.py):
-      - Load embed_cache_{model}_{dim}_entity.pkl if it exists (legacy embed_cache_{model}_{dim}.pkl logs a warning)
-      - Generate embeddings only for entity_ids absent from cache
-      - Prune entity_ids in cache but not in current build
-      - Save updated cache file if any changes occurred
-    - Attach embeddings to merged entities by entity_id; entity_ids not in cache remain null
-    - If no provider configured: skip (null embeddings), log warning
-13. Drop/recreate schema (tables + indexes via same engine, CREATE INDEX IF NOT EXISTS)
-14. INSERT INTO entities (batch, ~5000 rows)
-15. Parse code_graph.gml → NetworkX graph → extract edges (translate to deterministic IDs)
-16. INSERT INTO edges (batch, ~25000 rows)
-17. Parse capability_defs.json ("desc" key), capability_graph.json → capabilities + capability_edges (from "dependencies" nested dict, 200 rows)
-18. ANALYZE entities; ANALYZE edges; (update planner statistics)
+11. Derive qualified_name from containment graph — walks CONTAINED_BY edges upward,
+    using only C++ scoping containers (namespace, class, struct, group); excludes file/dir parents
+12. Build doc_search_vector (english dictionary):
+    setweight(to_tsvector('english', name), 'A') ||
+    setweight(to_tsvector('english', brief || details), 'B') ||
+    setweight(to_tsvector('english', notes || rationale || params || returns), 'C')
+13. Build symbol_search_vector (simple dictionary):
+    setweight(to_tsvector('simple', name), 'A') ||
+    setweight(to_tsvector('simple', qualified_name || signature), 'B') ||
+    setweight(to_tsvector('simple', definition_text), 'C')
+14. Compute symbol_searchable: lowercased, punctuation-stripped concatenation of
+    name + qualified_name + signature (for pg_trgm similarity)
+15. Build doc_embed_text: labeled prose fields (BRIEF/DETAILS/PARAMS/RETURNS/NOTES/RATIONALE);
+    fallback to bare name for doc-less entities
+16. Build symbol_embed_text: qualified_name_signature for functions;
+    qualified_name or bare name for non-functions
+17. Load or generate dual embeddings (provider is required):
+    - Doc embeddings: embed doc_embed_text via doc embedding provider (BAAI/bge-base-en-v1.5)
+    - Symbol embeddings: embed symbol_embed_text via symbol embedding provider (jinaai/jina-embeddings-v2-base-code)
+    - Each type has an independent cache file: embed_cache_{model_slug}_{dim}_{type}.pkl
+    - Cache synchronization: load existing → compute missing → prune stale → save if changed
+18. Drop/recreate schema (tables + indexes, CREATE INDEX IF NOT EXISTS; CREATE EXTENSION IF NOT EXISTS for vector + pg_trgm)
+19. INSERT INTO entities (batch, ~5000 rows — includes dual embeddings, dual tsvectors, symbol_searchable, qualified_name)
+20. Compute ts_rank ceilings (99th percentile ts_rank for each tsvector column → INSERT INTO search_config)
+21. Parse code_graph.gml → NetworkX graph → extract edges (translate to deterministic IDs)
+22. INSERT INTO edges (batch, ~25000 rows)
+23. Parse capability_defs.json ("desc" key), capability_graph.json → capabilities + capability_edges (from "dependencies" nested dict, 200 rows)
+24. ANALYZE entities; ANALYZE edges; (update planner statistics)
 ```
-
-
 
 ### Runtime (Server Queries)
 
 ```
 1. Tool invocation (e.g., search, get_entity)
-2. For search: resolution pipeline (exact signature → exact name → prefix → keyword → semantic) runs internally
+2. For search: multi-view pipeline runs internally
+   a. Query classification (symbol-like vs. conceptual)
+   b. Per-view retrieval (5 channels: doc semantic, symbol semantic, doc keyword, symbol keyword, trigram)
+   c. Cross-encoder reranking per view
+   d. View competition (max score per entity across views)
+   e. Deduplication + score floor + exact-name priority tier
 3. For all other tools: direct entity_id lookup (no resolution)
 4. Database query (SELECT ... WHERE ... ORDER BY score LIMIT N)
 5. Map rows → Pydantic models (EntitySummary, EntityDetail, etc.)
@@ -572,7 +644,6 @@ class ContextBundle(BaseModel):
 
 ### Documentation
 
-
 - `brief` max length: 200 characters
 - `details` max length: 10,000 characters
 
@@ -584,10 +655,14 @@ class ContextBundle(BaseModel):
 
 ### Embeddings
 
-
-- `embedding` dimensions = `EMBEDDING_DIMENSION` env var (default 768, enforced by pgvector column definition)
-- `embedding` can be NULL (entity has no embedding or no documentable content; semantic search excludes it)
-- `search_vector` NOT NULL (always generated, even for entities without docs)
+- `doc_embedding` dimensions = `EMBEDDING_DIMENSION` env var (default 768, enforced by pgvector column definition)
+- `symbol_embedding` dimensions = `EMBEDDING_DIMENSION` env var (default 768, enforced by pgvector column definition)
+- `doc_embedding` can be NULL only if entity has no documentable content; otherwise populated from labeled prose fields
+- `symbol_embedding` can be NULL only if entity has no documentable content; otherwise populated from qualified signature
+- `doc_search_vector` generated using English dictionary (stemming): name=A, brief+details=B, notes+rationale+params+returns=C
+- `symbol_search_vector` generated using Simple dictionary (no stemming): name=A, qualified_name+signature=B, definition_text=C
+- `symbol_searchable` must be lowercase, punctuation-stripped (for pg_trgm similarity)
+- `qualified_name` may be NULL (scope chain unavailable) but ≥90% of functions should have one; uses only namespace/class/struct/group as scoping containers
 
 ### Edges
 
@@ -599,7 +674,7 @@ class ContextBundle(BaseModel):
 
 ## 6. Query Patterns
 
-> **Convention**: Simple CRUD and filtered queries use SQLModel `select()`. Complex queries (hybrid search CTE, tsvector ranking, pgvector cosine) use `session.execute(text(...))` with bound parameters.
+> **Convention**: Simple CRUD and filtered queries use SQLModel `select()`. Complex queries (per-view retrieval, cosine similarity, tsvector ranking, trigram matching) use `session.execute(text(...))` with bound parameters.
 
 ### Entity Resolution (SQLModel `select()`)
 
@@ -634,63 +709,21 @@ async def get_by_prefix(session: AsyncSession, prefix: str, limit: int = 20) -> 
     return list(result.scalars().all())
 ```
 
-### Keyword & Semantic Search (raw SQL via `text()`)
+### Multi-View Search Pipeline
+
+Search uses a multi-view pipeline with cross-encoder reranking. Per-view SQL retrieval is followed by in-Python cross-encoder scoring. See spec.md FR-007–FR-012 for the full pipeline description.
+
+Per-view retrieval queries (5 channels total):
 
 ```python
-from sqlalchemy import text
-
-# Keyword search
-KEYWORD_QUERY = text(\"\"\"
-    SELECT *, ts_rank(search_vector, plainto_tsquery(:query)) AS score
-    FROM entities
-    WHERE search_vector @@ plainto_tsquery(:query)
-    ORDER BY score DESC
-    LIMIT :limit
-\"\"\")
-
-# Semantic search
-SEMANTIC_QUERY = text(\"\"\"
-    SELECT *, 1 - (embedding <=> :embedding::vector) AS score
-    FROM entities
-    WHERE embedding IS NOT NULL
-    ORDER BY score DESC
-    LIMIT :limit
-\"\"\")
+# Doc semantic: cosine similarity on doc_embedding
+# Symbol semantic: cosine similarity on symbol_embedding
+# Doc keyword: ts_rank on doc_search_vector (english dictionary)
+# Symbol keyword: ts_rank on symbol_search_vector (simple dictionary)
+# Trigram: pg_trgm similarity on symbol_searchable
 ```
 
-### Hybrid Search (Combined — raw SQL via `text()`)
-
-```sql
-WITH semantic AS (
-    SELECT entity_id, 1 - (embedding <=> $1::vector) AS score
-    FROM entities
-    WHERE embedding IS NOT NULL
-    ORDER BY score DESC
-    LIMIT 100
-),
-keyword AS (
-    SELECT entity_id, ts_rank(search_vector, plainto_tsquery($2)) AS score
-    FROM entities
-    WHERE search_vector @@ plainto_tsquery($2)
-    ORDER BY score DESC
-    LIMIT 100
-),
-exact AS (
-    SELECT entity_id, 1.0 AS score
-    FROM entities
-    WHERE signature = $3 OR name = $3
-)
-SELECT
-    e.*,
-    COALESCE(ex.score, 0) * 10 + COALESCE(s.score, 0) * 0.6 + COALESCE(k.score, 0) * 0.4 AS combined_score
-FROM entities e
-LEFT JOIN exact ex USING (entity_id)
-LEFT JOIN semantic s USING (entity_id)
-LEFT JOIN keyword k USING (entity_id)
-WHERE ex.entity_id IS NOT NULL OR s.entity_id IS NOT NULL OR k.entity_id IS NOT NULL
-ORDER BY combined_score DESC
-LIMIT $4;
-```
+All ranking is done by the cross-encoder (Xenova/ms-marco-MiniLM-L-12-v2) after retrieval. There is no weighted-sum hybrid CTE — the cross-encoder is the sole authority on result ordering.
 
 ### Graph Traversal (SQLModel `select()` + NetworkX)
 
@@ -724,23 +757,25 @@ async def get_direct_callees(session: AsyncSession, entity_id: str, limit: int =
 
 ## Summary
 
-- **Database**: PostgreSQL 17 + pgvector, 5 tables (entities, edges, capabilities, capability_edges, entry_points)
+- **Database**: PostgreSQL 18 + pgvector + pg_trgm, 6 tables (entities, edges, capabilities, capability_edges, entry_points, search_config)
 - **Entity Identity**: Deterministic `{prefix}:{7hex}` IDs computed from signature_map keys; stable across rebuilds from same artifacts
 - **ORM Layer**: SQLModel `table=True` table definitions with SQLAlchemy async engine (asyncpg driver)
-- **Query Style**: SQLModel `select()` for CRUD/filtered queries; `text()` for hybrid search CTE and pgvector/tsvector operations
+- **Query Style**: SQLModel `select()` for CRUD/filtered queries; `text()` for per-view retrieval (cosine, ts_rank, trigram)
 - **In-memory**: NetworkX MultiDiGraph (~5300 nodes, ~25K edges) for BFS/traversal
-- **API Models**: Pydantic v2 (EntitySummary, EntityDetail, SearchResult, BehaviorSlice, etc.); ResolutionEnvelope removed
-- **Embedding**: Configurable provider (local FastEmbed ONNX or hosted OpenAI-compatible); vector dimension configurable (default 768)
-- **Build Script**: Offline ETL (artifact parsing → on-the-fly sig_map computation → deterministic ID generation → source extraction with fail-fast → capability assignment → metric computation → incremental embedding cache sync per type (entity, usages) with minimal-embed fallback for doc-less entities → params normalization → DB population via SQLModel session)
-- **Server Runtime**: Async queries (SQLModel + SQLAlchemy async session) + in-memory graph algorithms (NetworkX) + async embedding (via `to_thread` for local)
+- **API Models**: Pydantic v2 (EntitySummary, EntityDetail, SearchResult, BehaviorSlice, etc.); ResolutionEnvelope removed; SearchMode enum removed
+- **Embedding**: Dual embedding architecture (required, no keyword-only fallback):
+  - Doc embedding: BAAI/bge-base-en-v1.5 (labeled prose fields) — model locked
+  - Symbol embedding: jinaai/jina-embeddings-v2-base-code (qualified scoped signature) — model locked
+  - Cross-encoder: Xenova/ms-marco-MiniLM-L-12-v2 (reranking) — model locked
+  - Provider: local FastEmbed ONNX or hosted OpenAI-compatible; vector dimension configurable (default 768)
+- **Build Script**: Offline ETL (artifact parsing → on-the-fly sig_map computation → deterministic ID generation → source extraction with fail-fast → capability assignment → metric computation → qualified_name derivation → dual embed text assembly → incremental embedding cache sync per type (doc, symbol, usages) → dual tsvector generation → symbol_searchable computation → ts_rank ceiling calibration → DB population via SQLModel session)
+- **Server Runtime**: Async queries (SQLModel + SQLAlchemy async session) + in-memory graph algorithms (NetworkX) + multi-view search pipeline (5-channel retrieval → cross-encoder reranking → view competition → deduplication → score floor + exact-name priority) + async embedding (via `to_thread` for local)
 
 All validation rules enforced at database constraints + Pydantic model validation. No runtime LLM inference; all data pre-computed.
 
 ---
 
 ## Appendix A: Artifact Data Contracts
-
-
 
 These contracts define the actual JSON formats in the source artifacts that the build script must correctly read.
 
@@ -818,20 +853,20 @@ Bridges entity IDs from `code_graph.json` to documentation keys in `doc_db.json`
 
 ## Appendix B: Embedding Provider
 
-
-
 ### Configuration (ServerConfig extensions)
 
 | Field | Type | Default | Env Var | Notes |
 |---|---|---|---|---|
-| `embedding_provider` | `"local" \| "hosted" \| null` | `null` | `EMBEDDING_PROVIDER` | null = keyword-only |
-| `embedding_local_model` | `str` | `"BAAI/bge-base-en-v1.5"` | `EMBEDDING_LOCAL_MODEL` | Only when provider = "local" |
-| `embedding_dimension` | `int` | `768` | `EMBEDDING_DIMENSION` | Must match provider output |
+| `embedding_provider` | `"local" \| "hosted"` | `"local"` | `EMBEDDING_PROVIDER` | Required; no `null` option (no keyword-only mode) |
+| `embedding_local_model` | `str` | `"BAAI/bge-base-en-v1.5"` | `EMBEDDING_LOCAL_MODEL` | Doc embedding model (local mode) — locked |
+| `symbol_local_model` | `str` | `"jinaai/jina-embeddings-v2-base-code"` | `SYMBOL_LOCAL_MODEL` | Symbol embedding model (local mode) — locked |
+| `cross_encoder_model` | `str` | `"Xenova/ms-marco-MiniLM-L-12-v2"` | `CROSS_ENCODER_MODEL` | Cross-encoder reranker — locked |
+| `embedding_dimension` | `int` | `768` | `EMBEDDING_DIMENSION` | Must match both doc and symbol provider output |
 | `embedding_base_url` | `str \| null` | `null` | `EMBEDDING_BASE_URL` | Required when provider = "hosted" |
 | `embedding_api_key` | `str \| null` | `null` | `EMBEDDING_API_KEY` | — |
 | `embedding_model` | `str \| null` | `null` | `EMBEDDING_MODEL` | Required when provider = "hosted" |
 
-Cache file naming: `embed_cache_{model_slug}_{dim}_{type}.pkl` where model_slug has `/` → `-` and `{type}` is the embedding package identifier (e.g., "entity", "usages").
+Cache file naming: `embed_cache_{model_slug}_{dim}_{type}.pkl` where model_slug has `/` → `-` and `{type}` is the embedding package identifier (e.g., "doc", "symbol", "usages").
 
 ### EmbeddingProvider Protocol
 
@@ -851,19 +886,34 @@ The protocol exposes both sync (`embed`, `embed_batch`) and async (`aembed`, `ae
 - `LocalEmbeddingProvider`: Wraps `fastembed.TextEmbedding`. `max_batch_size=256`. Async via `asyncio.to_thread()`.
 - `HostedEmbeddingProvider`: Wraps `openai.OpenAI` (sync) + `openai.AsyncOpenAI` (async). `max_batch_size=256`.
 
-**Factory:** `create_provider(config) → EmbeddingProvider | None` — returns appropriate variant or None.
+**Factory:** `create_provider(config) → EmbeddingProvider` — returns appropriate variant. No `None` return; embedding is required.
 
 **Invariant:** `provider.dimension == config.embedding_dimension` (validated by factory, fails fast on mismatch).
 
+### CrossEncoderProvider
+
+Wraps `fastembed.TextCrossEncoder` with async support.
+
+```python
+class CrossEncoderProvider:
+    def __init__(self, model_name: str) -> None:
+        self._reranker = TextCrossEncoder(model_name=model_name)
+
+    def rerank(self, query: str, documents: list[str], batch_size: int = 64) -> list[float]:
+        return list(self._reranker.rerank(query, documents, batch_size=batch_size))
+
+    async def arerank(self, query: str, documents: list[str], batch_size: int = 64) -> list[float]:
+        return await asyncio.to_thread(self.rerank, query, documents, batch_size)
+```
+
 ### Embedding Artifact Lifecycle
 
-Cache files are named `embed_cache_{model_slug}_{dim}_{type}.pkl` (e.g., `embed_cache_bge-base-en-v1-5_768_entity.pkl`). Each embedding type has an independent file.
+Cache files are named `embed_cache_{model_slug}_{dim}_{type}.pkl` (e.g., `embed_cache_bge-base-en-v1-5_768_doc.pkl`, `embed_cache_jina-embeddings-v2-base-code_768_symbol.pkl`). Each embedding type has an independent file.
 
-Per-type synchronization (when provider is configured):
+Per-type synchronization (provider is always configured):
 1. Load existing cache file for that type if it exists
 2. Compute missing keys (in current build but not in cache) and stale keys (in cache but not in current build)
 3. Generate embeddings only for missing keys via `provider.embed_batch()`
 4. Prune stale keys from cache dict
 5. Save updated cache file if any changes occurred; skip save if cache was already current
-6. If no provider configured: skip all embeddings for that type (null columns), log warning
-7. Invalidation is manual — developer deletes the type-specific file to force full regeneration
+6. Invalidation is manual — developer deletes the type-specific file to force full regeneration

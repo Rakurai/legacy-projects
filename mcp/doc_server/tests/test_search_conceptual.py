@@ -20,7 +20,8 @@ async def test_prose_query_finds_documented_entity(
     results = await hybrid_search(
         session=test_session,
         query="armor resistances",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -40,7 +41,8 @@ async def test_behavioral_query_matches_notes(
     results = await hybrid_search(
         session=test_session,
         query="immortal characters immune",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -58,7 +60,8 @@ async def test_doc_query_does_not_match_symbol_only(
     results = await hybrid_search(
         session=test_session,
         query="zzz_completely_unrelated_concept_999",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -74,7 +77,8 @@ async def test_doc_results_carry_winning_view(
     results = await hybrid_search(
         session=test_session,
         query="combat damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -82,8 +86,9 @@ async def test_doc_results_carry_winning_view(
     assert len(results) > 0
     for r in results:
         assert r.winning_view in ("doc", "symbol")
-        assert r.winning_score >= 0.0
-        assert r.losing_score >= 0.0
+        assert r.score == r.winning_score
+        assert isinstance(r.winning_score, float)
+        assert isinstance(r.losing_score, float)
 
 
 @pytest.mark.asyncio
@@ -94,7 +99,8 @@ async def test_kind_filter_with_prose_query(
     results = await hybrid_search(
         session=test_session,
         query="combat damage armor",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
         kind="function",
@@ -113,7 +119,8 @@ async def test_capability_filter_with_prose_query(
     results = await hybrid_search(
         session=test_session,
         query="damage character",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
         capability="combat",
@@ -133,7 +140,8 @@ async def test_rationale_field_searchable(
     results = await hybrid_search(
         session=test_session,
         query="balance consistently",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )

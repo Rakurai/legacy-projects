@@ -122,13 +122,13 @@ The `entity_usages` table is explicitly out of scope (FR-062, A-009). Its `embed
 ```python
 class SearchResult(BaseModel):
     result_type: str                        # "entity" in V1; V2 adds "subsystem_doc"
-    score: float = Field(ge=0)              # Cross-encoder score (winning view)
+    score: float                            # Cross-encoder score (winning view); raw logit may be negative
     entity_summary: EntitySummary | None    # Present when result_type="entity"
     matching_usages: list[MatchingUsage] | None  # Present when source="usages"
     # NEW fields
     winning_view: str                       # "symbol" or "doc"
-    winning_score: float                    # Cross-encoder score from winning view
-    losing_score: float                     # Cross-encoder score from losing view
+    winning_score: float                    # Cross-encoder score from winning view; raw logit may be negative
+    losing_score: float                     # Cross-encoder score from losing view; raw logit may be negative
     # REMOVED fields
     # search_mode: SearchMode  ← FR-070: removed entirely
 ```

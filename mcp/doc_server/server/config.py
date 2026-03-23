@@ -60,9 +60,15 @@ class ServerConfig(BaseSettings):
     embedding_api_key: str | None = Field(default=None, description="API key (or 'lm-studio' for local)")
     embedding_model: str | None = Field(default=None, description="Hosted model name")
 
+    # Local symbol embedding model (code-aware, for symbol view)
+    embedding_local_symbol_model: str = Field(
+        default="jinaai/jina-embeddings-v2-base-code",
+        description="FastEmbed model name for symbol view (local provider only)",
+    )
+
     # Cross-encoder reranker
     cross_encoder_model: str = Field(
-        default="Xenova/ms-marco-MiniLM-L-6-v2",
+        default="Xenova/ms-marco-MiniLM-L-12-v2",
         description="fastembed cross-encoder model name for reranking",
     )
 
@@ -87,7 +93,7 @@ class ServerConfig(BaseSettings):
 
     @property
     def embedding_model_slug(self) -> str:
-        """Normalized model slug for cache file naming.
+        """Normalized model slug for doc embedding cache file naming.
 
         Replaces '/' with '-' to make filesystem-safe.
         Example: BAAI/bge-base-en-v1.5 → BAAI-bge-base-en-v1-5
@@ -96,6 +102,17 @@ class ServerConfig(BaseSettings):
             return self.embedding_local_model.replace("/", "-")
         # hosted — embedding_model is validated as required in create_provider
         return self.embedding_model.replace("/", "-") if self.embedding_model else "unknown"
+
+    @property
+    def embedding_symbol_model_slug(self) -> str:
+        """Normalized model slug for symbol embedding cache file naming.
+
+        For local provider, uses the dedicated symbol model.
+        For hosted provider, falls back to the same model as doc.
+        """
+        if self.embedding_provider == "local":
+            return self.embedding_local_symbol_model.replace("/", "-")
+        return self.embedding_model_slug
 
     @property
     def embed_cache_filename(self) -> str:

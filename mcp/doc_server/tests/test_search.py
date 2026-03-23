@@ -24,7 +24,8 @@ async def test_search_exact_match_boost(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
         limit=20,
@@ -47,7 +48,8 @@ async def test_search_with_kind_filter(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
         kind="function",
@@ -69,7 +71,8 @@ async def test_search_with_capability_filter(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
         capability="combat",

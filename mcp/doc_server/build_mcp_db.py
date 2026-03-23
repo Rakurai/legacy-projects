@@ -474,8 +474,9 @@ async def main() -> None:
     build_symbol_searchable(merged_entities)
 
     provider = create_provider(config)
+    symbol_provider = create_provider(config, model_name_override=config.embedding_local_symbol_model)
 
-    # Dual embedding caches: doc + symbol
+    # Dual embedding caches: doc (BGE) + symbol (Jina-code)
     entity_keys = [m.entity_id for m in merged_entities]
 
     doc_texts = build_doc_embed_texts(merged_entities)
@@ -493,12 +494,12 @@ async def main() -> None:
     symbol_texts = build_symbol_embed_texts(merged_entities)
     symbol_embeddings_raw = sync_embeddings_cache(
         artifacts_path=config.artifacts_path,
-        model_slug=config.embedding_model_slug,
+        model_slug=config.embedding_symbol_model_slug,
         dimension=config.embedding_dimension,
         embedding_type="symbol",
         current_keys=cast(list[str | tuple[str, ...]], entity_keys),
         texts_by_key=cast(dict[str | tuple[str, ...], str], symbol_texts),
-        provider=provider,
+        provider=symbol_provider,
     )
     symbol_embeddings = cast(dict[str, list[float]], symbol_embeddings_raw)
 

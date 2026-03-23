@@ -31,7 +31,7 @@ The server exposes **factual, structural, and behavioral** information about the
 3. **Graph exploration** — expose the dependency graph (calls, uses, inherits, includes, containment) for traversal at configurable depth.
 4. **Behavior analysis** — derive behavioral views from the graph: call cones, state touches.
 5. **Capability browsing** — expose the 30 capability groups with their typed dependencies, entry point mappings, and function membership.
-6. **Graceful degradation** — function correctly when no embedding provider is configured or when a configured provider encounters an error, falling back to keyword-only search with explicit mode reporting.
+6. **Required embedding** — dual embedding models (doc + symbol) and a cross-encoder reranker are hard requirements. The server fails fast at startup if they are unavailable. There is no keyword-only degraded mode.
 7. **Deterministic serving** — all data is pre-computed and loaded from a database. No LLM inference at runtime. Responses are reproducible.
 8. **V2 readiness** — schema and response shapes are designed so that hierarchical system documentation (subsystem narratives, entity↔subsystem links) can be added without reworking V1 tables or tools.
 
@@ -42,6 +42,7 @@ The server exposes **factual, structural, and behavioral** information about the
 3. Write access — the server is read-only; data changes require re-running the offline build script.
 4. Multi-codebase support — this server serves one codebase (Legacy MUD).
 5. Authentication or multi-tenancy.
+6. Keyword-only degraded search mode — embedding and cross-encoder are required infrastructure.
 
 ---
 
@@ -61,9 +62,9 @@ Implementation is phased; each phase builds on the prior phase's infrastructure.
 
 ### Phase 2 — Search
 
-- [ ] `search("poison spreading between characters")` returns relevant entities ranked by combined score
-- [ ] With no embedding provider configured, search returns results with `search_mode: "keyword_fallback"`
+- [ ] `search("poison spreading between characters")` returns relevant entities ranked by cross-encoder score across doc and symbol views
 - [ ] Filtering by kind and capability works correctly
+- [ ] Symbol-like queries (e.g., `stc`, `PLR_COLOR2`) surface correct entities via symbol view
 
 ### Phase 3 — Graph Exploration
 
@@ -100,8 +101,7 @@ Implementation is phased; each phase builds on the prior phase's infrastructure.
 
 | Risk | Impact | Mitigation |
 |------|--------|-----------|
-| No embedding provider configured | Semantic search disabled; keyword-only mode | Explicit `keyword_fallback` mode; agents warned via `search_mode` field |
-| Embedding provider error at query time | Single request degrades to keyword-only | Provider errors caught; request completes with keyword fallback and logs warning |
+| Embedding provider or cross-encoder unavailable at startup | Server cannot start | Server fails fast with clear error; deployment must ensure models are available |
 | Large call cones exceed response limits | Truncated behavior slices | `max_cone_size` parameter + truncation metadata in response |
 | Entity resolution returns wrong entity | Agent proceeds with incorrect context | Deterministic entity IDs eliminate ID instability; search returns ranked results for disambiguation |
 | Source code on disk out of sync with artifacts | Stale `source_text` in DB | Build script extracts source at build time; rebuild after code changes |

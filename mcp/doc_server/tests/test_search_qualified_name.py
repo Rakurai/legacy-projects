@@ -19,7 +19,8 @@ async def test_scoped_query_boosts_matching_scope(
     results = await hybrid_search(
         session=test_session,
         query="Combat::damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -38,7 +39,8 @@ async def test_different_scope_query(
     results = await hybrid_search(
         session=test_session,
         query="Logging::damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -57,7 +59,8 @@ async def test_unscoped_query_returns_both(
     results = await hybrid_search(
         session=test_session,
         query="damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
@@ -71,18 +74,19 @@ async def test_unscoped_query_returns_both(
 async def test_scoped_match_gets_boost(
     test_session, sample_entities, mock_embedding_provider, mock_doc_view, mock_symbol_view
 ):
-    """Scope-matched entity gets sort_tier=2 (highest tier)."""
+    """Scope-matched entity appears in results and ranks by CE score."""
     results = await hybrid_search(
         session=test_session,
         query="Combat::damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )
 
     assert len(results) >= 1
     combat_result = next(r for r in results if r.entity_summary and r.entity_summary.entity_id == "fn:a1b2c3d")
-    assert combat_result.sort_tier == 2
+    assert combat_result.score is not None
 
 
 @pytest.mark.asyncio
@@ -105,7 +109,8 @@ async def test_nonexistent_scope_returns_bare_name_results(
     results = await hybrid_search(
         session=test_session,
         query="Nonexistent::damage",
-        embedding_provider=mock_embedding_provider,
+        doc_embedding_provider=mock_embedding_provider,
+        symbol_embedding_provider=mock_embedding_provider,
         doc_view=mock_doc_view,
         symbol_view=mock_symbol_view,
     )

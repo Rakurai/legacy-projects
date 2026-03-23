@@ -62,10 +62,10 @@ search(
 | Field | Type | Required | Description | Change |
 |-------|------|----------|-------------|--------|
 | `result_type` | `str` | Yes | `"entity"` in V1 | Unchanged |
-| `score` | `float ≥ 0` | Yes | Cross-encoder score from winning view | **Semantic change**: was weighted combo, now CE logit |
+| `score` | `float` | Yes | Cross-encoder score from winning view; raw logit may be negative | **Semantic change**: was weighted combo, now CE logit |
 | `winning_view` | `"symbol" \| "doc"` | Yes | Which view produced the higher CE score | **NEW** (FR-040, FR-061) |
-| `winning_score` | `float` | Yes | Cross-encoder score from winning view | **NEW** (FR-040, FR-061) |
-| `losing_score` | `float` | Yes | Cross-encoder score from losing view | **NEW** (FR-040, FR-061) |
+| `winning_score` | `float` | Yes | Cross-encoder score from winning view; raw logit may be negative | **NEW** (FR-040, FR-061) |
+| `losing_score` | `float` | Yes | Cross-encoder score from losing view; raw logit may be negative | **NEW** (FR-040, FR-061) |
 | `entity_summary` | `EntitySummary \| null` | Conditional | Present when `result_type="entity"` | Unchanged |
 | `matching_usages` | `list[MatchingUsage] \| null` | Conditional | Present when `source="usages"` | Unchanged |
 | ~~`search_mode`~~ | ~~`SearchMode`~~ | — | ~~Strategy used~~ | **REMOVED** (FR-070) |

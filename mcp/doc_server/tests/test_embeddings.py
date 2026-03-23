@@ -129,6 +129,7 @@ class TestSyncEmbeddingsCacheStringKeys:
     def test_cold_cache_generates_all_embeddings(self, tmp_path: Path) -> None:
         """No cache file → generates all embeddings."""
         mock_provider = MagicMock()
+        mock_provider.max_batch_size = 256
         mock_provider.embed_batch.return_value = [[0.1] * 3, [0.2] * 3]
 
         current_keys = ["key1", "key2"]
@@ -175,6 +176,7 @@ class TestSyncEmbeddingsCacheStringKeys:
         save_embedding_cache(existing, tmp_path, "model", 3, "test")
 
         mock_provider = MagicMock()
+        mock_provider.max_batch_size = 256
         mock_provider.embed_batch.return_value = [[0.2] * 3]
 
         result = sync_embeddings_cache(
@@ -198,6 +200,7 @@ class TestSyncEmbeddingsCacheStringKeys:
         save_embedding_cache(existing, tmp_path, "model", 3, "test")
 
         mock_provider = MagicMock()
+        mock_provider.max_batch_size = 256
 
         result = sync_embeddings_cache(
             artifacts_path=tmp_path,
@@ -219,6 +222,7 @@ class TestSyncEmbeddingsCacheStringKeys:
         save_embedding_cache(existing, tmp_path, "model", 3, "test")
 
         mock_provider = MagicMock()
+        mock_provider.max_batch_size = 256
         mock_provider.embed_batch.return_value = [[0.2] * 3]
 
         result = sync_embeddings_cache(
@@ -243,6 +247,7 @@ class TestSyncEmbeddingsCacheTupleKeys:
     def test_tuple_keys_work(self, tmp_path: Path) -> None:
         """Tuple keys (callee, caller, sig) work correctly."""
         mock_provider = MagicMock()
+        mock_provider.max_batch_size = 256
         mock_provider.embed_batch.return_value = [[0.1] * 3]
 
         key = ("fn:callee", "caller_compound", "caller_sig")
@@ -269,6 +274,7 @@ class TestSyncEmbeddingsCacheTupleKeys:
         save_embedding_cache(existing, tmp_path, "model", 3, "usages")
 
         mock_provider = MagicMock()
+        mock_provider.max_batch_size = 256
         mock_provider.embed_batch.return_value = [[0.2] * 3]
 
         result = sync_embeddings_cache(

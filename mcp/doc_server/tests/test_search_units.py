@@ -55,7 +55,6 @@ class TestCandidate:
         assert c.symbol_keyword == 0.0
         assert c.trigram == 0.0
         assert c.name_exact is False
-        assert c.signature_exact is False
         assert c.ce_doc == 0.0
         assert c.ce_symbol == 0.0
 

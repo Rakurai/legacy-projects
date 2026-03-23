@@ -56,7 +56,7 @@ async def search(
             results = await hybrid_search_usages(
                 session=session,
                 query=query,
-                embedding_provider=lc["embedding_provider"],
+                embedding_provider=lc["doc_embedding_provider"],
                 kind=kind,
                 capability=capability,
                 limit=top_k,
@@ -65,7 +65,8 @@ async def search(
             results = await hybrid_search(
                 session=session,
                 query=query,
-                embedding_provider=lc["embedding_provider"],
+                doc_embedding_provider=lc["doc_embedding_provider"],
+                symbol_embedding_provider=lc["symbol_embedding_provider"],
                 kind=kind,
                 capability=capability,
                 limit=top_k,

@@ -2,18 +2,20 @@
 Multi-View Search Pipeline — 7-stage retrieval with cross-encoder reranking.
 
 Stages:
-1. Five parallel channel queries (doc semantic, symbol semantic, doc keyword, symbol keyword, trigram)
+1. Channel queries (embedding overlapped with DB queries)
 2. Union + deduplicate by entity_id
 3. Compute intermediate signal vector (8 signals)
 4. Per-signal floor filtering with name_exact bypass
 5. Cross-encoder reranking (both views per candidate)
-6. Assign winning_view / winning_score / losing_score
-7. Return top-K
+6. Query-shape-aware view selection + doc-sparsity penalty
+7. Sort with exact-name priority tier (symbol-like queries), return top-K
 
 hybrid_search_usages is unchanged (entity_usages out of scope per FR-062).
 """
 
+import asyncio
 import math
+import re
 import time
 from dataclasses import dataclass
 
@@ -39,6 +41,18 @@ _USAGE_SEMANTIC_WEIGHT = 0.6
 _USAGE_KEYWORD_WEIGHT = 0.4
 _USAGE_SCORE_THRESHOLD: float = 0.2
 
+# Final rerank floor for non-exact results.  Raised from 0.0 to 0.5 for L-12's wider positive range.
+_RERANK_SCORE_FLOOR = 0.5
+
+# Query-shape-aware scoring: for symbol-like queries, doc view must beat symbol by this margin to win.
+_SYMBOL_QUERY_DOC_MARGIN = 2.0
+
+# Penalty subtracted from doc CE when the winning view is doc but entity has no brief.
+_DOC_SPARSITY_PENALTY = 3.0
+
+# Minimum winning_score for exact-name tier placement (guards against pathological CE scores).
+_EXACT_NAME_MIN_SCORE = 0.0
+
 
 # ---------------------------------------------------------------------------
 # Candidate data structure
@@ -57,7 +71,6 @@ class Candidate:
     symbol_keyword: float = 0.0
     trigram: float = 0.0
     name_exact: bool = False
-    signature_exact: bool = False
     # Shaped scores (computed after channel merge)
     doc_keyword_shaped: float = 0.0
     symbol_keyword_shaped: float = 0.0
@@ -136,9 +149,7 @@ _STOP_WORDS: frozenset[str] = frozenset(
 
 def _tokenize(text: str) -> set[str]:
     """Lowercase alpha-numeric tokenization, stripping stop words."""
-    import re as _re
-
-    return {t for t in _re.findall(r"[a-z0-9_]+", text.lower()) if t not in _STOP_WORDS}
+    return {t for t in re.findall(r"[a-z0-9_]+", text.lower()) if t not in _STOP_WORDS}
 
 
 def _compute_token_jaccard(query_tokens: set[str], entity_tokens: set[str]) -> float:
@@ -150,11 +161,11 @@ def _compute_token_jaccard(query_tokens: set[str], entity_tokens: set[str]) -> f
     return len(intersection) / len(union)
 
 
-def _compute_query_coverage(query_tokens: set[str], entity_tokens: set[str]) -> float:
-    """Fraction of query tokens found in entity tokens."""
+def _compute_query_coverage(query_tokens: set[str], doc_tokens: set[str]) -> float:
+    """Fraction of query tokens found in document text tokens."""
     if not query_tokens:
         return 0.0
-    return len(query_tokens & entity_tokens) / len(query_tokens)
+    return len(query_tokens & doc_tokens) / len(query_tokens)
 
 
 def _shape_tsrank(raw: float, ceiling: float) -> float:
@@ -162,6 +173,23 @@ def _shape_tsrank(raw: float, ceiling: float) -> float:
     if ceiling <= 0:
         return 0.0
     return min(math.log1p(raw) / math.log1p(ceiling), 1.0)
+
+
+def _is_symbol_like_query(query: str) -> bool:
+    """True when query looks like a C++ identifier or code fragment, not natural language.
+
+    Symbol-like: bare names (stc, damage), qualified names (Character::position),
+    and code signatures (void damage(Character *ch, ...)).
+    Non-symbol: natural language prose ("functions that handle death processing").
+    """
+    stripped = query.strip()
+    if not stripped:
+        return False
+    # No whitespace → bare name or qualified name
+    if " " not in stripped:
+        return True
+    # Contains parens → likely a code signature
+    return "(" in stripped
 
 
 # ---------------------------------------------------------------------------
@@ -187,11 +215,8 @@ async def _exact_match_ids(
     query: str,
     kind: str | None,
     capability: str | None,
-) -> tuple[set[str], set[str]]:
-    """Find entity IDs with exact name or signature match.
-
-    Returns (name_exact_ids, signature_exact_ids).
-    """
+) -> set[str]:
+    """Find entity IDs with exact name or signature match."""
     name_stmt = select(Entity.entity_id).where(Entity.name == query)
     name_stmt = _apply_filters(name_stmt, kind, capability)
     name_result = await session.execute(name_stmt)
@@ -202,7 +227,7 @@ async def _exact_match_ids(
     sig_result = await session.execute(sig_stmt)
     sig_ids = {row[0] for row in sig_result.all()}
 
-    return name_ids, sig_ids
+    return name_ids | sig_ids
 
 
 async def _doc_keyword_scores(
@@ -301,7 +326,8 @@ async def _trigram_scores(
 async def hybrid_search(
     session: AsyncSession,
     query: str,
-    embedding_provider: EmbeddingProvider,
+    doc_embedding_provider: EmbeddingProvider,
+    symbol_embedding_provider: EmbeddingProvider,
     doc_view: RetrievalView,
     symbol_view: RetrievalView,
     kind: str | None = None,
@@ -326,8 +352,13 @@ async def hybrid_search(
     # For scoped queries, also search the bare name through all channels
     search_query = bare_name if bare_name else query
 
-    # Stage 1: Five parallel channel queries
-    name_exact_ids, sig_exact_ids = await _exact_match_ids(session, search_query, kind, capability)
+    # Stage 1: Channel queries
+    # Dual embedding computation runs concurrently with non-semantic DB queries.
+    # DB queries share one AsyncSession so must stay sequential.
+    doc_embed_task = asyncio.create_task(doc_embedding_provider.aembed(search_query))
+    sym_embed_task = asyncio.create_task(symbol_embedding_provider.aembed(search_query))
+
+    exact_ids = await _exact_match_ids(session, search_query, kind, capability)
 
     # Also check for qualified_name exact match on the full scoped query
     if scope_prefix and bare_name:
@@ -335,26 +366,26 @@ async def hybrid_search(
         qn_stmt = _apply_filters(qn_stmt, kind, capability)
         qn_result = await session.execute(qn_stmt)
         qn_ids = {row[0] for row in qn_result.all()}
-        name_exact_ids = name_exact_ids | qn_ids
-
-    query_embedding = await embedding_provider.aembed(search_query)
+        exact_ids = exact_ids | qn_ids
 
     doc_kw = await _doc_keyword_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
     sym_kw = await _symbol_keyword_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
     trgm = await _trigram_scores(session, search_query, kind, capability, _CHANNEL_LIMIT)
 
-    doc_sem = await _doc_semantic_scores(session, query_embedding, kind, capability, _CHANNEL_LIMIT)
-    sym_sem = await _symbol_semantic_scores(session, query_embedding, kind, capability, _CHANNEL_LIMIT)
+    doc_query_embedding = await doc_embed_task
+    sym_query_embedding = await sym_embed_task
+
+    doc_sem = await _doc_semantic_scores(session, doc_query_embedding, kind, capability, _CHANNEL_LIMIT)
+    sym_sem = await _symbol_semantic_scores(session, sym_query_embedding, kind, capability, _CHANNEL_LIMIT)
 
     # Stage 2: Merge by entity_id
     all_ids = (
-        name_exact_ids | sig_exact_ids | doc_kw.keys() | sym_kw.keys() | doc_sem.keys() | sym_sem.keys() | trgm.keys()
+        exact_ids | doc_kw.keys() | sym_kw.keys() | doc_sem.keys() | sym_sem.keys() | trgm.keys()
     )
 
     log.debug(
         "Channel counts",
-        name_exact=len(name_exact_ids),
-        sig_exact=len(sig_exact_ids),
+        exact=len(exact_ids),
         doc_kw=len(doc_kw),
         sym_kw=len(sym_kw),
         doc_sem=len(doc_sem),
@@ -374,8 +405,7 @@ async def hybrid_search(
     candidates: dict[str, Candidate] = {}
     for eid in all_ids:
         c = Candidate(entity_id=eid)
-        c.name_exact = eid in name_exact_ids
-        c.signature_exact = eid in sig_exact_ids
+        c.name_exact = eid in exact_ids
         c.doc_semantic = doc_sem.get(eid, 0.0)
         c.symbol_semantic = sym_sem.get(eid, 0.0)
         c.doc_keyword = doc_kw.get(eid, 0.0)
@@ -385,20 +415,6 @@ async def hybrid_search(
         c.doc_keyword_shaped = _shape_tsrank(c.doc_keyword, doc_ceiling)
         c.symbol_keyword_shaped = _shape_tsrank(c.symbol_keyword, sym_ceiling)
         candidates[eid] = c
-
-    # Token overlap signals (FR-032, FR-034, FR-035)
-    query_tokens = _tokenize(search_query)
-    if query_tokens:
-        name_result = await session.execute(
-            select(Entity.entity_id, Entity.name, Entity.signature).where(Entity.entity_id.in_(list(all_ids)))
-        )
-        for row in name_result.all():
-            c = candidates.get(row.entity_id)
-            if c is None:
-                continue
-            entity_tokens = _tokenize(f"{row.name or ''} {row.signature or ''}")
-            c.token_jaccard = _compute_token_jaccard(query_tokens, entity_tokens)
-            c.query_coverage = _compute_query_coverage(query_tokens, entity_tokens)
 
     # Stage 4: Per-signal floor filtering with name_exact bypass
     # Candidates pass if: any signal exceeds its floor threshold, OR name/sig exact match
@@ -414,7 +430,7 @@ async def hybrid_search(
 
     filtered: dict[str, Candidate] = {}
     for eid, c in candidates.items():
-        if c.name_exact or c.signature_exact:
+        if c.name_exact:
             filtered[eid] = c
             continue
         # Check if any signal exceeds its floor
@@ -437,13 +453,35 @@ async def hybrid_search(
     result = await session.execute(select(Entity).where(Entity.entity_id.in_(list(filtered.keys()))))
     entity_map = {e.entity_id: e for e in result.scalars().all()}
 
-    # Scope-aware boost: if query contained "::", boost candidates whose qualified_name matches the scope
-    scope_matched_ids: set[str] = set()
+    # Token overlap signals — computed post-filter using loaded entities (FR-032, FR-034, FR-035)
+    query_tokens = _tokenize(search_query)
+    if query_tokens:
+        for eid, entity in entity_map.items():
+            c = filtered.get(eid)
+            if c is None:
+                continue
+            symbol_tokens = _tokenize(f"{entity.name or ''} {entity.signature or ''}")
+            c.token_jaccard = _compute_token_jaccard(query_tokens, symbol_tokens)
+            doc_text = " ".join(
+                part
+                for part in (entity.brief, entity.details, entity.notes, entity.rationale, entity.returns)
+                if part
+            )
+            if entity.params:
+                doc_text += " " + " ".join(entity.params.values())
+            doc_tokens = _tokenize(doc_text) | symbol_tokens
+            c.query_coverage = _compute_query_coverage(query_tokens, doc_tokens)
+
+    # Scope-aware cross-encoder context: if query contained "::", flag candidates whose qualified_name matches
     if scope_prefix:
         full_scope = f"{scope_prefix}::{bare_name}".lower()
         for eid, entity in entity_map.items():
             if entity.qualified_name and full_scope in entity.qualified_name.lower():
-                scope_matched_ids.add(eid)
+                candidates[eid].name_exact = True
+
+    # Classify query shape before reranking (drives view selection and sort strategy)
+    is_symbol_query = _is_symbol_like_query(query)
+    log.debug("Query shape", is_symbol_like=is_symbol_query)
 
     # Stage 5: Cross-encoder reranking (both views per candidate)
     # Build document texts for cross-encoder
@@ -469,32 +507,56 @@ async def hybrid_search(
             c.ce_symbol = sym_scores[i]
     rerank_elapsed_ms = (time.monotonic() - rerank_start) * 1000
 
-    # Stage 6: Assign winning view and build results
-    results: list[SearchResult] = []
+    # Stage 6: Query-shape-aware view selection + doc-sparsity penalty
+    scored_results: list[SearchResult] = []
     for eid, c in filtered.items():
         entity = entity_map.get(eid)
         if not entity:
             continue
 
-        # Determine winning view
-        if c.ce_doc >= c.ce_symbol:
+        effective_doc = c.ce_doc
+        effective_sym = c.ce_symbol
+
+        # Demote doc-view winners whose entity has no real documentation.
+        # Prevents entities with fallback-only text (bare name) from outranking
+        # well-documented entities on short queries.
+        if effective_doc > effective_sym and not entity.brief:
+            effective_doc -= _DOC_SPARSITY_PENALTY
+
+        # Query-shape-aware view selection:
+        # For symbol-like queries, bias toward symbol evidence —
+        # doc view must beat symbol by _SYMBOL_QUERY_DOC_MARGIN to win.
+        # For sentence queries, keep standard max(doc, symbol) arbitration.
+        if is_symbol_query:
+            if effective_doc > effective_sym + _SYMBOL_QUERY_DOC_MARGIN:
+                winning_view = "doc"
+                winning_score = effective_doc
+                losing_score = effective_sym
+            else:
+                winning_view = "symbol"
+                winning_score = effective_sym
+                losing_score = effective_doc
+        elif effective_doc >= effective_sym:
             winning_view = "doc"
-            winning_score = c.ce_doc
-            losing_score = c.ce_symbol
+            winning_score = effective_doc
+            losing_score = effective_sym
         else:
             winning_view = "symbol"
-            winning_score = c.ce_symbol
-            losing_score = c.ce_doc
+            winning_score = effective_sym
+            losing_score = effective_doc
 
-        # Tier-based sort: scope match > exact match > cross-encoder score
-        if eid in scope_matched_ids:
-            tier = 2
-        elif c.name_exact or c.signature_exact:
-            tier = 1
-        else:
-            tier = 0
+        corroborating_signal = max(
+            c.doc_keyword_shaped,
+            c.symbol_keyword_shaped,
+            c.trigram,
+            c.token_jaccard,
+            c.query_coverage,
+        )
 
-        results.append(
+        if not c.name_exact and winning_score < _RERANK_SCORE_FLOOR and corroborating_signal <= 0.0:
+            continue
+
+        scored_results.append(
             SearchResult(
                 result_type="entity",
                 score=winning_score,
@@ -502,13 +564,24 @@ async def hybrid_search(
                 winning_view=winning_view,
                 winning_score=winning_score,
                 losing_score=losing_score,
-                sort_tier=tier,
             )
         )
 
-    # Stage 7: Sort by tier desc then score desc, return top-K
-    results.sort(key=lambda r: (r.sort_tier, r.score), reverse=True)
-    results = results[:limit]
+    # Stage 7: Sort + top-K.
+    # For symbol-like queries, exact-name matches form a priority sort tier
+    # so that known identifiers rank above semantically-similar doc-only matches.
+    if is_symbol_query:
+
+        def _sort_key(r: SearchResult) -> tuple[int, float, float]:
+            c = filtered.get(r.entity_summary.entity_id)
+            is_exact = c.name_exact if c else False
+            tier = 1 if (is_exact and r.winning_score >= _EXACT_NAME_MIN_SCORE) else 0
+            return (tier, r.winning_score, r.losing_score)
+
+        scored_results.sort(key=_sort_key, reverse=True)
+    else:
+        scored_results.sort(key=lambda r: (r.winning_score, r.losing_score), reverse=True)
+    results = scored_results[:limit]
 
     log.info(
         "Search complete",

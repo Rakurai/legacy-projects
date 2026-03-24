@@ -9,12 +9,12 @@ Resources:
 - legacy://stats                 — Server statistics
 - legacy://components            — List all system component docs with metadata
 - legacy://component/{id}        — Get full component documentation
-
-Future:
-- legacy://helps                 — Index of in-game help topics (when corpus is available)
-- legacy://help/{topic}          — Full help entry text (when corpus is available)
+- legacy://helps                 — Index of in-game help topics with keywords and category
+- legacy://help/{index}          — Full help entry text (color codes stripped)
 """
 
+import json
+import re
 from functools import lru_cache
 from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
@@ -350,3 +350,73 @@ def get_component(components_dir: Path, component_id: str) -> str:
     if not md_file.exists():
         raise ValueError(f"Component not found: {component_id}")
     return md_file.read_text(encoding="utf-8")
+
+
+# ---- Help Entry Resources ----
+
+_COLOR_CODE_RE = re.compile(r"\{[A-Za-z]")
+
+
+def _strip_color_codes(text: str) -> str:
+    """Remove legacy MUD color markers like {C, {x, {P, etc."""
+    return _COLOR_CODE_RE.sub("", text)
+
+
+@lru_cache(maxsize=1)
+def _load_help_entries(help_file: Path) -> list[dict[str, object]]:
+    """Load and cache help entries from JSON artifact."""
+    raw: list[dict[str, object]] = json.loads(help_file.read_text(encoding="utf-8"))
+    return raw
+
+
+def get_helps_index(help_file: Path) -> list[dict[str, object]]:
+    """Return index of all help entries with keywords, category, and level.
+
+    Args:
+        help_file: Path to artifacts/help_entries.json
+
+    Returns:
+        List of dicts with index, keywords, category, level, text_length
+    """
+    log.info("Resource: legacy://helps")
+
+    entries = _load_help_entries(help_file)
+    return [
+        {
+            "index": i,
+            "keywords": entry["keywords"],
+            "category": entry["category"],
+            "level": entry["level"],
+            "text_length": len(str(entry["text"])),
+        }
+        for i, entry in enumerate(entries)
+    ]
+
+
+def get_help_entry(help_file: Path, index: int) -> dict[str, object]:
+    """Return a single help entry by index, with color codes stripped.
+
+    Args:
+        help_file: Path to artifacts/help_entries.json
+        index: Entry index from the helps index
+
+    Returns:
+        Dict with keywords, category, level, text (color-stripped)
+
+    Raises:
+        ValueError: If index is out of range
+    """
+    log.info("Resource: legacy://help/{index}", index=index)
+
+    entries = _load_help_entries(help_file)
+    if index < 0 or index >= len(entries):
+        raise ValueError(f"Help entry index out of range: {index} (0-{len(entries) - 1})")
+
+    entry = entries[index]
+    return {
+        "index": index,
+        "keywords": entry["keywords"],
+        "category": entry["category"],
+        "level": entry["level"],
+        "text": _strip_color_codes(str(entry["text"])),
+    }

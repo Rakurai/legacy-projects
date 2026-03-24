@@ -124,7 +124,7 @@ For full setup instructions, see [INSTALL.md](INSTALL.md).
 | `list_entry_points` | `do_*`, `spell_*`, `spec_*` functions with optional capability/name filter |
 | `get_entry_point_info` | Which capabilities an entry point exercises, with direct/transitive counts |
 
-### Resources (7)
+### Resources (9)
 
 | URI | Description |
 |-----|-------------|
@@ -135,6 +135,8 @@ For full setup instructions, see [INSTALL.md](INSTALL.md).
 | `legacy://stats` | Server statistics |
 | `legacy://components` | All 29 system component docs — frontmatter index (id, name, kind, layer, depends_on, depended_on_by) |
 | `legacy://component/{id}` | Full markdown content for a system component doc |
+| `legacy://helps` | Index of all 582 in-game help entries — keywords, category, level, text length |
+| `legacy://help/{index}` | Full help entry text by index (color codes stripped) |
 
 ### Prompts (5)
 

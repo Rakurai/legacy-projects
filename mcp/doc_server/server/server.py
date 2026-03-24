@@ -27,6 +27,8 @@ from server.resources import (
     get_components_index,
     get_entity_resource,
     get_file_entities_resource,
+    get_help_entry,
+    get_helps_index,
     get_stats_resource,
 )
 
@@ -95,6 +97,24 @@ async def component_resource(component_id: str, ctx: Context) -> str:
     lc = get_ctx(ctx)
     components_dir = lc["config"].artifacts_path / "components"
     return get_component(components_dir, component_id)
+
+
+@mcp.resource("legacy://helps")
+async def helps_index_resource(ctx: Context) -> str:
+    """Index of all in-game help entries with keywords, category, and level."""
+    lc = get_ctx(ctx)
+    help_file = lc["config"].artifacts_path / "help_entries.json"
+    data = get_helps_index(help_file)
+    return json.dumps({"help_entries": data, "total": len(data)}, default=str)
+
+
+@mcp.resource("legacy://help/{index}")
+async def help_entry_resource(index: str, ctx: Context) -> str:
+    """Full help entry text by index (color codes stripped)."""
+    lc = get_ctx(ctx)
+    help_file = lc["config"].artifacts_path / "help_entries.json"
+    data = get_help_entry(help_file, int(index))
+    return json.dumps(data, default=str)
 
 
 # ---- Prompts ----

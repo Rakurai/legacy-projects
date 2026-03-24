@@ -7,7 +7,7 @@
 > **References:** [V1 Spec](specs/v1/spec.md) ·
 > [V1 Data Model](specs/v1/MODEL.md) ·
 > [V1 Search Validation](specs/v1/search_performance.md) ·
-> [V2 Design](specs/v2/DESIGN_v2.md) ·
+> [V2 Spec](specs/v2/spec.md) ·
 > [Agent Requirements](../../docs/migration/speculative_agent_reqs.md)
 
 ---
@@ -156,8 +156,8 @@ content authoring constraints.
 ## 4. V2 — Conceptual Layer (Designed, Stage 0 Complete)
 
 V2 adds curated system-level narratives: 19 systems + 3 support entries, chunked
-for semantic search, with grounding trust signals and entity↔subsystem links. V1
-tools and tables are unchanged.
+for semantic search, with entity↔subsystem links. V1 tools and tables are
+unchanged.
 
 **Status:** Stage 0 (document rewrite) is complete — 29 component markdown files
 exist in `artifacts/components/` with YAML frontmatter and inline section tags.
@@ -167,8 +167,8 @@ Stages 1–4 (mechanical chunking → curation → validation → ingestion) rem
 
 | Artifact | Content |
 |----------|---------|
-| `artifacts/components/*.md` | 29 curated system docs with YAML frontmatter (`id`, `kind`, `layer`, `depends_on`, etc.) and tagged `##` headings encoding section kind, grounding status, and narrative role |
-| `subsystem_docs` table | Chunks with embeddings, grounding status (`grounded` / `mixed` / `weak` / `rejected`), narrative role (`overview` / `mechanism` / `dependency` / `edge_case` / `admin` / `history`) |
+| `artifacts/components/*.md` | 29 curated system docs with YAML frontmatter (`id`, `kind`, `layer`, `depends_on`, etc.) and tagged `##` headings encoding section kind and narrative role |
+| `subsystem_docs` table | Chunks with embeddings, narrative role (`overview` / `mechanism` / `dependency` / `edge_case` / `admin` / `history`) |
 | `entity_subsystem_links` table | Many-to-many join with role, provenance, and confidence |
 | `subsystem_edges` table | System-level dependency edges |
 
@@ -177,7 +177,7 @@ Stages 1–4 (mechanical chunking → curation → validation → ingestion) rem
 | Tool | Purpose |
 |------|---------|
 | `list_subsystems` | All subsystems with hierarchy and summary metrics; filter by kind, layer, or parent |
-| `get_subsystem` | Full subsystem detail with sections ordered overview-first by narrative role; grounding-aware filtering |
+| `get_subsystem` | Full subsystem detail with sections ordered overview-first by narrative role |
 | `get_subsystem_context` | Given an entity, assemble relevant system narrative via reranking (overview → evidence match → mentions → capability alignment) |
 | `get_subsystem_dependencies` | System-level dependency graph traversal, depth 1–3 |
 | `search_subsystem_docs` | Semantic + keyword search scoped to subsystem narrative prose |
@@ -186,7 +186,7 @@ Stages 1–4 (mechanical chunking → curation → validation → ingestion) rem
 
 | Tool | Enhancement |
 |------|-------------|
-| `search` | New `source` parameter (`entity` / `subsystem_doc` / `all`); grounding-aware ranking for subsystem doc results |
+| `search` | New `source` parameter (`entity` / `subsystem_doc` / `all`); per-layer pipelines merged by cross-encoder score for `source=all` |
 | `get_entity` | New `include_subsystems` flag adds subsystem links to entity responses |
 
 ### What This Enables
@@ -196,9 +196,7 @@ by layer, traverse the system dependency graph, and assess complexity without
 reading individual entities. The spec-creating agent gains narrative context — after
 getting the code-level view of a feature via V1 tools, it can call
 `get_subsystem_context` to understand how that feature fits into the broader system
-and what architectural patterns surround it. Grounding signals let agents calibrate
-trust: `grounded` sections are verified against code; `weak` sections warrant
-source-level verification before relying on them in a spec.
+and what architectural patterns surround it.
 
 ---
 
@@ -226,8 +224,8 @@ approach are not yet determined.
   free-form text?
 - How should help entries link to code entities and system concepts — automatic
   name matching, manual curation, or both?
-- Should help entries carry their own grounding/trust signals, or is the source
-  (official in-game help) sufficient to assume accuracy?
+- Is the official in-game help text always accurate, or do some entries
+  describe intended behavior that was never implemented?
 - How do overlapping help entries (e.g. `help cast` vs. `help fireball` vs.
   `help magic`) relate to each other and to the magic subsystem narrative?
 
@@ -323,7 +321,7 @@ Every prompt encodes:
    expect), builder guide (data/config rules)
 4. **Escalation rules** — only escalate summary → full record → source code when
    doc quality is low, result is central to the contract, evidence conflicts,
-   or grounding is weak
+   or documentation is sparse
 5. **Structured synthesis target** — what the agent should produce at the end
 
 Prompts should **not** start with transitive graph traversal, merge all layers
@@ -351,7 +349,7 @@ conceptual layer step and note the gap.
 
 | Prompt | Purpose | Key tools (V2) |
 |--------|---------|----------------|
-| `orient_to_system` | Understand one subsystem at the conceptual/dependency level | `list_subsystems` → `get_subsystem` → `get_subsystem_dependencies` → entity inspection only if docs are weak or complexity is high |
+| `orient_to_system` | Understand one subsystem at the conceptual/dependency level | `list_subsystems` → `get_subsystem` → `get_subsystem_dependencies` → entity inspection only if complexity is high |
 | `compare_systems_for_sequencing` | Migration sequencing analysis for a set of systems | `get_subsystem_dependencies` for each → `compare_capabilities` → `list_entry_points` → synthesize blockers, coupling, independent work |
 
 #### V3/V4-ready (cross-layer)
@@ -405,7 +403,24 @@ high prompt-design payoff.
 
 ---
 
-## 9. Discussion Questions
+## 9. Resolved Decisions
+
+1. **Cross-layer search architecture** — Per-layer search pipelines with
+   late-stage merge for `source=all`. Each layer owns its retrieval logic;
+   results are merged by cross-encoder score. V3/V4 add pipeline functions,
+   not parameters to a generic pipeline.
+
+2. **No trust or grounding signals** — Quality control happens at build/curation
+   time. If a doc section is good enough to serve, serve it without hedging.
+   If it's not, don't ingest it. No runtime quality filtering.
+
+3. **No `explore_entity` composite tool** — Prompt-based workflows
+   (`explain_entity_in_context`) guide agents through primitive tools in the
+   right order. Avoids response-size problems.
+
+---
+
+## 10. Open Discussion Questions
 
 1. **`exclude_ids` priority** — The prompt designs all assume an `exclude_ids`
    parameter for iterative de-duplication. This is a small tool-surface change
@@ -417,37 +432,23 @@ high prompt-design payoff.
    agents need different aggregations — e.g., "show me all messaging side effects
    for this entry point as output strings" rather than categorized function lists?
 
-3. **V2 grounding granularity** — The four-level grounding model
-   (grounded/mixed/weak/rejected) was designed so agents can calibrate trust. Is
-   this the right granularity? Would a binary signal (verified/unverified) be
-   simpler and equally effective?
-
-4. **Cross-layer search timing** — Should unified cross-layer search (`source=all`
-   spanning entities, subsystem docs, help entries, and builder guide sections)
-   exist as early as V3, or are per-layer search tools sufficient until all layers
-   are populated?
-
-5. **`explore_entity` vs. prompts** — The speculative agent requirements propose
-   `explore_entity` as a composite orientation tool. With `explain_entity_in_context`
-   as a prompt (guiding the agent through existing primitive tools in the right
-   order), is a dedicated tool still needed? Prompts avoid response-size problems
-   by letting the agent decide what to fetch next.
-
-6. **Help entry linking** — Automatic linking of help entries to code entities (by
+3. **Help entry linking** — Automatic linking of help entries to code entities (by
    name matching) will produce noisy results. Manual curation is expensive. What
-   is the right balance?
+   is the right balance? Note: help entries link *to* entities (the help text
+   references code concepts), but entities don't necessarily link *back* — the
+   join table direction matters.
 
-7. **Builder's guide scope** — How much of the builder's guide is relevant to
+4. **Builder's guide scope** — How much of the builder's guide is relevant to
    migration? Some sections describe how to *use* the online building commands
    (which are being reimplemented from scratch) while others describe data formats
    and conventions (which constrain the reimplementation). Should V4 include both,
    or scope to data-level documentation only?
 
-8. **Missing file-level tools** — V1 currently lacks `list_file_entities`,
+5. **Missing file-level tools** — V1 currently lacks `list_file_entities`,
    `get_file_summary`, `get_hotspots`, and `get_related_files` (described in the
    agent requirements but not implemented). Are these needed for the spec-creating
    agent workflow, or do `search` and graph tools provide sufficient coverage?
 
-9. **Prompt shipping strategy** — Should V1-ready prompts (1–4) ship as MCP
+6. **Prompt shipping strategy** — Should V1-ready prompts (1–4) ship as MCP
    prompts immediately, with degraded notes where V2 steps are skipped? Or wait
    until V2 tools exist so the prompts are complete on first release?

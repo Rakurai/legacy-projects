@@ -1,5 +1,24 @@
 # MCP Legacy Documentation Server — Agent Requirements
 
+> **Staleness notice (2026-03-24):** This document was written before V1
+> implementation was complete and contains several speculative tool designs
+> that diverge from the shipped V1 surface. Key divergences:
+>
+> - `resolve_entity` does not exist — `search` is the sole entity resolution
+>   path (no separate resolve step)
+> - `doc_quality` field was removed — replaced by `doc_state`,
+>   `is_contract_seed`, `rationale_specificity` as separate signals
+> - `list_file_entities`, `get_file_summary`, `get_hotspots`,
+>   `get_related_files` are not implemented
+> - No `keyword_fallback` degraded mode — embedding + cross-encoder are
+>   required infrastructure
+> - `explore_entity` was decided against — prompt-based workflows replaced it
+> - `exclude_ids` is not yet implemented on any tool
+>
+> The canonical V1 surface is in `mcp/doc_server/specs/v1/spec.md`. Use this
+> document for agent workflow intent and information-need analysis, not as a
+> tool inventory reference.
+
 This document describes the requirements for the MCP server from the perspective of
 the agents that will consume it. It is intended to guide tool design, response shape
 design, and prompt design for both the current V1/V2 implementation and future

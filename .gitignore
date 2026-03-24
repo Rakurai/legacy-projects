@@ -4,6 +4,9 @@ __pycache__/
 *.pyo
 *.egg-info/
 dist/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
 
 # crap
 .DS_Store
@@ -12,6 +15,12 @@ dist/
 .venv/
 venv/
 .env
+
+# Editors and temp files
+.vscode/
+.idea/
+*.tmp
+*.swp
 
 # Scratch
 .scratch/

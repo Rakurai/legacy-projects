@@ -29,6 +29,7 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 * No `Any` in production paths. If unavoidable, annotate with `Any` and add `# TODO refine type`.
 * Narrow types aggressively (Literal/union/enums). Prefer Protocol/TypedDict over weakening types.
 * Public interfaces must be fully typed; return `Optional[T]` **only** when `None` is intentional.
+* Interface consistency: return types, error types, and data shapes must be consistent between producer and consumer. If a function's signature or return shape changes, update all callers in the same change.
 * **Python 3.14+** lazy evaluation of annotations is native; no `from __future__ import annotations` needed. Forward references work unquoted.
 * Use Unicode for all strings.
 
@@ -65,6 +66,7 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 * **Linting & formatting**: `ruff` (lint + format).
 * **Static type checking**: `mypy --strict`.
 * **Testing**: `pytest` and `pytest-randomly` to detect inter-test coupling.
+* **Dependency manifest**: every new third-party import must have a corresponding entry in the project's dependency manifest. Do not import packages that aren't declared.
 
 ---
 
@@ -143,7 +145,9 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 **Rules**
 
 * Write **happy-path** tests that confirm contracts and core flows execute successfully.
-* Do not construct failure scenarios or exhaustive edge-case matrices in PoC.
+* Do not construct exhaustive edge-case matrices in PoC.
+* Negative-path coverage for spec-defined error conditions is required; exhaustive edge-case matrices are not.
+* Tests must be **falsifiable** — each test should fail if its target behavior were broken. Tests that only assert mocks, hardcoded values, or nothing at all are prohibited.
 * Prefer a few high-signal integration/contract tests over broad unit coverage.
 * If tests or code fail, fix the **implementation**, not by trivializing tests.
 
@@ -160,7 +164,17 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 * Keep domain specifics (logging impl, framework mechanics) in domain docs; keep universal rules here.
 
 ---
+## Wiring Discipline
 
+**Principle**: Every component must be reachable.
+
+**Rules**
+
+* Every new function, endpoint, handler, config key, or scheduled task must be reachable from at least one production entry point. Dead code on creation is prohibited.
+* After renaming, moving, or changing a function signature, verify that every call site uses the new name, location, and signature. No stale references.
+* Config keys and environment variables referenced in code must exist in config files or `.env.example`. Config entries that no code references should be removed.
+
+---
 ## Prohibited Practices
 
 * “Fallback” anything (terminology or behavior).
@@ -182,5 +196,9 @@ Scope: PoC-ready code that is clean, consistent, and DevOps-handoffable without 
 * [ ] Linting/formatting via `ruff`.
 * [ ] Resource-based interfaces; schema-first.
 * [ ] Context managers for all resources; cleanup on every path.
-* [ ] Happy-path tests only; few high-signal checks.
+* [ ] Happy-path tests + spec-defined negative paths; few high-signal checks.
+* [ ] Tests are falsifiable — each would fail if target behavior were broken.
+* [ ] Every new component is reachable from a production entry point.
+* [ ] All call sites updated after renames/signature changes.
+* [ ] New imports declared in dependency manifest.
 * [ ] Comments/docstrings add non-obvious value only.

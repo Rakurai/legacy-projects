@@ -4,9 +4,11 @@
 > the tool surface before V2–V4 implementation proceeds. This is a disposable
 > working document, not a permanent specification.
 >
-> **References:** [V1 Spec](../../mcp/doc_server/specs/v1/spec.md) ·
-> [V2 Design](../../mcp/doc_server/specs/v2/DESIGN_v2.md) ·
-> [Agent Requirements](speculative_agent_reqs.md)
+> **References:** [V1 Spec](specs/v1/spec.md) ·
+> [V1 Data Model](specs/v1/MODEL.md) ·
+> [V1 Search Validation](specs/v1/search_performance.md) ·
+> [V2 Design](specs/v2/DESIGN_v2.md) ·
+> [Agent Requirements](../../docs/migration/speculative_agent_reqs.md)
 
 ---
 
@@ -48,7 +50,7 @@ the same principle.
 ## 3. V1 — Implementation Layer (Live)
 
 V1 exposes entity-level documentation, source code, dependency graphs, behavioral
-analysis, and capability groupings through 19 tools, 5 resources, and 4 prompts.
+analysis, and capability groupings through 16 tools, 5 resources, and 4 prompts.
 
 ### Data
 
@@ -57,9 +59,21 @@ analysis, and capability groupings through 19 tools, 5 resources, and 4 prompts.
 | `code_graph.json` | ~5,300 entities parsed from Doxygen XML (functions, classes, structs, files, variables) |
 | `code_graph.gml` | Directed multigraph with ~25,000 dependency edges (calls, uses, inherits, includes, contained_by) |
 | `generated_docs/*.json` | LLM-generated documentation per source file — briefs, parameter descriptions, rationale, usage examples |
-| `signature_map.json` | Deterministic entity ID bridge (`{prefix}:{7hex}`) between code graph and doc DB |
 | `capability_defs.json` | 30 capability group definitions with type, stability, and function membership |
-| `capability_graph.json` | Inter-capability dependency edges |
+| `capability_graph.json` | Inter-capability dependency edges, member-to-capability mapping (~848 assignments) |
+
+The signature map is computed on-the-fly at build time from `EntityDatabase` +
+`DocumentDB` — no separate artifact file is required.
+
+### Entity Identity
+
+Entity IDs are deterministic: `{prefix}:{sha256(canonical_key)[:7]}` where the
+canonical key is the signature map tuple `(compound_id, signature_or_name)`.
+Prefixes: `fn` (function/define), `var` (variable), `cls` (class/struct), `file`
+(file), `sym` (other). IDs are stable across rebuilds from identical artifacts.
+
+The `search` tool is the sole path from human-readable text to entity IDs — no
+other tool performs name-to-ID resolution.
 
 ### Tools
 
@@ -69,14 +83,29 @@ analysis, and capability groupings through 19 tools, 5 resources, and 4 prompts.
 |------|---------|
 | `get_entity` | Full entity record by ID — docs, source location, metrics, optional source code and graph neighbors |
 | `get_source_code` | Source code with configurable context lines |
-| `list_file_entities` | All entities in a source file, filterable by kind |
-| `get_file_summary` | File-level statistics — entity counts by kind, capability distribution, top entities by fan-in |
 
 #### Search
 
 | Tool | Purpose |
 |------|---------|
-| `search` | Hybrid semantic (pgvector) + keyword (tsvector) search with exact-match boost; degrades to keyword-only when embeddings are unavailable |
+| `search` | Multi-view hybrid search with cross-encoder reranking (see below) |
+
+Search uses a 5-channel retrieval pipeline:
+
+1. **Doc semantic** — pgvector cosine similarity on `doc_embedding` (BAAI/bge-base-en-v1.5)
+2. **Symbol semantic** — pgvector cosine similarity on `symbol_embedding` (jinaai/jina-embeddings-v2-base-code)
+3. **Doc keyword** — `ts_rank` on `doc_search_vector` (english dictionary, stemming)
+4. **Symbol keyword** — `ts_rank` on `symbol_search_vector` (simple dictionary, no stemming)
+5. **Trigram** — `pg_trgm` similarity on `symbol_searchable`
+
+All candidates are reranked by a cross-encoder (Xenova/ms-marco-MiniLM-L-12-v2).
+Per-candidate score = max cross-encoder score across doc and symbol views, with
+query-shape-aware view selection for symbol-like queries. No per-query
+normalization. Embedding and cross-encoder are **required** infrastructure — there
+is no keyword-only degraded mode.
+
+Results include multi-view metadata: `winning_view`, `winning_score`,
+`losing_score`.
 
 #### Graph Navigation
 
@@ -87,7 +116,6 @@ analysis, and capability groupings through 19 tools, 5 resources, and 4 prompts.
 | `get_dependencies` | Filtered dependencies by relationship type and direction |
 | `get_class_hierarchy` | Base classes and derived classes for a class entity |
 | `get_related_entities` | All direct neighbors grouped by relationship type |
-| `get_related_files` | Related files via include relationships |
 
 #### Behavioral Analysis
 
@@ -95,7 +123,6 @@ analysis, and capability groupings through 19 tools, 5 resources, and 4 prompts.
 |------|---------|
 | `get_behavior_slice` | Transitive call cone with capabilities touched, globals used, and categorized side effects |
 | `get_state_touches` | Direct + transitive global variable usage and side effects |
-| `get_hotspots` | Entities ranked by fan-in, fan-out, bridge score, or documentation gaps |
 
 #### Capabilities
 
@@ -107,15 +134,22 @@ analysis, and capability groupings through 19 tools, 5 resources, and 4 prompts.
 | `list_entry_points` | `do_*`, `spell_*`, `spec_*` functions with optional capability/name filter |
 | `get_entry_point_info` | Which capabilities an entry point exercises, with direct/transitive counts |
 
+#### Interface Analysis
+
+| Tool | Purpose |
+|------|---------|
+| `explain_interface` | Contract-focused view of a function: parameters, return value, preconditions, side effects, state assumptions |
+
 ### What This Enables
 
 A spec-creating agent can research a feature end-to-end at the code level:
-resolve the entity → read its documentation and source → trace its call graph →
+search for the entity → read its documentation and source → trace its call graph →
 inspect its behavioral footprint (side effects, globals, capabilities touched) →
-understand where it sits in the capability map. This is sufficient for features
-that are self-contained within a single subsystem, but it gives the agent no
-narrative context about the system the feature belongs to, no understanding of
-what the user expects to see, and no knowledge of content authoring constraints.
+understand where it sits in the capability map → get a contract-focused interface
+view. This is sufficient for features that are self-contained within a single
+subsystem, but it gives the agent no narrative context about the system the feature
+belongs to, no understanding of what the user expects to see, and no knowledge of
+content authoring constraints.
 
 ---
 
@@ -153,7 +187,7 @@ Stages 1–4 (mechanical chunking → curation → validation → ingestion) rem
 | Tool | Enhancement |
 |------|-------------|
 | `search` | New `source` parameter (`entity` / `subsystem_doc` / `all`); grounding-aware ranking for subsystem doc results |
-| `get_entity` / `list_file_entities` | New `include_subsystems` flag adds subsystem links to entity responses |
+| `get_entity` | New `include_subsystems` flag adds subsystem links to entity responses |
 
 ### What This Enables
 
@@ -269,34 +303,151 @@ ever reading the legacy source.
 
 ---
 
-## 8. Discussion Questions
+## 8. MCP Prompts — Agent Workflow Scaffolds
 
-1. **V1 behavioral tools in practice** — Are `get_behavior_slice`, `get_state_touches`,
-   and `get_hotspots` producing shapes that agents actually find useful? Or do agents
-   need different aggregations — e.g., "show me all messaging side effects for this
-   entry point as output strings" rather than categorized function lists?
+MCP prompts are role-specific workflow scaffolds that guide agents through the
+right tools in the right order, with explicit depth budgets and stop conditions.
+They are not generic "analyze X" prose — they are retrieval recipes designed to
+prevent the primary failure mode: agents over-pulling graph/search context and
+sifting through noise.
 
-2. **V2 grounding granularity** — The four-level grounding model
+### Design principles
+
+Every prompt encodes:
+
+1. **Starting tool** — where to begin
+2. **Depth budgets** — default graph depth, when to stop, when deeper traversal
+   is justified
+3. **Layer ordering** — which layer is authoritative for which question:
+   implementation (how it works), conceptual (why it exists), help (what users
+   expect), builder guide (data/config rules)
+4. **Escalation rules** — only escalate summary → full record → source code when
+   doc quality is low, result is central to the contract, evidence conflicts,
+   or grounding is weak
+5. **Structured synthesis target** — what the agent should produce at the end
+
+Prompts should **not** start with transitive graph traversal, merge all layers
+by default, or encourage "search everything about X" patterns.
+
+### Prompt inventory
+
+Eight prompts are planned, phased by tool availability. Prompts 1–4 use V1 tools
+and can ship now. Prompts 5–6 require V2 subsystem tools. Prompts 7–8 require
+V3/V4 ingestion.
+
+#### V1-ready (spec-creating agent)
+
+| Prompt | Purpose | Key tools |
+|--------|---------|-----------|
+| `research_feature_for_spec` | Full feature research: implementation → interface → behavior → conceptual context | `search` → `get_entity` → `get_source_code` → `get_state_touches` → `get_behavior_slice` → `explain_interface` → `get_subsystem_context`* |
+| `trace_feature_concern` | Answer one narrow behavioral question (messaging, state mutation, persistence, scheduling) | `get_behavior_slice` → filter by concern → `get_entity`/`get_source_code` for relevant entities only |
+| `explain_entity_in_context` | Lightweight orientation on a single entity | `get_entity(include_neighbors=true)` → `get_behavior_slice(max_depth=1)` → `get_subsystem_context`* |
+| `map_interface_contract` | Extract the contract another system must rely on | `get_entity` → `explain_interface` → `get_state_touches` → optionally one layer of callees |
+
+\* `get_subsystem_context` is a V2 tool; V1 versions of these prompts skip the
+conceptual layer step and note the gap.
+
+#### V2-ready (system planning agent)
+
+| Prompt | Purpose | Key tools (V2) |
+|--------|---------|----------------|
+| `orient_to_system` | Understand one subsystem at the conceptual/dependency level | `list_subsystems` → `get_subsystem` → `get_subsystem_dependencies` → entity inspection only if docs are weak or complexity is high |
+| `compare_systems_for_sequencing` | Migration sequencing analysis for a set of systems | `get_subsystem_dependencies` for each → `compare_capabilities` → `list_entry_points` → synthesize blockers, coupling, independent work |
+
+#### V3/V4-ready (cross-layer)
+
+| Prompt | Purpose | Key tools (V3/V4) |
+|--------|---------|-------------------|
+| `collect_user_visible_contract` | What does the player see and expect? | `search_help_docs` → `get_help_topic` → cross-check with `get_behavior_slice` |
+| `collect_data_and_configuration_rules` | What are the content authoring constraints? | `search_builder_guide` → `get_builder_guide_section` → cross-check with `get_state_touches` |
+
+### Primary prompt detail: `research_feature_for_spec`
+
+This is the most important prompt — the primary workflow for the spec-creating
+agent. The workflow walks implementation → interface → behavior → context:
+
+1. **Resolve**: `search(feature_name)` → get entity ID
+2. **Orient**: `get_entity(entity_id, include_code=false, include_neighbors=true)`
+3. **Read code**: `get_source_code(entity_id)` — primary entity only
+4. **Inspect callees**: Review direct neighbors from step 2. Follow a callee
+   deeper only if: it appears in side effects/state touches, it defines an
+   interface contract the feature depends on, or its brief is absent/unclear
+5. **Behavioral footprint**: `get_state_touches(entity_id)` +
+   `get_behavior_slice(entity_id, max_depth=2)`
+6. **Interface contracts**: `explain_interface(entity_id)` for the primary entity
+   and any dependency that looks like an external contract boundary
+7. **Conceptual context** (V2): `get_subsystem_context(entity_id)` — skip in V1
+8. **User-facing behavior** (V3): `search_help_docs` — skip until V3
+9. **Config constraints** (V4): `search_builder_guide` — skip until V4
+10. **Synthesize**: purpose, entry conditions, side effects, user-visible behavior,
+    external contracts, config/data constraints, open uncertainties
+
+**Stop rules**: Do not chase transitive callees unless they expose or constrain
+the feature's interface. Prefer summaries/briefs before full records.
+
+### Tool surface gaps for prompts
+
+Several prompt patterns assume tool capabilities that do not yet exist:
+
+| Gap | Impact | Where needed |
+|-----|--------|-------------|
+| No `exclude_ids` parameter on any tool | Agents cannot avoid re-fetching already-seen entities across sequential calls | All prompts (anti-bloat mechanism) |
+| No file-level tools (`list_file_entities`, `get_file_summary`) | Cannot orient on "what else is in this file?" without manual search | `research_feature_for_spec` step 4 |
+| No `get_hotspots` | Cannot quickly find high-fan-in or bridge entities for a capability | `orient_to_system`, `compare_systems_for_sequencing` |
+| V2 subsystem tools not yet implemented | Planning agent prompts are blocked; spec agent prompts lose conceptual layer step | Prompts 5–6 blocked; prompts 1, 3 degraded |
+| V3/V4 tools not yet designed | User-facing and builder constraint prompts are blocked | Prompts 7–8 blocked |
+
+The `exclude_ids` gap is the most impactful — it is the primary anti-bloat
+mechanism for iterative multi-call workflows and is referenced by every prompt.
+Adding it as an optional parameter to `search`, `get_callers`, `get_callees`,
+`get_related_entities`, and `get_behavior_slice` would be a small change with
+high prompt-design payoff.
+
+---
+
+## 9. Discussion Questions
+
+1. **`exclude_ids` priority** — The prompt designs all assume an `exclude_ids`
+   parameter for iterative de-duplication. This is a small tool-surface change
+   with high impact on every multi-call workflow. Should this be the next V1
+   enhancement before V2 work begins?
+
+2. **V1 behavioral tools in practice** — Are `get_behavior_slice` and
+   `get_state_touches` producing shapes that agents actually find useful? Or do
+   agents need different aggregations — e.g., "show me all messaging side effects
+   for this entry point as output strings" rather than categorized function lists?
+
+3. **V2 grounding granularity** — The four-level grounding model
    (grounded/mixed/weak/rejected) was designed so agents can calibrate trust. Is
    this the right granularity? Would a binary signal (verified/unverified) be
    simpler and equally effective?
 
-3. **Cross-layer search timing** — Should unified cross-layer search (`source=all`
+4. **Cross-layer search timing** — Should unified cross-layer search (`source=all`
    spanning entities, subsystem docs, help entries, and builder guide sections)
    exist as early as V3, or are per-layer search tools sufficient until all layers
    are populated?
 
-4. **Aggregation tools** — The speculative agent requirements propose
-   `explore_entity` (orientation across all layers) and `explain_interface`
-   (contract-focused view). Are these necessary, or do agents compose effectively
-   from primitive tools?
+5. **`explore_entity` vs. prompts** — The speculative agent requirements propose
+   `explore_entity` as a composite orientation tool. With `explain_entity_in_context`
+   as a prompt (guiding the agent through existing primitive tools in the right
+   order), is a dedicated tool still needed? Prompts avoid response-size problems
+   by letting the agent decide what to fetch next.
 
-5. **Help entry linking** — Automatic linking of help entries to code entities (by
+6. **Help entry linking** — Automatic linking of help entries to code entities (by
    name matching) will produce noisy results. Manual curation is expensive. What
    is the right balance?
 
-6. **Builder's guide scope** — How much of the builder's guide is relevant to
+7. **Builder's guide scope** — How much of the builder's guide is relevant to
    migration? Some sections describe how to *use* the online building commands
    (which are being reimplemented from scratch) while others describe data formats
    and conventions (which constrain the reimplementation). Should V4 include both,
    or scope to data-level documentation only?
+
+8. **Missing file-level tools** — V1 currently lacks `list_file_entities`,
+   `get_file_summary`, `get_hotspots`, and `get_related_files` (described in the
+   agent requirements but not implemented). Are these needed for the spec-creating
+   agent workflow, or do `search` and graph tools provide sufficient coverage?
+
+9. **Prompt shipping strategy** — Should V1-ready prompts (1–4) ship as MCP
+   prompts immediately, with degraded notes where V2 steps are skipped? Or wait
+   until V2 tools exist so the prompts are complete on first release?

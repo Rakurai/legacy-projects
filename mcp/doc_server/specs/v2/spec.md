@@ -1,8 +1,14 @@
 # Feature Specification: MCP Documentation Server V2 — System-Level Documentation
 
+> **Archived (2026-03-24):** This spec was not implemented. The V2 subsystem
+> documentation layer was superseded by a simpler approach: component docs are
+> served as MCP resources (`legacy://components`, `legacy://component/{id}`)
+> with no new database tables, embeddings, or search pipelines. Retained for
+> historical reference.
+
 **Feature Branch**: `005-v2-subsystem-docs`
 **Created**: 2026-03-24
-**Status**: Draft
+**Status**: Archived (not implemented)
 **Depends On**: V1 (live, `specs/v1/spec.md`)
 **Input**: V2 indexing decisions (`v2_indexing.md`), agent requirements
 (`docs/migration/speculative_agent_reqs.md`), prompt design (`ROADMAP.md §8`)

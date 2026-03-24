@@ -1,5 +1,8 @@
 # V2 Stage 0 Task Checklist
 
+> **Completed (2026-03-24):** All tasks below are done. V2 database ingestion
+> was superseded by serving component docs as MCP resources.
+
 Derived from [v2_proposal.md](v2_proposal.md). Work each file top-to-bottom. Cross-cutting tasks apply to every file touched.
 
 ---

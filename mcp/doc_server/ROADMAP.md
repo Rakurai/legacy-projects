@@ -1,13 +1,18 @@
 # MCP Documentation Server — What It Provides
 
-> **Purpose:** Seed discussion on migration agent strategies and surface gaps in
-> the tool surface before V2–V4 implementation proceeds. This is a disposable
-> working document, not a permanent specification.
+> **Archived (2026-03-24):** V2–V4 were superseded by a simpler approach:
+> component docs are served as MCP resources (`legacy://components`,
+> `legacy://component/{id}`) with no new database tables, embeddings, or search
+> pipelines. Help file resources are a future TODO if the corpus is brought in.
+> This document is retained for historical reference only.
+
+> **Original purpose:** Seed discussion on migration agent strategies and surface
+> gaps in the tool surface before V2–V4 implementation proceeds.
 >
 > **References:** [V1 Spec](specs/v1/spec.md) ·
 > [V1 Data Model](specs/v1/MODEL.md) ·
 > [V1 Search Validation](specs/v1/search_performance.md) ·
-> [V2 Spec](specs/v2/spec.md) ·
+> [V2 Spec](specs/v2/spec.md) (archived) ·
 > [Agent Requirements](../../docs/migration/speculative_agent_reqs.md)
 
 ---

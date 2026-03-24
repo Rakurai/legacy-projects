@@ -1,5 +1,10 @@
 # Game Subsystems
 
+> **Superseded (2026-03-24):** This document has been superseded by the curated
+> component docs in `artifacts/components/`. Those files have YAML frontmatter
+> with machine-readable dependency metadata and tagged section headings.
+> They are also served via the MCP server as `legacy://component/{id}` resources.
+
 This document defines the subsystem boundaries for the Legacy MUD codebase,
 organized into groups suitable for independent rewrite planning. Each subsystem is
 described by its features and responsibilities — not by source files.

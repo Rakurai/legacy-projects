@@ -1,6 +1,12 @@
 # V2 Stage 0 Proposal: Document Cleanup
 
-Reference: [DESIGN_v2.md §5.2–§5.3](../mcp/doc_server/DESIGN_v2.md), [v2_indexing.md §5.6](../mcp/doc_server/v2_indexing.md)
+> **Completed (2026-03-24):** All Stage 0 work in this document has been
+> completed. The 29 component docs in `artifacts/components/` have YAML
+> frontmatter and tagged headings. V2 database ingestion was superseded by
+> serving component docs as MCP resources. This document is retained for
+> historical reference.
+
+Reference: [DESIGN_v2.md](../mcp/doc_server/DESIGN_v2.md), [v2_indexing.md](../mcp/doc_server/v2_indexing.md)
 
 All changes below are architectural: file layout, YAML frontmatter, heading tags, and content ownership reassignment. No prose rewriting.
 

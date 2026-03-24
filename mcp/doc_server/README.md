@@ -10,14 +10,10 @@ All data is pre-computed and deterministic. No LLM inference at runtime.
 
 ## What It Provides
 
-The server organizes codebase knowledge in additive layers:
-
-| Layer | Version | Question Answered |
-|-------|---------|-------------------|
-| **Implementation** | V1 (live) | *What is this code object and how does it work?* |
-| **Conceptual** | V2 (designed) | *What larger system narrative helps interpret it?* |
-| **User-Facing** | V3 (planned) | *What does the player see and expect?* |
-| **Specification** | V4 (planned) | *What are the content authoring rules?* |
+| Layer | Question Answered | How |
+|-------|-------------------|-----|
+| **Implementation** | *What is this code object and how does it work?* | 15 tools: search, entity lookup, graph traversal, behavioral analysis, capability mapping |
+| **System Narrative** | *What larger system does it belong to?* | 29 curated component docs served as resources (`legacy://component/{id}`) |
 
 ### Implementation Data
 
@@ -176,4 +172,4 @@ uv run mypy server/
 - [V1 Spec](specs/v1/spec.md) — implemented
 - [V1 Tool Contracts](specs/v1/contracts/tools.md)
 - [V1 Data Model](specs/v1/MODEL.md)
-- [V2 Design](specs/v2/DESIGN_v2.md) — designed, Stage 0 complete
+- [V2 Design](specs/v2/DESIGN_v2.md) — archived (superseded by resource-based approach)

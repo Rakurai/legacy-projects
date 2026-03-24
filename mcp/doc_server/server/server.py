@@ -23,6 +23,8 @@ from server.app import get_ctx, mcp
 from server.resources import (
     get_capabilities_resource,
     get_capability_detail_resource,
+    get_component,
+    get_components_index,
     get_entity_resource,
     get_file_entities_resource,
     get_stats_resource,
@@ -78,6 +80,23 @@ async def stats_resource(ctx: Context) -> str:
     return json.dumps(data, default=str)
 
 
+@mcp.resource("legacy://components")
+async def components_index_resource(ctx: Context) -> str:
+    """List all system component docs with frontmatter metadata."""
+    lc = get_ctx(ctx)
+    components_dir = lc["config"].artifacts_path / "components"
+    data = get_components_index(components_dir)
+    return json.dumps({"components": data}, default=str)
+
+
+@mcp.resource("legacy://component/{component_id}")
+async def component_resource(component_id: str, ctx: Context) -> str:
+    """Get full markdown content for a system component doc."""
+    lc = get_ctx(ctx)
+    components_dir = lc["config"].artifacts_path / "components"
+    return get_component(components_dir, component_id)
+
+
 # ---- Prompts ----
 
 from server.prompts import (  # noqa: E402
@@ -85,6 +104,7 @@ from server.prompts import (  # noqa: E402
     compare_entry_points_prompt,
     explain_entity_prompt,
     explore_capability_prompt,
+    research_feature_prompt,
 )
 
 
@@ -110,6 +130,12 @@ def compare_entry_points(entry_point_names: list[str]) -> list[dict[str, str]]:
 def explore_capability(capability_name: str) -> list[dict[str, str]]:
     """Capability exploration workflow."""
     return explore_capability_prompt(capability_name)
+
+
+@mcp.prompt()
+def research_feature(feature_name: str) -> list[dict[str, str]]:
+    """Feature research workflow for migration spec writing."""
+    return research_feature_prompt(feature_name)
 
 
 # ---- Entry Point ----

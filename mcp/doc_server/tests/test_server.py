@@ -35,11 +35,13 @@ EXPECTED_TOOLS = {
 
 EXPECTED_RESOURCES = {
     "legacy://capabilities",
+    "legacy://components",
     "legacy://stats",
 }
 
 EXPECTED_TEMPLATES = {
     "legacy://capability/{name}",
+    "legacy://component/{component_id}",
     "legacy://entity/{entity_id}",
     "legacy://file/{path}",
 }
@@ -49,6 +51,7 @@ EXPECTED_PROMPTS = {
     "analyze_behavior",
     "compare_entry_points",
     "explore_capability",
+    "research_feature",
 }
 
 

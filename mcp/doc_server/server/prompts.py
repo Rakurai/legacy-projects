@@ -6,6 +6,7 @@ Prompts:
 - analyze_behavior: Behavioral analysis of a function
 - compare_entry_points: Compare multiple entry points
 - explore_capability: Explore a capability group
+- research_feature: Feature research workflow for migration spec writing
 """
 
 from server.logging_config import log
@@ -174,6 +175,51 @@ def explore_capability_prompt(capability_name: str) -> list[dict[str, str]]:
                 "documentation server. This will reveal its architectural role, "
                 "dependencies, and complexity.\n\n"
                 "Gathering capability data..."
+            ),
+        },
+    ]
+
+
+def research_feature_prompt(feature_name: str) -> list[dict[str, str]]:
+    """
+    Generate prompt messages for feature research during migration spec writing.
+
+    Workflow: search → get_entity → get_source_code → get_behavior_slice →
+              get_state_touches → explain_interface → read component resource
+
+    Args:
+        feature_name: Feature, function, or system name to research
+
+    Returns:
+        List of conversation messages (user + assistant)
+    """
+    log.info("Generating research_feature prompt", feature_name=feature_name)
+
+    return [
+        {
+            "role": "user",
+            "content": (
+                f"I need to research the legacy feature '{feature_name}' to write a migration spec. "
+                "Please gather:\n\n"
+                "1. Implementation details (entity docs, source code)\n"
+                "2. Behavioral footprint (call cone, side effects, state touches)\n"
+                "3. Interface contracts (preconditions, postconditions, caller expectations)\n"
+                "4. System context (which component/subsystem it belongs to, dependencies)\n"
+                "5. Exact formulas, constants, message strings, and timing values"
+            ),
+        },
+        {
+            "role": "assistant",
+            "content": (
+                f"I'll research '{feature_name}' for migration spec writing using the Legacy "
+                "documentation server. My approach:\n\n"
+                "1. **Search** for the entity to get its ID\n"
+                "2. **get_entity** for documentation, then **get_source_code** for implementation\n"
+                "3. **get_behavior_slice** and **get_state_touches** for side effects and state mutations\n"
+                "4. **explain_interface** for the behavioral contract\n"
+                "5. Read **legacy://components** to identify the parent system, then "
+                "**legacy://component/{id}** for architectural context\n\n"
+                "Starting with a search..."
             ),
         },
     ]

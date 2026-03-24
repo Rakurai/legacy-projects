@@ -19,7 +19,7 @@ The server organizes codebase knowledge in additive layers:
 | **User-Facing** | V3 (planned) | *What does the player see and expect?* |
 | **Specification** | V4 (planned) | *What are the content authoring rules?* |
 
-### V1 Data (Current)
+### Implementation Data
 
 - ~5,300 entities parsed from Doxygen XML (functions, classes, structs, files, variables)
 - ~25,000 dependency edges (calls, uses, inherits, includes, contained_by)
@@ -27,6 +27,12 @@ The server organizes codebase knowledge in additive layers:
 - 30 capability group definitions with typed inter-capability dependencies
 - Source code extracted at build time
 - Multi-view search: dual embeddings (doc + symbol), dual tsvectors (english + simple), trigram fuzzy matching, cross-encoder reranking, qualified-name scoped disambiguation
+
+### System Narrative Data
+
+- 29 curated component/subsystem markdown documents in `artifacts/components/`
+- Each has YAML frontmatter: id, name, kind, layer, depends_on, depended_on_by
+- Served as read-only MCP resources (no database, no embeddings — filesystem reads)
 
 ## Architecture
 
@@ -118,7 +124,7 @@ For full setup instructions, see [INSTALL.md](INSTALL.md).
 | `list_entry_points` | `do_*`, `spell_*`, `spec_*` functions with optional capability/name filter |
 | `get_entry_point_info` | Which capabilities an entry point exercises, with direct/transitive counts |
 
-### Resources (5)
+### Resources (7)
 
 | URI | Description |
 |-----|-------------|
@@ -127,15 +133,18 @@ For full setup instructions, see [INSTALL.md](INSTALL.md).
 | `legacy://entity/{entity_id}` | Full entity record |
 | `legacy://file/{path}` | Entities in a source file |
 | `legacy://stats` | Server statistics |
+| `legacy://components` | All 29 system component docs — frontmatter index (id, name, kind, layer, depends_on, depended_on_by) |
+| `legacy://component/{id}` | Full markdown content for a system component doc |
 
-### Prompts (4)
+### Prompts (5)
 
 | Prompt | Purpose |
-|--------|---------|
+|--------|--------|
 | `explain_entity` | Entity explanation workflow |
 | `analyze_behavior` | Behavioral analysis with call cone and side effects |
 | `compare_entry_points` | Compare entry points for shared dependencies |
 | `explore_capability` | Explore a capability group's architecture |
+| `research_feature` | Feature research for migration spec writing — combines code tools with component resources |
 
 ## Entity IDs
 

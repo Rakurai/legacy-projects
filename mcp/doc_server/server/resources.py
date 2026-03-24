@@ -7,12 +7,20 @@ Resources:
 - legacy://entity/{entity_id}    — Get full entity details
 - legacy://file/{path}           — List entities in a file
 - legacy://stats                 — Server statistics
+- legacy://components            — List all system component docs with metadata
+- legacy://component/{id}        — Get full component documentation
+
+Future:
+- legacy://helps                 — Index of in-game help topics (when corpus is available)
+- legacy://help/{topic}          — Full help entry text (when corpus is available)
 """
 
 from functools import lru_cache
 from importlib.metadata import PackageNotFoundError, version
+from pathlib import Path
 
 import networkx as nx
+import yaml
 from sqlalchemy import func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlmodel import select
@@ -274,3 +282,71 @@ async def get_stats_resource(
             "database_connection_status": "connected",
         },
     }
+
+
+# ---- Component Documentation Resources ----
+
+
+def _parse_frontmatter(text: str) -> tuple[dict, str]:
+    """Parse YAML frontmatter from a markdown file.
+
+    Expects ``---`` delimited frontmatter at the start of the file.
+    Returns (metadata_dict, body_text).
+    """
+    if not text.startswith("---"):
+        return {}, text
+    end = text.index("---", 3)
+    fm_text = text[3:end]
+    body = text[end + 3 :].lstrip("\n")
+    return yaml.safe_load(fm_text) or {}, body
+
+
+def get_components_index(components_dir: Path) -> list[dict]:
+    """Read all component markdown files and return frontmatter index.
+
+    Args:
+        components_dir: Path to artifacts/components/ directory
+
+    Returns:
+        Sorted list of component metadata dicts
+    """
+    log.info("Resource: legacy://components")
+
+    components: list[dict] = []
+    for md_file in sorted(components_dir.glob("*.md")):
+        text = md_file.read_text(encoding="utf-8")
+        fm, _body = _parse_frontmatter(text)
+        if "id" not in fm:
+            continue
+        components.append({
+            "id": fm["id"],
+            "name": fm.get("name", fm["id"]),
+            "kind": fm.get("kind"),
+            "layer": fm.get("layer"),
+            "parent": fm.get("parent"),
+            "depends_on": fm.get("depends_on", []),
+            "depended_on_by": fm.get("depended_on_by", []),
+        })
+
+    return components
+
+
+def get_component(components_dir: Path, component_id: str) -> str:
+    """Read full markdown content for a specific component.
+
+    Args:
+        components_dir: Path to artifacts/components/ directory
+        component_id: Component identifier (matches filename stem and frontmatter id)
+
+    Returns:
+        Full markdown content of the component doc
+
+    Raises:
+        ValueError: If component not found
+    """
+    log.info("Resource: legacy://component/{id}", id=component_id)
+
+    md_file = components_dir / f"{component_id}.md"
+    if not md_file.exists():
+        raise ValueError(f"Component not found: {component_id}")
+    return md_file.read_text(encoding="utf-8")

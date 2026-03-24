@@ -11,6 +11,7 @@ from server.prompts import (
     analyze_behavior_prompt,
     compare_entry_points_prompt,
     explore_capability_prompt,
+    research_feature_prompt,
 )
 
 
@@ -21,8 +22,9 @@ from server.prompts import (
         (analyze_behavior_prompt, ("do_kill", 5), ["do_kill"]),
         (compare_entry_points_prompt, (["do_look", "do_examine"],), ["do_look", "do_examine"]),
         (explore_capability_prompt, ("combat",), ["combat"]),
+        (research_feature_prompt, ("fireball",), ["fireball"]),
     ],
-    ids=["explain_entity", "analyze_behavior", "compare_entry_points", "explore_capability"],
+    ids=["explain_entity", "analyze_behavior", "compare_entry_points", "explore_capability", "research_feature"],
 )
 def test_prompt_structure(factory, args, expected_mentions):
     """All prompt generators return user+assistant messages mentioning key terms."""
